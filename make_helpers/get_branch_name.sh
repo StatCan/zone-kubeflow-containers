@@ -11,9 +11,9 @@ if [[ $GITHUB_ACTIONS == "true" ]] ; then
 		BRANCH_NAME=${BASH_REMATCH[1]}
 	elif [[ $GITHUB_REF =~ $PR_PATTERN ]]; then
 		PR_NUMBER=${BASH_REMATCH[1]}
-		# If not specified, assume PR comes from StatCan/aaw-kubeflow-containers
+		# If not specified, assume PR comes from StatCan/zone-kubeflow-containers
 		OWNER=${OWNER:-StatCan}
-	    REPOSITORY=${REPOSITORY:-aaw-kubeflow-containers}
+	    REPOSITORY=${REPOSITORY:-zone-kubeflow-containers}
 	    BRANCH_NAME=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$OWNER/$REPOSITORY/pulls/$PR_NUMBER | jq '.head.ref')
 	    # Remove leading/trailing quotes
 	    BRANCH_NAME=$(sed -e 's/^"//' -e 's/"$//' <<<"$BRANCH_NAME")

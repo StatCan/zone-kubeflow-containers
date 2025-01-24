@@ -1,3 +1,8 @@
+# Zone-kubelfow-containers
+
+This readme has not yet been updated from when this project was a part of [aaw-kubeflow-containers](https://github.com/StatCan/aaw-kubeflow-containers).
+Much of it is out of date and doesn't apply. 
+
 # Containers for Kubeflow
 
 Container images to be used with kubeflow on the AAW platform for Data Science & other workloads.
