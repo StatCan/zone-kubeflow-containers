@@ -87,7 +87,7 @@ jobs:
         echo "IMAGE_VERSION=dev" >> "$GITHUB_ENV"
    
     - name: Set ENV variables for pushes to master
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master-2.0'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: | 
         echo "REGISTRY=k8scc01covidacr.azurecr.io" >> "$GITHUB_ENV"
         echo "IMAGE_VERSION=v2" >> "$GITHUB_ENV"
