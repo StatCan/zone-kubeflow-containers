@@ -324,7 +324,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_TEMP_HOME/Machine \
     && \ 
     # Manage extensions
-    code-server --install-extension ms-python.python@2024.22.2 && \
+    code-server --install-extension ms-python.python@2024.22.1 && \
     code-server --install-extension ms-python.debugpy@2024.14.0 && \
     code-server --install-extension ms-python.vscode-pylance@2025.2.1 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
