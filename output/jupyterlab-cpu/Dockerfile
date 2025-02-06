@@ -303,8 +303,8 @@ ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transform
     # jupyterlab-spreadsheet
 
 # Install vscode
-ARG VSCODE_VERSION=4.93.1
-ARG VSCODE_SHA=9307ad9dacf30a3de76a26d0d455150d17798cf0394ccf5a4f3705ff20c945d8
+ARG VSCODE_VERSION=4.96.4
+ARG VSCODE_SHA=9062963BFA22664A2FB443343FBAA3AE39B4D12817C2002E0F550BCF4F3FFB2C
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 USER root
 
@@ -324,16 +324,18 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_TEMP_HOME/Machine \
     && \ 
     # Manage extensions
-    code-server --install-extension ms-python.python@2024.8.1 && \
-    code-server --install-extension ms-python.debugpy@2024.8.0 && \
+    code-server --install-extension ms-python.python@2024.22.2 && \
+    code-server --install-extension ms-python.debugpy@2024.14.0 && \
+    code-server --install-extension ms-python.vscode-pylance@2025.2.1 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 && \
-    code-server --install-extension quarto.quarto@1.113.0 && \
+    code-server --install-extension quarto.quarto@1.118.0 && \
     code-server --install-extension dvirtz.parquet-viewer@2.9.0 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
     code-server --install-extension cpptools-linux.vsix && \
+    code-server --uninstall-extension ms-vscode.js-debug-companion && \
     mv $CS_DEFAULT_HOME/* $CS_TEMP_HOME && \
     fix-permissions $CS_TEMP_HOME
 
