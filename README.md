@@ -236,7 +236,7 @@ yaml to create a test
       image: "imagename"                                # The name of the image that will be tested
       # The following values are static between differnt tests
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
