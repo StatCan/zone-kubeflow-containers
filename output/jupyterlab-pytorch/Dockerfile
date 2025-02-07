@@ -348,7 +348,6 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     # Manage extensions
     code-server --install-extension ms-python.python@2024.22.1 && \
     code-server --install-extension ms-python.debugpy@2024.14.0 && \
-    code-server --install-extension ms-python.vscode-pylance && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 && \
     code-server --install-extension quarto.quarto@1.118.0 && \
