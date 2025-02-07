@@ -28,11 +28,6 @@ on:
         description: url of the registry <registy-name>
         required: true
         type: string
-      buildkit:
-        description: buildkit version, legacy is 0 and deprecated 
-        required: false
-        type: number
-        default: 1
       branch-name:
         description: The name of the current branch 
         required: true
@@ -76,7 +71,6 @@ jobs:
       image: ${{ inputs.image }}
       base-image: ${{ inputs.base-image }}
       registry-name: ${{ inputs.registry-name }}
-      buildkit: ${{ inputs.buildkit }}
       branch-name: ${{ inputs.branch-name }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
