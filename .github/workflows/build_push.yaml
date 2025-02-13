@@ -166,6 +166,11 @@ jobs:
     # Free up space from build process (containerscan action will run out of space if we don't)
     - run: ./.github/scripts/cleanup_runner.sh
 
+    - name: Run R Studio Server test inside the container
+      run: |
+        docker run --rm ${{ steps.build-image.outputs.full_image_name }} \
+        /bin/bash -c "chmod +x ./tests/r/test_rstudio_server.sh && ./tests/r/test_rstudio_server.sh"
+  
     # Scan image for vulnerabilities
     - name: Aqua Security Trivy image scan
       if: true
