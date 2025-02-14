@@ -13,7 +13,7 @@ USER root
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
 COPY clean-layer.sh /usr/bin/clean-layer.sh
-COPY ./tests /tests
+COPY ../tests /tests
 
 RUN apt-get update --yes \
     && apt-get install --yes language-pack-fr \
