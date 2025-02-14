@@ -168,6 +168,7 @@ jobs:
 
     - name: Run R Studio Server test inside the container
       run: |
+        ls -alh \
         docker run --rm ${{ steps.build-image.outputs.full_image_name }} \
         /bin/bash -c "chmod +x ./tests/r/test_rstudio_server.sh && ./tests/r/test_rstudio_server.sh"
   
