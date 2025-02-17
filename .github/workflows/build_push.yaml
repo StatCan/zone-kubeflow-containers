@@ -169,7 +169,7 @@ jobs:
     - name: Run R Studio Server test inside the container
       run: |
         docker run --rm ${{ steps.build-image.outputs.full_image_name }} \
-        /bin/bash -c "chmod +x /test_rstudio_server.sh && /test_rstudio_server.sh"
+        /bin/bash -c "sudo chmod +x /test_rstudio_server.sh && /test_rstudio_server.sh"
   
     # Scan image for vulnerabilities
     - name: Aqua Security Trivy image scan
