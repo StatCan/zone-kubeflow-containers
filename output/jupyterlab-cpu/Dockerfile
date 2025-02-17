@@ -24,6 +24,7 @@ USER root
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
 COPY clean-layer.sh /usr/bin/clean-layer.sh
+COPY test_rstudio_server.sh /test_rstudio_server.sh
 
 RUN apt-get update --yes \
     && apt-get install --yes language-pack-fr \
