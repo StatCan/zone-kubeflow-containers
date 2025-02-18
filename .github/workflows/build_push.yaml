@@ -171,6 +171,9 @@ jobs:
         docker run --rm ${{ steps.build-image.outputs.full_image_name }} \
         Rscript -e 'source("/test_package_load.R")' 
 
+    # Free up space from build process (containerscan action will run out of space if we don't)
+    - run: ./.github/scripts/cleanup_runner.sh
+
     # Scan image for vulnerabilities
     - name: Aqua Security Trivy image scan
       if: true
