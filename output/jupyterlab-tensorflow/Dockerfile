@@ -30,7 +30,8 @@ RUN apt-get update --yes \
     && apt-get install --yes language-pack-fr \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/* \
-    && chmod +x /usr/bin/clean-layer.sh
+    && chmod +x /usr/bin/clean-layer.sh \
+    && chmod +x /test_rstudio_server.sh
 
 ###############################
 ###  docker-bits/1_CUDA-11.8.0.Dockerfile
