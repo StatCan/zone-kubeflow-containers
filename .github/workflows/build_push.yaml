@@ -169,7 +169,7 @@ jobs:
     - name: Run R package load test inside the container
       run: |
         docker run --rm ${{ steps.build-image.outputs.full_image_name }} \
-        Rscript -e 'source("./tests/r/test_package_load.R")' 
+        Rscript -e 'source("/test_package_load.R")' 
 
     # Scan image for vulnerabilities
     - name: Aqua Security Trivy image scan
