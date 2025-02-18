@@ -171,6 +171,7 @@ jobs:
         docker run --rm ${{ steps.build-image.outputs.full_image_name }} \
         Rscript -e 'source("/test_package_load.R")' 
 
+    # Cleanup
     - run: ./.github/scripts/cleanup_runner.sh
 
     # Scan image for vulnerabilities
