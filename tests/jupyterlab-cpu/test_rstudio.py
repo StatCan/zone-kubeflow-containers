@@ -7,7 +7,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.parametrize("command,expected_keyword,description", [
     (
         "rstudio-server version",
-        "rstudio-server",
+        "2024.04.2+764 (Chocolate Cosmos) for Ubuntu Jammy",
         "Test that the rstudio-server version command outputs valid version information."
     ),
 ])
@@ -24,8 +24,10 @@ def test_rstudio_server_version(command, expected_keyword, description):
         f"Command '{command}' failed with exit code {result.returncode}. "
         f"Error output: {result.stderr}"
     )
-    LOGGER.debug(result.stdout)
+
+    output = result.stdout.strip()  # Strip whitespace for clean comparison
+    LOGGER.debug(output)
     # Check that the expected keyword is in the output.
-    assert expected_keyword in result.stdout, (
-        f"Expected keyword '{expected_keyword}' not found in output: {result.stdout}"
+    assert expected_keyword in output, (
+        f"Expected keyword '{expected_keyword}' not found in output: {output}"
     )
