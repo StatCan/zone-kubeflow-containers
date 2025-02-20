@@ -1,6 +1,6 @@
 # Zone-kubelfow-containers  <!-- omit in toc -->
 
-Container images to be used with The Zone.
+Container images to be used with [The Zone](https://zone.statcan.ca).
 
 ## Table of Contents <!-- omit in toc -->
 - [Introduction](#introduction)
@@ -161,17 +161,17 @@ The workflows will trigger on the following:
 This allows for easy scanning and automated testing for images.
 
 After the workflow is complete,
-the images will be available on the k8scc01covidacr.azurecr.io ACR.
-You can access these images using any of the following:
+the images will be available on artifactory.cloud.statcan.ca/das-aaw-docker.
+You can access these images on https://zone.statcan.ca using any of the following:
 
-- k8scc01covidacr.azurecr.io/IMAGENAME:BRANCH_NAME
-- k8scc01covidacr.azurecr.io/IMAGENAME:SHA
-- k8scc01covidacr.azurecr.io/IMAGENAME:SHORT_SHA
+- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:BRANCH_NAME
+- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:SHA
+- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:SHORT_SHA
 
 Pushes to master will also have the following tags:
 
-- k8scc01covidacr.azurecr.io/IMAGENAME:latest
-- k8scc01covidacr.azurecr.io/IMAGENAME:v2
+- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:latest
+- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:v2
 
 ### Overview of Images
 
