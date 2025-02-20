@@ -1,6 +1,6 @@
 # Zone-kubelfow-containers  <!-- omit in toc -->
 
-Container images to be used with The Zone.
+Container images to be used with [The Zone](https://zone.statcan.ca).
 
 ## Table of Contents <!-- omit in toc -->
 - [Introduction](#introduction)
@@ -162,7 +162,7 @@ This allows for easy scanning and automated testing for images.
 
 After the workflow is complete,
 the images will be available on artifactory.cloud.statcan.ca/das-aaw-docker.
-You can access these images using any of the following:
+You can access these images on https://zone.statcan.ca using any of the following:
 
 - artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:BRANCH_NAME
 - artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:SHA
