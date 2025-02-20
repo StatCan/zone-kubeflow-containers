@@ -1,8 +1,5 @@
 name: Nightly test
-on:
-  schedule:
-    # Execute at 2am EST every day
-    - cron:  '0 7 * * *'
+on: push
 
 jobs:
   vars:
