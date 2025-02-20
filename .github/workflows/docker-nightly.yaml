@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       REGISTRY_NAME: "k8scc01covidacr.azurecr.io"
-      BRANCH_NAME: "v2"
+      TAG: "v2"
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +24,7 @@ jobs:
     with:
       image: ${{ matrix.image }}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.BRANCH_NAME }}"
+      tag: "${{ needs.vars.outputs.TAG }}"
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
