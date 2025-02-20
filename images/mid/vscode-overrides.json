@@ -1,3 +1,5 @@
 {
-    "workbench.colorTheme": "Default Dark Modern"
+    "workbench.colorTheme": "Default Dark Modern",
+    "quarto.preview.mode": "file",
+    "quarto.preview.host": "0.0.0.0"
 }
