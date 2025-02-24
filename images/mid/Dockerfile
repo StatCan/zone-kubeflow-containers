@@ -63,6 +63,8 @@ RUN pip install \
     'jupyterlab' \
     'jupyter_contrib_nbextensions' \ 
     'dash' \
+    'mitosheet' \
+    'mito-ai' \
     'plotly' \
     'ipywidgets' \
     'markupsafe' \
