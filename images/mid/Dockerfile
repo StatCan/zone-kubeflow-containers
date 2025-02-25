@@ -256,5 +256,5 @@ RUN pip3 --no-cache-dir install --quiet \
       fix-permissions /home/$NB_USER
 
 # break stuff
-RUN pip install numpy && rm -rf /opt/conda/lib/python3.*/site-packages/numpy*
-RUN R -e 'install.packages("languageserver")' && rm -rf /usr/local/lib/R/site-library/languageserver
+RUN rm -rf /opt/conda/lib/python*
+RUN rm -rf /opt/conda/lib/R/library/
