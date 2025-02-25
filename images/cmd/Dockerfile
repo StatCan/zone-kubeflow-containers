@@ -24,6 +24,10 @@ ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 # Point conda to Artifactory repository
 RUN conda config --remove channels conda-forge --system
 
+# break stuff
+RUN rm -rf /opt/conda/lib/python*
+RUN rm -rf /opt/conda/lib/R/library/
+
 USER $NB_USER
 ENTRYPOINT ["tini", "--"]
 CMD ["start-custom.sh"]
