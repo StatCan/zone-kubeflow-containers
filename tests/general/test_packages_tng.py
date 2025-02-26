@@ -1,12 +1,12 @@
 import logging
 import importlib.util
 import pytest
+from tabulate import tabulate  # Add this dependency
 
 from helpers import CondaPackageHelper
 
 LOGGER = logging.getLogger(__name__)
 
-# Package mappings for import names
 PACKAGE_MAPPING = {
     "matplotlib-base": "matplotlib",
     "beautifulsoup4": "bs4",
@@ -23,7 +23,6 @@ PACKAGE_MAPPING = {
     "catools": "caTools",
 }
 
-# Packages excluded from import tests
 EXCLUDED_PACKAGES = {"tini", "python", "hdf5", "nodejs", "jupyterlab-git", "openssl"}
 
 @pytest.fixture(scope="function")
@@ -63,30 +62,41 @@ def check_import_r_package(package_helper, package):
         return 0
     return package_helper.running_container.exec_run(["R", "--slave", "-e", f"library({package})"]).exit_code
 
-def _import_packages(package_helper, packages, check_function, max_failures):
-    """Test if packages can be imported."""
-    failures = {}
-    LOGGER.info("Testing package imports...")
+def _import_packages(package_helper, packages, check_function, max_failures, package_type):
+    """Test if packages can be imported and print a summary table."""
+    successes = []
+    failures = []
+
+    LOGGER.info(f"Testing {package_type} package imports...")
     for package in packages:
         LOGGER.info(f"Checking import: {package}")
         try:
             assert check_function(package_helper, package) == 0, f"Failed to import {package}"
+            successes.append(package)
         except AssertionError as err:
-            failures[package] = str(err)
+            failures.append(package)
+    
+    # Print summary
+    summary_table = []
+    for package in successes:
+        summary_table.append([package, "✅ Imported Successfully"])
+    for package in failures:
+        summary_table.append([package, "❌ Import Failed"])
+    
+    LOGGER.info(f"\n{tabulate(summary_table, headers=['Package', 'Status'], tablefmt='github')}")
+    
     if len(failures) > max_failures:
         raise AssertionError(f"Exceeded max import failures: {failures}")
-    elif failures:
-        LOGGER.warning(f"Import failures: {failures}")
 
 def test_python_packages(package_helper, packages, max_failures=3):
     """Test Python package imports."""
     python_packages = [package_map(pkg) for pkg in packages if not pkg.startswith("r-") and pkg not in EXCLUDED_PACKAGES]
-    _import_packages(package_helper, python_packages, check_import_python_package, max_failures)
+    _import_packages(package_helper, python_packages, check_import_python_package, max_failures, "Python")
 
 def test_r_packages(package_helper, packages, max_failures=3):
     """Test R package imports."""
     r_packages = [package_map(pkg[2:]) for pkg in packages if pkg.startswith("r-") and pkg not in EXCLUDED_PACKAGES]
-    _import_packages(package_helper, r_packages, check_import_r_package, max_failures)
+    _import_packages(package_helper, r_packages, check_import_r_package, max_failures, "R")
 
 def test_summary_report():
     """Print a final summary report."""
