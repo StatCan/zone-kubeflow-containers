@@ -4,10 +4,12 @@ import pytest
 
 LOGGER = logging.getLogger(__name__)
 
+expected = "2024.04.2+764 (Chocolate Cosmos) for Ubuntu Jammy"
+
 @pytest.mark.parametrize("command,expected_keyword,description", [
     (
         "rstudio-server version",
-        "2024.04.2+764 (Chocolate Cosmos) for Ubuntu Jammy",
+        expected,
         "Test that the rstudio-server version command outputs valid version information."
     ),
 ])
