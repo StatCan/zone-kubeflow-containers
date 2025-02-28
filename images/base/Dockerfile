@@ -68,9 +68,6 @@ ARG AZCLI_URL=https://aka.ms/InstallAzureCLIDeb
 ARG OH_MY_ZSH_URL=https://raw.githubusercontent.com/loket/oh-my-zsh/feature/batch-mode/tools/install.sh
 ARG OH_MY_ZSH_SHA=22811faf34455a5aeaba6f6b36f2c79a0a454a74c8b4ea9c0760d1b2d7022b03
 
-ARG TRINO_URL=https://repo1.maven.org/maven2/io/trino/trino-cli/410/trino-cli-410-executable.jar
-ARG TRINO_SHA=f32c257b9cfc38e15e8c0b01292ae1f11bda2b23b5ce1b75332e108ca7bf2e9b
-
 ARG ARGO_CLI_VERSION=v3.5.12
 ARG ARGO_CLI_URL=https://github.com/argoproj/argo-workflows/releases/download/${ARGO_CLI_VERSION}/argo-linux-amd64.gz
 ARG ARGO_CLI_CHECKSUM_URL=https://github.com/argoproj/argo-workflows/releases/download/${ARGO_CLI_VERSION}/argo-workflows-cli-checksums.txt
@@ -100,13 +97,6 @@ RUN \
     wget -q "${OH_MY_ZSH_URL}" -O /tmp/oh-my-zsh-install.sh \
     && echo "${OH_MY_ZSH_SHA} /tmp/oh-my-zsh-install.sh" | sha256sum -c \
     && echo "oh-my-zsh: ok" \
-  && \
-    # trino cli
-    wget -q "${TRINO_URL}" -O /tmp/trino-original \
-    && echo ${TRINO_SHA} /tmp/trino-original | sha256sum -c \
-    && echo "trinocli: ok" \
-    && chmod +x /tmp/trino-original \
-    && sudo mv /tmp/trino-original /usr/local/bin/trino-original \
   && \
     # argo cli
     curl -sLO  ${ARGO_CLI_URL}\
