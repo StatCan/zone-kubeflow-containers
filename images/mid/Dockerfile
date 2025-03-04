@@ -171,7 +171,7 @@ RUN curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/
 # SAS
 
 # Install Quarto
-ARG QUARTO_VERSION=1.5.57
+ARG QUARTO_VERSION=1.6.42
 ARG QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz
 ARG QUARTO_CHECKSUM_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-checksums.txt
 
