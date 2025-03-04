@@ -1,3 +1,10 @@
 {
-    "workbench.colorTheme": "Default Dark Modern"
+    "workbench.colorTheme": "Default Dark Modern",
+    "python.languageServer": "Jedi",
+    "python.experiments.optInto": [
+        "pythonJediLSP"
+    ],
+    "python.experiments.optOutFrom": [
+        "pythonJediLSPcf"
+    ]
 }
