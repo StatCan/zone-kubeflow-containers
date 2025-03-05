@@ -1,0 +1,151 @@
+name: Build, test, and push Docker Images
+on:
+  push:
+    branches:
+      - "master"
+    paths:
+      - ".github/workflows/*"
+
+      - "images/**"
+      - "!images/*/README.md"
+      - "tests/**"
+      - "!tests/README.md"
+      - "requirements-dev.txt"
+  pull_request:
+    paths:
+      - ".github/workflows/*"
+
+      - "images/**"
+      - "!images/*/README.md"
+      - "tests/**"
+      - "!tests/README.md"
+      - "requirements-dev.txt"
+
+jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      REGISTRY_NAME: "k8scc01covidacr.azurecr.io"
+      branch-name: ${{ steps.getBranch.outputs.branch-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get branch name
+        id: getBranch
+        run: |
+          chmod +x ./make_helpers/get_branch_name.sh
+          BRANCH_NAME=$(./make_helpers/get_branch_name.sh)
+          echo "branch-name=$BRANCH_NAME"
+          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+      - name: Set up environment
+        run: echo "Environment has been set up."
+
+  base:
+    needs: [vars]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "base"
+      directory: "base"
+      base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  mid:
+    needs: [vars, base]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "mid"
+      directory: "mid"
+      parent-image: "base"
+      parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  mid-jupyterlab:
+    needs: [vars, mid]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "mid-jupyterlab"
+      directory: "jupyterlab"
+      parent-image: "mid"
+      parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  jupyterlab-cpu:
+    needs: [vars, mid-jupyterlab]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "jupyterlab-cpu"
+      directory: "cmd"
+      parent-image: "mid-jupyterlab"
+      parent-image-is-diff: "${{ needs.mid-jupyterlab.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  mid-sas:
+    needs: [vars, mid]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "mid-sas"
+      directory: "sas"
+      parent-image: "mid"
+      parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  sas:
+    needs: [vars, mid-sas]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "sas"
+      directory: "cmd"
+      parent-image: "mid-sas"
+      parent-image-is-diff: "${{ needs.mid-sas.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  # Test the Images
+
+  jupyterlab-cpu-test:
+    needs: [vars, jupyterlab-cpu]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    with:
+      image: "jupyterlab-cpu"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  sas-test:
+    needs: [vars, sas]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    with:
+      image: "sas"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
