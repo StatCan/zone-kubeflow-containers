@@ -4,12 +4,20 @@ on:
     # Execute at 2am EST every day
     - cron:  '0 7 * * *'
 
-env:
-  REGISTRY_NAME: "k8scc01covidacr.azurecr.io"
-  BRANCH_NAME: "v2"
-
 jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      REGISTRY_NAME: "k8scc01covidacr.azurecr.io"
+      TAG: "v2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: echo "Environment has been set up."
+
   nightly-tests:
+    needs: vars
     strategy:
       matrix:
         image:
@@ -18,8 +26,8 @@ jobs:
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
       image: ${{ matrix.image }}
-      registry-name: "${{ env.REGISTRY_NAME }}"
-      branch-name: "${{ env.BRANCH_NAME }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.TAG }}"
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
