@@ -147,6 +147,14 @@ fi
 
 echo "broken configuration settings removed"
 
+# Add custom jupyterlab settings for .ipynb_checkpoints
+mkdir /opt/jupyterlab_scripts
+cp custom_checkpoints.py /opt/jupyterlab_scripts
+# Append to jupyter_notebook_config.py using echo
+echo "import sys" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+echo "sys.path.append('/opt/jupyterlab_scripts')" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+echo "c.NotebookApp.contents_manager_class = 'custom_checkpoints.CentralizedCheckpoints'" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+
 export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 
