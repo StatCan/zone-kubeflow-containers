@@ -59,6 +59,7 @@ RUN pip install \
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
+    'nodejs' \
     'pkg-config' \
     'jupyterlab' \
     'jupyter_contrib_nbextensions' \ 
