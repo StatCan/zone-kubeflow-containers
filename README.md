@@ -132,7 +132,7 @@ For example you may see:
 username@hostname:~$ docker images
 REPOSITORY                                  TAG        IMAGE ID       CREATED          SIZE
 k8scc01covidacr.azurecr.io/jupyterlab-cpu   v2         13f8dc0e4f7a   26 minutes ago   14.6GB
-k8scc01covidacr.azurecr.io/jupyterlab-sas   v2         2b9acb795079   19 hours ago     15.5GB
+k8scc01covidacr.azurecr.io/sas              v2         2b9acb795079   19 hours ago     15.5GB
 ```
 
 7. Run your image with `docker run -p 8888:8888 REPO/IMAGENAME:TAG`, e.g. `docker run -p 8888:8888 k8scc01covidacr.azurecr.io/sas:v2`.
