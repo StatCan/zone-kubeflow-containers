@@ -54,6 +54,7 @@ PACKAGE_MAPPING = {
     "pillow": "PIL",
     "pytables": "tables",
     "pyyaml": "yaml",
+    "jupyterhub-singleuser": "jupyterhub.singleuser",
     # R
     "randomforest": "randomForest",
     "rsqlite": "DBI",
@@ -82,7 +83,7 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-language-pack-fr-fr",
     "jupyterlab-lsp",
     # Other
-    "conda-forge::blas[build=openblas]",
+    "conda-forge::blas=[build", # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
     "protobuf",
     "r-irkernel",
     "unixodbc",
@@ -93,6 +94,7 @@ EXCLUDED_PACKAGES = [
     "gputil",
     "cudatoolkit",
     "cudnn",
+    "mamba",
     # Python
     "graphviz",
     # pytables has been added because it is causing issues, TODO: understand issue and resolve
@@ -117,7 +119,7 @@ def packages(package_helper):
 
 def package_map(package):
     """Perform a mapping between the python package name and the name used for the import"""
-    _package = package
+    _package = package.split("[")[0] # Remove bracketed metadata
     if _package in PACKAGE_MAPPING:
         _package = PACKAGE_MAPPING.get(_package)
     return _package
