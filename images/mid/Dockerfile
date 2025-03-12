@@ -183,7 +183,7 @@ RUN mkdir -p /etc/rstudio && \
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
-ENV SPARK_HOME="/opt/conda/lib/python3.11/site-packages/pyspark"
+ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 
 # Install some default R packages
 RUN mamba install --quiet --yes \
@@ -264,8 +264,10 @@ ENV SASPY_VERSION="5.4.0"
 
 RUN pip install sas_kernel
 
-# TODO: make Python version ENV var.
-COPY sascfg.py /opt/conda/lib/python3.11/site-packages/saspy/sascfg.py
+COPY sascfg.py /tmp/sascfg.py
+RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
+    && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
+    && rm /tmp/sascfg.py
 
 RUN jupyter nbextension install --py sas_kernel.showSASLog && \
     jupyter nbextension enable sas_kernel.showSASLog --py && \
