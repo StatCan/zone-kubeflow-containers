@@ -133,6 +133,7 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
     apt-get install -y unixodbc unixodbc-dev && \
     # libaio1 needed for Oracle Instant Client
     apt-get install -y libaio1t64 && \
+    ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1 && \
     pip install --no-cache-dir --quiet pyodbc && \
     rm -rf /var/lib/apt/lists/* && \
     fix-permissions $CONDA_DIR && \
