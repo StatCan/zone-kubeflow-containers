@@ -59,6 +59,7 @@ RUN pip install \
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
+    'nodejs' \
     'pkg-config' \
     'jupyterlab' \
     'jupyter_contrib_nbextensions' \ 
@@ -169,6 +170,52 @@ RUN curl --silent -L  --fail "https://download2.rstudio.org/server/jammy/amd64/r
     rm /tmp/rstudio.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Harden rstudio-server
+RUN mkdir -p /etc/rstudio && \
+    echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf && \
+    echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf && \
+    echo "www-same-site=lax" >> /etc/rstudio/rserver.conf && \
+    echo "restrict-directory-view=1" >> /etc/rstudio/rsession.conf && \
+    # Sets the default working dir
+    echo "session-default-working-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf && \
+    echo "session-default-new-project-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf && \
+    # https://github.com/rstudio/rstudio/issues/14060
+    echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf 
+
+ENV PATH=$PATH:/usr/lib/rstudio-server/bin
+
+ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
+
+# Install some default R packages
+RUN mamba install --quiet --yes \
+      'r-arrow' \
+      'r-aws.s3' \
+      'r-base=4.4.1' \
+      'r-catools' \
+      'r-e1071' \
+      'r-hdf5r' \
+      'r-markdown' \
+      'r-odbc' \
+      'r-renv' \
+      'r-rodbc' \
+      'r-sf' \
+      'r-sparklyr' \
+      'r-tidyverse' \
+    && \
+    clean-layer.sh && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+RUN python3 -m pip install \
+    'jupyter-rsession-proxy==2.2.0' \
+    'jupyter-server-proxy==4.2.0' && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+# If using the docker bit in other Dockerfiles, this must get written over in a later layer
+ENV DEFAULT_JUPYTER_URL="/rstudio"
+ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
+
 # SAS
 
 # Install Quarto
@@ -218,8 +265,10 @@ ENV SASPY_VERSION="5.4.0"
 
 RUN pip install sas_kernel
 
-# TODO: make Python version ENV var.
-COPY sascfg.py /opt/conda/lib/python3.11/site-packages/saspy/sascfg.py
+COPY sascfg.py /tmp/sascfg.py
+RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
+    && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
+    && rm /tmp/sascfg.py
 
 RUN jupyter nbextension install --py sas_kernel.showSASLog && \
     jupyter nbextension enable sas_kernel.showSASLog --py && \
@@ -250,7 +299,7 @@ RUN pip3 --no-cache-dir install --quiet \
       'pyjwt==2.6.0' \
       'oauthlib==3.2.2' \
       'mpmath==1.3.0' \
-      'lxml==4.9.2' \
+      'lxml==5.3.1' \
       'pyarrow==14.0.1' \
       'cryptography==41.0.6' \
       && fix-permissions $CONDA_DIR && \
