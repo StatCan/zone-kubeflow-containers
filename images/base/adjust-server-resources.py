@@ -28,7 +28,7 @@ def get_cpu_cores(cpu_request: float, cpu_limit: float | None) -> tuple:
     print(f"CPU limit: {cpu_limit} CPU cores")
 
     # Validate the values.
-    if cpu_request < 0.5:
+    if cpu_request < 0.1:
         raise ValueError("Cannot have less than 0.1 CPU cores specified.")
 
     if cpu_limit > 14:
@@ -170,7 +170,7 @@ def main():
         nargs="?",
         help=(
             "Optional limit on number of CPU cores for notebook server, default to requested."
-            " Must be between 0.5 and 14, and must be at least cpu_request."
+            " Must be between 0.1 and 14, and must be at least cpu_request."
         ),
     )
     cmd_parser.add_argument(
