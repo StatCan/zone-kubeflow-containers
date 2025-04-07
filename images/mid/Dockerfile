@@ -61,7 +61,6 @@ RUN pip install \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
