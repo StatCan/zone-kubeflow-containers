@@ -266,13 +266,6 @@ RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.maj
     && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
     && rm /tmp/sascfg.py
 
-RUN jupyter nbextension enable codefolding/main --sys-prefix && \
-    jupyter nbextension install --py sas_kernel.showSASLog && \
-    jupyter nbextension enable sas_kernel.showSASLog --py && \
-    jupyter nbextension install --py sas_kernel.theme && \
-    jupyter nbextension enable sas_kernel.theme --py && \
-    jupyter nbextension list
-
 # Must be set in deepest image
 ENV DEFAULT_JUPYTER_URL=/lab 
 
