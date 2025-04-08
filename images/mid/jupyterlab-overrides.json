@@ -1,5 +1,8 @@
 {
     "@jupyterlab/notebook-extension:tracker" : {
         "recordTiming": true
+    },
+    "@jupyterlab/codemirror-extension:commands": {
+        "codeFolding": true
     }
 }
