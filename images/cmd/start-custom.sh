@@ -147,6 +147,18 @@ fi
 
 echo "broken configuration settings removed"
 
+# Create a directory to store custom JupyterLab scripts (including checkpoint management)
+mkdir /opt/jupyterlab_scripts
+# Copy the custom checkpoint management script to the dedicated directory
+cp custom_checkpoints.py /opt/jupyterlab_scripts
+# Append necessary configurations to Jupyter's notebook config file
+# This ensures that Jupyter can locate and use the custom checkpoint manager
+# Step 1: Ensure Python can find the custom script directory
+echo "import sys" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+echo "sys.path.append('/opt/jupyterlab_scripts')" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+# Step 2: Set Jupyter to use the custom checkpoint manager instead of the default one
+echo "c.NotebookApp.contents_manager_class = 'custom_checkpoints.CentralizedCheckpoints'" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+
 export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 
