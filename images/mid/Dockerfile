@@ -55,14 +55,12 @@ COPY coder.json $CS_TEMP_HOME/
 
 RUN pip install \
     'git+https://github.com/betatim/vscode-binder' && \
-    # jupyter_contrib_nbextensions likes to be installed with pip
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -78,7 +76,6 @@ RUN pip install \
     'jupyterlab-lsp' \
     'jupyter-lsp'  && \
     jupyter server extension enable --py jupyter_server_proxy && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
     jupyter labextension enable \
       '@jupyterlab/translation-extension' \
       '@jupyterlab/server-proxy' \
@@ -268,12 +265,6 @@ COPY sascfg.py /tmp/sascfg.py
 RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
     && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
     && rm /tmp/sascfg.py
-
-RUN jupyter nbextension install --py sas_kernel.showSASLog && \
-    jupyter nbextension enable sas_kernel.showSASLog --py && \
-    jupyter nbextension install --py sas_kernel.theme && \
-    jupyter nbextension enable sas_kernel.theme --py && \
-    jupyter nbextension list
 
 # Must be set in deepest image
 ENV DEFAULT_JUPYTER_URL=/lab 
