@@ -7,6 +7,5 @@
     "python.experiments.optOutFrom": [
         "pythonJediLSPcf"
     ],
-    "python.defaultInterpreterPath": "/opt/conda/bin/python",
-    "settings.workspace.enable": "false"
+    "python.defaultInterpreterPath": "/opt/conda/bin/python"
 }
