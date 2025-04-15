@@ -6,6 +6,5 @@
     ],
     "python.experiments.optOutFrom": [
         "pythonJediLSPcf"
-    ],
-    "python.defaultInterpreterPath": "/opt/conda/bin/python"
+    ]
 }

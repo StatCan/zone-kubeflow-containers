@@ -1,5 +1,8 @@
 {
   "query": {
     "folder": "/home/jovyan/workspace"
+  },
+  "settings": {
+    "python.defaultInterpreterPath": "/opt/conda/bin/python"
   }
 }
