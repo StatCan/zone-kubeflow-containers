@@ -1,55 +1,47 @@
 USER root
 
-# installs vscode server, python & conda packages and jupyter lab extensions.
-
-# Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
-# this version of Jupyterlab and/or are not OL-compliant so they have been removed until new compatible versions are available:
-    # jupyterlab-kale
-    # jupyterlab-variableinspector
-    # jupyterlab-archive
-    # jupyterlab-spellchecker
-    # jupyterlab-spreadsheet
-
-# Install vscode
+# Install vscode with separated storage
 ARG VSCODE_VERSION=4.93.1
 ARG VSCODE_SHA=9307ad9dacf30a3de76a26d0d455150d17798cf0394ccf5a4f3705ff20c945d8
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
-ENV CS_DISABLE_FILE_DOWNLOADS=1
-ENV CS_DEFAULT_HOME=/home/jovyan/.local/share/code-server
-ENV SERVICE_URL=https://extensions.coder.com/api
+ENV CS_DISABLE_FILE_DOWNLOADS=1 \
+    CS_TEMP_HOME=/etc/share/code-server \
+    CS_DEFAULT_HOME=/home/jovyan/.local/share/code-server \
+    SERVICE_URL=https://extensions.coder.com/api \
+    EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 
 RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
-    && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix \
+    && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix -O /tmp/cpptools.vsix \
     && apt-get update \
-    && apt-get install -y nginx build-essential gdb \
+    && apt-get install -y --no-install-recommends nginx build-essential gdb \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
-    && mkdir -p ${CS_DEFAULT_HOME}/Machine \
-    && \
-    # Manage extensions
-    code-server --install-extension ms-python.python@2024.8.1 && \
-    code-server --install-extension ms-python.debugpy@2024.8.0 && \
-    code-server --install-extension REditorSupport.r@2.8.4 && \
-    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 && \
-    code-server --install-extension quarto.quarto@1.113.0 && \
-    code-server --install-extension dvirtz.parquet-viewer@2.9.0 && \
-    code-server --install-extension redhat.vscode-yaml@1.15.0 && \
-    code-server --install-extension ms-vscode.azurecli@0.6.0 && \
-    code-server --install-extension mblode.pretty-formatter@0.2.1 && \
-    code-server --install-extension cpptools-linux.vsix && \
-    fix-permissions ${CS_DEFAULT_HOME}
+    && mkdir -p ${CS_TEMP_HOME}/extensions ${CS_TEMP_HOME}/Machine \
+    && code-server --extensions-dir ${CS_TEMP_HOME}/extensions \
+    --install-extension ms-python.python@2024.8.1 \
+    --install-extension ms-python.debugpy@2024.8.0 \
+    --install-extension REditorSupport.r@2.8.4 \
+    --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 \
+    --install-extension quarto.quarto@1.113.0 \
+    --install-extension dvirtz.parquet-viewer@2.9.0 \
+    --install-extension redhat.vscode-yaml@1.15.0 \
+    --install-extension ms-vscode.azurecli@0.6.0 \
+    --install-extension mblode.pretty-formatter@0.2.1 \
+    --install-extension /tmp/cpptools.vsix \
+    && rm /tmp/cpptools.vsix \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p ${CS_DEFAULT_HOME} \
+    && ln -s ${CS_TEMP_HOME}/extensions ${CS_DEFAULT_HOME}/extensions \
+    && ln -s ${CS_TEMP_HOME}/Machine ${CS_DEFAULT_HOME}/Machine \
+    && fix-permissions ${CS_TEMP_HOME} \
+    && fix-permissions ${CS_DEFAULT_HOME}
 
-ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 COPY vscode-overrides.json ${CS_DEFAULT_HOME}/Machine/settings.json
-# Fix for VSCode extensions and CORS
-# Languagepacks.json needs to exist for code-server to recognize the languagepack
-COPY languagepacks.json ${CS_DEFAULT_HOME}/
-
-# Sets the default workspace for vscode
-COPY coder.json ${CS_DEFAULT_HOME}/
+COPY languagepacks.json coder.json ${CS_TEMP_HOME}/
 
 RUN pip install \
     'git+https://github.com/betatim/vscode-binder' && \
@@ -60,7 +52,7 @@ RUN pip install \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
+    'jupyter_contrib_nbextensions' \
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -78,33 +70,33 @@ RUN pip install \
     jupyter server extension enable --py jupyter_server_proxy && \
     jupyter nbextension enable codefolding/main --sys-prefix && \
     jupyter labextension enable \
-      '@jupyterlab/translation-extension' \
-      '@jupyterlab/server-proxy' \
-      'nbdime-jupyterlab' \
+    '@jupyterlab/translation-extension' \
+    '@jupyterlab/server-proxy' \
+    'nbdime-jupyterlab' \
     && \
     jupyter lab build && \
     jupyter lab clean && \
-  clean-layer.sh && \
-  rm -rf /home/$NB_USER/.cache/yarn && \
-  rm -rf /home/$NB_USER/.node-gyp && \
-  fix-permissions $CONDA_DIR && \
-  fix-permissions /home/$NB_USER
+    clean-layer.sh && \
+    rm -rf /home/$NB_USER/.cache/yarn && \
+    rm -rf /home/$NB_USER/.node-gyp && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
 
 # Install python, R, Julia and other useful language servers
 RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
     /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' && \
     mamba install -c conda-forge \
-      'python-lsp-server' \
+    'python-lsp-server' \
     && \
-# These should probably go in a package.json file
-# Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
+    # These should probably go in a package.json file
+    # Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
     npm i -g \
     'bash-language-server'  \
     'dockerfile-language-server-nodejs' \
     'javascript-typescript-langserver' \
     'unified-language-server' \
     'yaml-language-server' && \
-    clean-layer.sh && \ 
+    clean-layer.sh && \
     fix-permissions $CONDA_DIR && \
     fix-permissions /home/$NB_USER
 
@@ -131,8 +123,8 @@ RUN apt-get update --yes \
     && mkdir -p ${OMPP_INSTALL_DIR} \
     && tar -xf /tmp/ompp.tar.gz -C ${OMPP_INSTALL_DIR} --strip-components=1\
     && rm -f /tmp/ompp.tar.gz \
-# Customize and rebuild omp-ui for jupyter-ompp-proxy install
-# issue with making a relative publicPath https://github.com/quasarframework/quasar/issues/8513
+    # Customize and rebuild omp-ui for jupyter-ompp-proxy install
+    # issue with making a relative publicPath https://github.com/quasarframework/quasar/issues/8513
     && sed -i -e 's/history/hash/' ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
     && sed -i -e "s/OMS_URL:.*''/OMS_URL: '.'/" ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
     && npm install --prefix ${OMPP_INSTALL_DIR}/ompp-ui @babel/traverse@7.23.2\
@@ -177,7 +169,7 @@ RUN mkdir -p /etc/rstudio && \
     echo "session-default-working-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf && \
     echo "session-default-new-project-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf && \
     # https://github.com/rstudio/rstudio/issues/14060
-    echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf 
+    echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
@@ -185,19 +177,19 @@ ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 
 # Install some default R packages
 RUN mamba install --quiet --yes \
-      'r-arrow' \
-      'r-aws.s3' \
-      'r-base=4.4.1' \
-      'r-catools' \
-      'r-e1071' \
-      'r-hdf5r' \
-      'r-markdown' \
-      'r-odbc' \
-      'r-renv' \
-      'r-rodbc' \
-      'r-sf' \
-      'r-sparklyr' \
-      'r-tidyverse' \
+    'r-arrow' \
+    'r-aws.s3' \
+    'r-base=4.4.1' \
+    'r-catools' \
+    'r-e1071' \
+    'r-hdf5r' \
+    'r-markdown' \
+    'r-odbc' \
+    'r-renv' \
+    'r-rodbc' \
+    'r-sf' \
+    'r-sparklyr' \
+    'r-tidyverse' \
     && \
     clean-layer.sh && \
     fix-permissions $CONDA_DIR && \
@@ -274,7 +266,7 @@ RUN jupyter nbextension install --py sas_kernel.showSASLog && \
     jupyter nbextension list
 
 # Must be set in deepest image
-ENV DEFAULT_JUPYTER_URL=/lab 
+ENV DEFAULT_JUPYTER_URL=/lab
 
 # SAS GConfid
 
@@ -291,13 +283,23 @@ RUN apt-get update --yes \
 # Forcibly upgrade packages to patch vulnerabilities
 # See https://github.com/StatCan/aaw-private/issues/58#issuecomment-1471863092 for more details.
 RUN pip3 --no-cache-dir install --quiet \
-      'wheel==0.40.0' \
-      'setuptools==67.6.0' \
-      'pyjwt==2.6.0' \
-      'oauthlib==3.2.2' \
-      'mpmath==1.3.0' \
-      'lxml==5.3.1' \
-      'pyarrow==14.0.1' \
-      'cryptography==41.0.6' \
-      && fix-permissions $CONDA_DIR && \
-      fix-permissions /home/$NB_USER
+    'wheel==0.40.0' \
+    'setuptools==67.6.0' \
+    'pyjwt==2.6.0' \
+    'oauthlib==3.2.2' \
+    'mpmath==1.3.0' \
+    'lxml==5.3.1' \
+    'pyarrow==14.0.1' \
+    'cryptography==41.0.6' \
+    && fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+# Cleanup layer
+RUN mamba clean --all -y \
+    && jupyter lab clean \
+    && rm -rf /home/$NB_USER/.cache/yarn \
+    && rm -rf /home/$NB_USER/.node-gyp \
+    && find /opt/conda -type f -name '*.pyc' -delete \
+    && find /opt/conda -type d -name '__pycache__' -delete \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
