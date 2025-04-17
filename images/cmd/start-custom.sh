@@ -154,20 +154,6 @@ export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
 echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 
-# change python location for vscode
-pythonInterpreterPath='{"python.defaultInterpreterPath": "/opt/conda/bin/python"}'
-
-if [ ! -d /home/jovyan/workspace/.vscode ]; then
-  mkdir -p /home/jovyan/workspace/.vscode;
-fi
-
-if [ ! -f /home/jovyan/workspace/.vscode/settings.json ]; then
-  #Not found
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json  
-else
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json
-fi
-
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
 #echo "Checking if Python venv exists"
@@ -188,13 +174,6 @@ else
 fi
 
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
-
-# Copy default config and extensions on first start up
-if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
-  echo "Creating code-server default settings and extentions"
-  mkdir -p "$CS_DEFAULT_HOME"
-  cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
-fi
 
 # Create default user directory
 if [ ! -d "$HOME/workspace" ]; then
