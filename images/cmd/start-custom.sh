@@ -175,13 +175,6 @@ fi
 
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
 
-# Copy default config and extensions on first start up
-if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
-  echo "Creating code-server default settings and extentions"
-  mkdir -p "$CS_DEFAULT_HOME"
-  cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
-fi
-
 # Create default user directory
 if [ ! -d "$HOME/workspace" ]; then
   echo "Creating default user directory"
