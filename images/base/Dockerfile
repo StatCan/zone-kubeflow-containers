@@ -122,9 +122,11 @@ RUN chmod +x /usr/local/bin/ktutil-keytab
 
 # ODBC drivers
 # Add the signature to trust the Microsoft repo
-RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg && \
-    echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" > /etc/apt/sources.list.d/microsoft-prod.list && \
-    apt-get update && \
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc && \
+    # Add repo to apt sources
+    curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+
+RUN apt-get update && \
     # Install the driver
     ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
     # optional: for bcp and sqlcmd
@@ -132,8 +134,7 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
     # installing unixODBC
     apt-get install -y unixodbc unixodbc-dev && \
     # libaio1 needed for Oracle Instant Client
-    apt-get install -y libaio1t64 && \
-    ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1 && \
+    apt-get install -y libaio1 && \
     pip install --no-cache-dir --quiet pyodbc && \
     rm -rf /var/lib/apt/lists/* && \
     fix-permissions $CONDA_DIR && \

@@ -65,20 +65,20 @@ class CondaPackageHelper:
             # command=["start.sh", "bash", "-c", "sleep infinity"]  # See note above
         )
 
-    def _conda_export_command(self, from_history=False):
+    @staticmethod
+    def _conda_export_command(from_history=False):
         """Return the conda export command with or without history"""
-        self._execute_command(["conda", "config", "--add", "channels", "defaults"])
         cmd = ["conda", "env", "export", "-n", "base", "--json", "--no-builds"]
         if from_history:
             cmd.append("--from-history")
-        return self._execute_command(cmd)
+        return cmd
 
     def installed_packages(self):
         """Return the installed packages"""
         if self.installed is None:
             LOGGER.info("Grabing the list of installed packages ...")
             self.installed = CondaPackageHelper._packages_from_json(
-                self._conda_export_command()
+                self._execute_command(CondaPackageHelper._conda_export_command())
             )
         return self.installed
 
@@ -87,7 +87,7 @@ class CondaPackageHelper:
         if self.specs is None:
             LOGGER.info("Grabing the list of specifications ...")
             self.specs = CondaPackageHelper._packages_from_json(
-                self._conda_export_command(True)
+                self._execute_command(CondaPackageHelper._conda_export_command(True))
             )
         return self.specs
 

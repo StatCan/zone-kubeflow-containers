@@ -59,7 +59,6 @@ RUN pip install \
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
-    'nodejs' \
     'pkg-config' \
     'jupyterlab' \
     'jupyter_contrib_nbextensions' \ 
@@ -159,7 +158,7 @@ ARG SHA256=d8ffb8e5c2dadb1c74df037c291a5585e595d978b3aec48a4a94a970e04a947d
 RUN apt-get update && \
     apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core && \
     wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
-    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" && \
+    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/" && \
     apt install -y --no-install-recommends r-base r-base-core r-recommended r-base-dev && \
     apt-get update && apt-get -y dist-upgrade
 
@@ -183,10 +182,16 @@ RUN mkdir -p /etc/rstudio && \
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
-ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
+ENV SPARK_HOME="/opt/conda/lib/python3.11/site-packages/pyspark"
 
 # Install some default R packages
-RUN mamba install --quiet --yes \
+# rpy2 is installed by upstream, I don't know if anyone uses it.
+# ryp2 was causing problems with R 4.4.1, so I removed it from the 
+# mamba install. rpy2 is reinstalled with pip below.
+# when we next upgrade R, let's try to restore rpy2 to its original state
+# which means just remove mamba remove rpy2 and remove pip install rpy2
+RUN mamba remove rpy2 && \
+    mamba install --quiet --yes \
       'r-arrow' \
       'r-aws.s3' \
       'r-base=4.4.1' \
@@ -201,6 +206,7 @@ RUN mamba install --quiet --yes \
       'r-sparklyr' \
       'r-tidyverse' \
     && \
+    pip install rpy2 && \
     clean-layer.sh && \
     fix-permissions $CONDA_DIR && \
     fix-permissions /home/$NB_USER
@@ -264,10 +270,8 @@ ENV SASPY_VERSION="5.4.0"
 
 RUN pip install sas_kernel
 
-COPY sascfg.py /tmp/sascfg.py
-RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
-    && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
-    && rm /tmp/sascfg.py
+# TODO: make Python version ENV var.
+COPY sascfg.py /opt/conda/lib/python3.11/site-packages/saspy/sascfg.py
 
 RUN jupyter nbextension install --py sas_kernel.showSASLog && \
     jupyter nbextension enable sas_kernel.showSASLog --py && \
@@ -298,7 +302,7 @@ RUN pip3 --no-cache-dir install --quiet \
       'pyjwt==2.6.0' \
       'oauthlib==3.2.2' \
       'mpmath==1.3.0' \
-      'lxml==5.3.1' \
+      'lxml==4.9.2' \
       'pyarrow==14.0.1' \
       'cryptography==41.0.6' \
       && fix-permissions $CONDA_DIR && \
