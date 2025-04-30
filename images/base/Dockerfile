@@ -13,8 +13,6 @@ RUN apt-get update --yes \
 COPY suspend-server.sh /usr/local/bin
 COPY adjust-server-resources.py /usr/local/bin
 
-RUN ulimit -c 0
-
 # https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 RUN mamba install --quiet \
       'pillow' \
