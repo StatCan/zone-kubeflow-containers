@@ -262,7 +262,7 @@ if [ -d "$DIR" ]; then
   echo "Permissions for $DIR set to 700."
 fi
 
-
+ulimit -c 0 
 echo "--------------------starting jupyter--------------------"
 
 /opt/conda/bin/jupyter server --notebook-dir=/home/${NB_USER} \
