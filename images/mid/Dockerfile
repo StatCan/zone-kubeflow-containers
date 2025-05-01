@@ -45,8 +45,8 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     mv $CS_DEFAULT_HOME/* $CS_TEMP_HOME && \
     fix-permissions $CS_TEMP_HOME
 
-COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json && \
-    mkdir -p $CS_DEFAULT_HOME/Machine && \
+RUN mkdir -p $CS_DEFAULT_HOME/Machine && \
+    cp vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json && \
     cp $CS_TEMP_HOME/Machine/settings.json $CS_DEFAULT_HOME/Machine/ && \
     fix-permissions $CS_DEFAULT_HOME
 
