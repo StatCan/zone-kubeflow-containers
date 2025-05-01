@@ -18,8 +18,7 @@ ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_
 ENV CS_DISABLE_FILE_DOWNLOADS=1
 ENV CS_TEMP_HOME=/etc/share/code-server
 ENV CS_DEFAULT_HOME=/home/jovyan/.local/share/code-server
-ENV SERVICE_URL=https://extensions.coder.com/api \
-    EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
+ENV SERVICE_URL=https://extensions.coder.com/api
 
 RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
@@ -45,6 +44,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     mv $CS_DEFAULT_HOME/* $CS_TEMP_HOME && \
     fix-permissions $CS_TEMP_HOME
 
+ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 RUN mkdir -p $CS_DEFAULT_HOME/Machine && \
     cp vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json && \
     cp vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json && \
