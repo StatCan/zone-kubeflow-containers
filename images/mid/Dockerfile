@@ -45,10 +45,10 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     mv $CS_DEFAULT_HOME/* $CS_TEMP_HOME && \
     fix-permissions $CS_TEMP_HOME
 
-COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json \
-    mkdir -p $CS_DEFAULT_HOME/Machine \
-    && cp $CS_TEMP_HOME/Machine/settings.json $CS_DEFAULT_HOME/Machine/ \
-    && fix-permissions $CS_DEFAULT_HOME
+COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json && \
+    mkdir -p $CS_DEFAULT_HOME/Machine && \
+    cp $CS_TEMP_HOME/Machine/settings.json $CS_DEFAULT_HOME/Machine/ && \
+    fix-permissions $CS_DEFAULT_HOME
 
 # Fix for VSCode extensions and CORS
 # Languagepacks.json needs to exist for code-server to recognize the languagepack
