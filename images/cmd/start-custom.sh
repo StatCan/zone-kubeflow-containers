@@ -154,6 +154,9 @@ export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
 echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 
+# Clear VS Code's cached interpreter list
+rm -f /home/jovyan/.local/share/code-server/User/globalStorage/ms-python.python/pythonPath*
+
 # change python location for vscode
 pythonInterpreterPath='{"python.defaultInterpreterPath": "/opt/conda/bin/python"}'
 
