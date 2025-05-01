@@ -17,7 +17,7 @@ ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
 ENV CS_TEMP_HOME=/etc/share/code-server
-ENV CS_DEFAULT_HOME=/home/jovyan/.local/share/code-server
+ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
 ENV SERVICE_URL=https://extensions.coder.com/api
 
 RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
@@ -45,11 +45,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     fix-permissions $CS_TEMP_HOME
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
-RUN mkdir -p $CS_DEFAULT_HOME/Machine
 COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json
-COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
-RUN fix-permissions $CS_DEFAULT_HOME
-
 # Fix for VSCode extensions and CORS
 # Languagepacks.json needs to exist for code-server to recognize the languagepack
 COPY languagepacks.json $CS_TEMP_HOME/
@@ -307,13 +303,3 @@ RUN pip3 --no-cache-dir install --quiet \
       'cryptography==41.0.6' \
       && fix-permissions $CONDA_DIR && \
       fix-permissions /home/$NB_USER
-
-# Cleanup layer
-RUN mamba clean --all -y \
-&& jupyter lab clean \
-&& rm -rf /home/$NB_USER/.cache/yarn \
-&& rm -rf /home/$NB_USER/.node-gyp \
-&& find /opt/conda -type f -name '*.pyc' -delete \
-&& find /opt/conda -type d -name '__pycache__' -delete \
-&& fix-permissions $CONDA_DIR \
-&& fix-permissions /home/$NB_USER

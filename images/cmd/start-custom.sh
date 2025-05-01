@@ -182,6 +182,9 @@ if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
 
+# Clear VS Code's cached interpreter list
+rm -f /home/jovyan/.local/share/code-server/User/globalStorage/ms-python.python/pythonPath*
+
 # Create default user directory
 if [ ! -d "$HOME/workspace" ]; then
   echo "Creating default user directory"
