@@ -47,7 +47,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
 
 RUN mkdir -p $CS_DEFAULT_HOME/Machine && \
     cp vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json && \
-    cp $CS_TEMP_HOME/Machine/settings.json $CS_DEFAULT_HOME/Machine/ && \
+    cp vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json && \
     fix-permissions $CS_DEFAULT_HOME
 
 # Fix for VSCode extensions and CORS
