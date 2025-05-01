@@ -45,10 +45,10 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     fix-permissions $CS_TEMP_HOME
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
-RUN mkdir -p $CS_DEFAULT_HOME/Machine && \
-    cp vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json && \
-    cp vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json && \
-    fix-permissions $CS_DEFAULT_HOME
+RUN mkdir -p $CS_DEFAULT_HOME/Machine
+COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json
+COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
+RUN fix-permissions $CS_DEFAULT_HOME
 
 # Fix for VSCode extensions and CORS
 # Languagepacks.json needs to exist for code-server to recognize the languagepack
