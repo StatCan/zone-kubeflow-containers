@@ -17,7 +17,7 @@ ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
 ENV CS_TEMP_HOME=/etc/share/code-server
-ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
+ENV CS_DEFAULT_HOME=/home/jovyan/.local/share/code-server
 ENV SERVICE_URL=https://extensions.coder.com/api
 
 RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
