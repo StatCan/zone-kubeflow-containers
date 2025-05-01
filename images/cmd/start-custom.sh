@@ -262,7 +262,9 @@ if [ -d "$DIR" ]; then
   echo "Permissions for $DIR set to 700."
 fi
 
+# Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
+
 echo "--------------------starting jupyter--------------------"
 
 /opt/conda/bin/jupyter server --notebook-dir=/home/${NB_USER} \
