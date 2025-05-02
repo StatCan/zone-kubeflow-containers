@@ -8,5 +8,6 @@
         "pythonJediLSPcf"
     ],
     "python.defaultInterpreterPath": "/opt/conda/bin/python",
-    "python.pythonPath": "/opt/conda/bin/python"
+    "python.pythonPath": "/opt/conda/bin/python",
+    "python.condaPath": "/opt/conda/bin/conda"
 }
