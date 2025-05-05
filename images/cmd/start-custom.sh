@@ -182,13 +182,24 @@ if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
 
-# Create default user directory
-if [ ! -d "$HOME/workspace" ]; then
-  echo "Creating default user directory"
-  mkdir -p "$HOME/workspace"
-  mkdir -p "$HOME/workspace/data"
-  mkdir -p "$HOME/workspace/repositories"
-fi
+# Create default user directories
+WORKSPACE_DIR="$HOME/workspace"
+REPO_DIR="$WORKSPACE_DIR/repositories"
+DATA_DIR="$WORKSPACE_DIR/data"
+VSCODE_DIR="$WORKSPACE_DIR/.vscode"
+VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
+PYTHON_PATH="/opt/conda/bin/python"
+
+echo "Ensuring workspace directories exist..."
+mkdir -p "$REPO_DIR" "$DATA_DIR" "$VSCODE_DIR"
+
+# Set Python interpreter path for VSCode
+echo "Setting Python interpreter for VSCode..."
+cat > "$VSCODE_SETTINGS" <<EOF
+{
+  "python.defaultInterpreterPath": "$PYTHON_PATH"
+}
+EOF
 
 # Retrieving Alias file for oracle client
 # Runs on every startup because this output location is not persisted storage
