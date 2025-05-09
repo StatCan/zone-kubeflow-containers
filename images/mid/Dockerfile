@@ -1,3 +1,5 @@
+FROM k8scc01covidacr.azurecr.io/base:update-workflow-runner@sha256:5e3204443983f5797d8bca206d2a1f619309ee135828547aef5363cc2f249c0b
+
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
@@ -53,63 +55,63 @@ COPY languagepacks.json $CS_TEMP_HOME/
 # Sets the default workspace for vscode
 COPY coder.json $CS_TEMP_HOME/
 
-RUN pip install \
-    'git+https://github.com/betatim/vscode-binder' && \
-    # jupyter_contrib_nbextensions likes to be installed with pip
-    mamba install --quiet --yes -c conda-forge \
-    # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
-    # need to add mamba install pkg-config so R can find freetype related packages
-    'nodejs' \
-    'pkg-config' \
-    'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
-    'dash' \
-    'plotly' \
-    'ipywidgets' \
-    'markupsafe' \
-    'pyspark' \
-    'ipympl' \
-    'pexpect==4.9.0' \
-    'jupyter-resource-usage' \
-    'jupyter-rsession-proxy==2.2.0' \
-    'jupyter-server-proxy==4.2.0' \
-    'jupyterlab-language-pack-fr-fr' \
-    'jupyterlab_execute_time' \
-    'nb_conda_kernels' \
-    'jupyterlab-lsp' \
-    'jupyter-lsp'  && \
-    jupyter server extension enable --py jupyter_server_proxy && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
-    jupyter labextension enable \
-      '@jupyterlab/translation-extension' \
-      '@jupyterlab/server-proxy' \
-      'nbdime-jupyterlab' \
-    && \
-    jupyter lab build && \
-    jupyter lab clean && \
-  clean-layer.sh && \
-  rm -rf /home/$NB_USER/.cache/yarn && \
-  rm -rf /home/$NB_USER/.node-gyp && \
-  fix-permissions $CONDA_DIR && \
-  fix-permissions /home/$NB_USER
+# RUN pip install \
+#     'git+https://github.com/betatim/vscode-binder' && \
+#     # jupyter_contrib_nbextensions likes to be installed with pip
+#     mamba install --quiet --yes -c conda-forge \
+#     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
+#     # need to add mamba install pkg-config so R can find freetype related packages
+#     'nodejs' \
+#     'pkg-config' \
+#     'jupyterlab' \
+#     'jupyter_contrib_nbextensions' \ 
+#     'dash' \
+#     'plotly' \
+#     'ipywidgets' \
+#     'markupsafe' \
+#     'pyspark' \
+#     'ipympl' \
+#     'pexpect==4.9.0' \
+#     'jupyter-resource-usage' \
+#     'jupyter-rsession-proxy==2.2.0' \
+#     'jupyter-server-proxy==4.2.0' \
+#     'jupyterlab-language-pack-fr-fr' \
+#     'jupyterlab_execute_time' \
+#     'nb_conda_kernels' \
+#     'jupyterlab-lsp' \
+#     'jupyter-lsp'  && \
+#     jupyter server extension enable --py jupyter_server_proxy && \
+#     jupyter nbextension enable codefolding/main --sys-prefix && \
+#     jupyter labextension enable \
+#       '@jupyterlab/translation-extension' \
+#       '@jupyterlab/server-proxy' \
+#       'nbdime-jupyterlab' \
+#     && \
+#     jupyter lab build && \
+#     jupyter lab clean && \
+#   clean-layer.sh && \
+#   rm -rf /home/$NB_USER/.cache/yarn && \
+#   rm -rf /home/$NB_USER/.node-gyp && \
+#   fix-permissions $CONDA_DIR && \
+#   fix-permissions /home/$NB_USER
 
 # Install python, R, Julia and other useful language servers
-RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
-    /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' && \
-    mamba install -c conda-forge \
-      'python-lsp-server' \
-    && \
-# These should probably go in a package.json file
-# Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
-    npm i -g \
-    'bash-language-server'  \
-    'dockerfile-language-server-nodejs' \
-    'javascript-typescript-langserver' \
-    'unified-language-server' \
-    'yaml-language-server' && \
-    clean-layer.sh && \ 
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+# RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
+#     /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' && \
+#     mamba install -c conda-forge \
+#       'python-lsp-server' \
+#     && \
+# # These should probably go in a package.json file
+# # Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
+#     npm i -g \
+#     'bash-language-server'  \
+#     'dockerfile-language-server-nodejs' \
+#     'javascript-typescript-langserver' \
+#     'unified-language-server' \
+#     'yaml-language-server' && \
+#     clean-layer.sh && \ 
+#     fix-permissions $CONDA_DIR && \
+#     fix-permissions /home/$NB_USER
 
 # OpenM install
 # Install OpenM++ MPI
@@ -186,25 +188,25 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 
-# Install some default R packages
-RUN mamba install --quiet --yes \
-      'r-arrow' \
-      'r-aws.s3' \
-      'r-base=4.4.1' \
-      'r-catools' \
-      'r-e1071' \
-      'r-hdf5r' \
-      'r-markdown' \
-      'r-odbc' \
-      'r-renv' \
-      'r-rodbc' \
-      'r-sf' \
-      'r-sparklyr' \
-      'r-tidyverse' \
-    && \
-    clean-layer.sh && \
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+# # Install some default R packages
+# RUN mamba install --quiet --yes \
+#       'r-arrow' \
+#       'r-aws.s3' \
+#       'r-base=4.4.1' \
+#       'r-catools' \
+#       'r-e1071' \
+#       'r-hdf5r' \
+#       'r-markdown' \
+#       'r-odbc' \
+#       'r-renv' \
+#       'r-rodbc' \
+#       'r-sf' \
+#       'r-sparklyr' \
+#       'r-tidyverse' \
+#     && \
+#     clean-layer.sh && \
+#     fix-permissions $CONDA_DIR && \
+#     fix-permissions /home/$NB_USER
 
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
