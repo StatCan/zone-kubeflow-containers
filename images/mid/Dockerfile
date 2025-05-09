@@ -1,5 +1,3 @@
-FROM k8scc01covidacr.azurecr.io/base:update-workflow-runner@sha256:5e3204443983f5797d8bca206d2a1f619309ee135828547aef5363cc2f249c0b
-
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
@@ -266,11 +264,11 @@ RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.maj
     && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
     && rm /tmp/sascfg.py
 
-RUN jupyter nbextension install --py sas_kernel.showSASLog && \
-    jupyter nbextension enable sas_kernel.showSASLog --py && \
-    jupyter nbextension install --py sas_kernel.theme && \
-    jupyter nbextension enable sas_kernel.theme --py && \
-    jupyter nbextension list
+# RUN jupyter nbextension install --py sas_kernel.showSASLog && \
+#     jupyter nbextension enable sas_kernel.showSASLog --py && \
+#     jupyter nbextension install --py sas_kernel.theme && \
+#     jupyter nbextension enable sas_kernel.theme --py && \
+#     jupyter nbextension list
 
 # Must be set in deepest image
 ENV DEFAULT_JUPYTER_URL=/lab 
@@ -289,14 +287,14 @@ RUN apt-get update --yes \
 
 # Forcibly upgrade packages to patch vulnerabilities
 # See https://github.com/StatCan/aaw-private/issues/58#issuecomment-1471863092 for more details.
-RUN pip3 --no-cache-dir install --quiet \
-      'wheel==0.40.0' \
-      'setuptools==67.6.0' \
-      'pyjwt==2.6.0' \
-      'oauthlib==3.2.2' \
-      'mpmath==1.3.0' \
-      'lxml==5.3.1' \
-      'pyarrow==14.0.1' \
-      'cryptography==41.0.6' \
-      && fix-permissions $CONDA_DIR && \
-      fix-permissions /home/$NB_USER
+# RUN pip3 --no-cache-dir install --quiet \
+#       'wheel==0.40.0' \
+#       'setuptools==67.6.0' \
+#       'pyjwt==2.6.0' \
+#       'oauthlib==3.2.2' \
+#       'mpmath==1.3.0' \
+#       'lxml==5.3.1' \
+#       'pyarrow==14.0.1' \
+#       'cryptography==41.0.6' \
+#       && fix-permissions $CONDA_DIR && \
+#       fix-permissions /home/$NB_USER
