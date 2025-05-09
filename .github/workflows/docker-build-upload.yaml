@@ -72,15 +72,15 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Pull parent image
-        id: pull-parent
+      - name: Tag for parent image
+        id: tag-parent
         if: inputs.parent-image != ''
-        run: make pull/${{ inputs.parent-image }} REPO=${{ inputs.registry-name }}
+        run: make tag/${{ inputs.parent-image }} REPO=${{ inputs.registry-name }}
 
       - name: Set BASE_IMAGE variable
         run: |
           if [ "${{ inputs.base-image }}" == "" ]; then
-            echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
+            echo "BASE_IMAGE=${{ steps.tag-parent.outputs.image_name }}" >> $GITHUB_ENV
           else
             echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
           fi
