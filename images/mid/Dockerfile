@@ -71,6 +71,7 @@ RUN pip install \
     'ipympl' \
     'pexpect==4.9.0' \
     'jupyter-resource-usage' \
+    'jupyter-rsession-proxy==2.2.0' \
     'jupyter-server-proxy==4.2.0' \
     'jupyterlab-language-pack-fr-fr' \
     'jupyterlab_execute_time' \
@@ -93,56 +94,56 @@ RUN pip install \
   fix-permissions /home/$NB_USER
 
 # Install python, R, Julia and other useful language servers
-RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
-    /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' && \
-    mamba install -c conda-forge \
-      'python-lsp-server' \
-    && \
-# These should probably go in a package.json file
-# Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
-    npm i -g \
-    'bash-language-server'  \
-    'dockerfile-language-server-nodejs' \
-    'javascript-typescript-langserver' \
-    'unified-language-server' \
-    'yaml-language-server' && \
-    clean-layer.sh && \ 
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+# RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
+#     /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' && \
+#     mamba install -c conda-forge \
+#       'python-lsp-server' \
+#     && \
+# # These should probably go in a package.json file
+# # Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
+#     npm i -g \
+#     'bash-language-server'  \
+#     'dockerfile-language-server-nodejs' \
+#     'javascript-typescript-langserver' \
+#     'unified-language-server' \
+#     'yaml-language-server' && \
+#     clean-layer.sh && \ 
+#     fix-permissions $CONDA_DIR && \
+#     fix-permissions /home/$NB_USER
 
 # OpenM install
 # Install OpenM++ MPI
-ARG OMPP_VERSION="1.17.5"
-# IMPORTANT: Don't forget to update the version number in the openmpp.desktop file!!
-ARG OMPP_PKG_DATE="20241021"
-# Sha needs to be manually generated.
-ARG SHA256ompp=79c4bf6e09c9c51f33986251f1f44279f29d4fe669b6e8f7d7597a406d24b5a9
-# OpenM++ environment settings
-ENV OMPP_INSTALL_DIR=/opt/openmpp/${OMPP_VERSION}
+# ARG OMPP_VERSION="1.17.5"
+# # IMPORTANT: Don't forget to update the version number in the openmpp.desktop file!!
+# ARG OMPP_PKG_DATE="20241021"
+# # Sha needs to be manually generated.
+# ARG SHA256ompp=79c4bf6e09c9c51f33986251f1f44279f29d4fe669b6e8f7d7597a406d24b5a9
+# # OpenM++ environment settings
+# ENV OMPP_INSTALL_DIR=/opt/openmpp/${OMPP_VERSION}
 
-COPY jupyter-ompp-proxy/ /opt/jupyter-ompp-proxy/
+# COPY jupyter-ompp-proxy/ /opt/jupyter-ompp-proxy/
 
 # OpenM++ expects sqlite to be installed (not just libsqlite)
 # Customize and rebuild omp-ui for jupyter-ompp-proxy install
 # issue with making a relative publicPath https://github.com/quasarframework/quasar/issues/8513
-ARG NODE_OPTIONS=--openssl-legacy-provider
-RUN apt-get update --yes \
-    && apt-get install --yes sqlite3 openmpi-bin libopenmpi-dev\
-    && wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/openmpp_ubuntu_mpi_${OMPP_PKG_DATE}.tar.gz -O /tmp/ompp.tar.gz \
-    && echo "${SHA256ompp} /tmp/ompp.tar.gz" | sha256sum -c - \
-    && mkdir -p ${OMPP_INSTALL_DIR} \
-    && tar -xf /tmp/ompp.tar.gz -C ${OMPP_INSTALL_DIR} --strip-components=1\
-    && rm -f /tmp/ompp.tar.gz \
-# Customize and rebuild omp-ui for jupyter-ompp-proxy install
-# issue with making a relative publicPath https://github.com/quasarframework/quasar/issues/8513
-    && sed -i -e 's/history/hash/' ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
-    && sed -i -e "s/OMS_URL:.*''/OMS_URL: '.'/" ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
-    && npm install --prefix ${OMPP_INSTALL_DIR}/ompp-ui @babel/traverse@7.23.2\
-    && npm run build --prefix ${OMPP_INSTALL_DIR}/ompp-ui \
-    && rm -r ${OMPP_INSTALL_DIR}/html \
-    && mv ${OMPP_INSTALL_DIR}/ompp-ui/dist/spa ${OMPP_INSTALL_DIR}/html \
-    && fix-permissions ${OMPP_INSTALL_DIR} \
-    && pip install /opt/jupyter-ompp-proxy/
+# ARG NODE_OPTIONS=--openssl-legacy-provider
+# RUN apt-get update --yes \
+#     && apt-get install --yes sqlite3 openmpi-bin libopenmpi-dev\
+#     && wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/openmpp_ubuntu_mpi_${OMPP_PKG_DATE}.tar.gz -O /tmp/ompp.tar.gz \
+#     && echo "${SHA256ompp} /tmp/ompp.tar.gz" | sha256sum -c - \
+#     && mkdir -p ${OMPP_INSTALL_DIR} \
+#     && tar -xf /tmp/ompp.tar.gz -C ${OMPP_INSTALL_DIR} --strip-components=1\
+#     && rm -f /tmp/ompp.tar.gz \
+# # Customize and rebuild omp-ui for jupyter-ompp-proxy install
+# # issue with making a relative publicPath https://github.com/quasarframework/quasar/issues/8513
+#     && sed -i -e 's/history/hash/' ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
+#     && sed -i -e "s/OMS_URL:.*''/OMS_URL: '.'/" ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
+#     && npm install --prefix ${OMPP_INSTALL_DIR}/ompp-ui @babel/traverse@7.23.2\
+#     && npm run build --prefix ${OMPP_INSTALL_DIR}/ompp-ui \
+#     && rm -r ${OMPP_INSTALL_DIR}/html \
+#     && mv ${OMPP_INSTALL_DIR}/ompp-ui/dist/spa ${OMPP_INSTALL_DIR}/html \
+#     && fix-permissions ${OMPP_INSTALL_DIR} \
+#     && pip install /opt/jupyter-ompp-proxy/
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2024-11-17T19-35-25Z /bin/mc /usr/local/bin/mc
@@ -185,31 +186,25 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 
-# Install some default R packages
-RUN mamba install --quiet --yes \
-      'r-arrow' \
-      'r-aws.s3' \
-      'r-base=4.4.1' \
-      'r-catools' \
-      'r-e1071' \
-      'r-hdf5r' \
-      'r-markdown' \
-      'r-odbc' \
-      'r-renv' \
-      'r-rodbc' \
-      'r-sf' \
-      'r-sparklyr' \
-      'r-tidyverse' \
-    && \
-    clean-layer.sh && \
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
-
-RUN python3 -m pip install \
-    'jupyter-rsession-proxy==2.2.0' \
-    'jupyter-server-proxy==4.2.0' && \
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+# # Install some default R packages
+# RUN mamba install --quiet --yes \
+#       'r-arrow' \
+#       'r-aws.s3' \
+#       'r-base=4.4.1' \
+#       'r-catools' \
+#       'r-e1071' \
+#       'r-hdf5r' \
+#       'r-markdown' \
+#       'r-odbc' \
+#       'r-renv' \
+#       'r-rodbc' \
+#       'r-sf' \
+#       'r-sparklyr' \
+#       'r-tidyverse' \
+#     && \
+#     clean-layer.sh && \
+#     fix-permissions $CONDA_DIR && \
+#     fix-permissions /home/$NB_USER
 
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"

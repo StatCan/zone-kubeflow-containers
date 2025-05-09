@@ -41,6 +41,17 @@ DEFAULT_NB_PREFIX := /notebook/username/notebookname
 ######    Docker helpers     ######
 ###################################
 
+tag/%: GITHUB_OUTPUT ?= .tmp/github_output.log
+tag/%: DARGS?=
+tag/%: REPO?=$(DEFAULT_REPO)
+tag/%: TAG?=$(DEFAULT_TAG)
+tag/%:
+	# End repo with a single slash and start tag with a single colon, if they exist
+	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') &&\
+	TAG=$$(echo "$(TAG)" | sed 's~^:*~:~' | sed 's~^\s*:*\s*$$~~') &&\
+	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" && \
+	echo "image_name=$$IMAGE_NAME" >> $(GITHUB_OUTPUT)
+
 pull/%: GITHUB_OUTPUT ?= .tmp/github_output.log
 pull/%: DARGS?=
 pull/%: REPO?=$(DEFAULT_REPO)
