@@ -40,7 +40,7 @@ on:
 
 jobs:
   build-upload:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     services:
       registry:
         image: registry:2

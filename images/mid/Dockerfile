@@ -53,45 +53,45 @@ COPY languagepacks.json $CS_TEMP_HOME/
 # Sets the default workspace for vscode
 COPY coder.json $CS_TEMP_HOME/
 
-# RUN pip install \
-#     'git+https://github.com/betatim/vscode-binder' && \
-#     # jupyter_contrib_nbextensions likes to be installed with pip
-#     mamba install --quiet --yes -c conda-forge \
-#     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
-#     # need to add mamba install pkg-config so R can find freetype related packages
-#     'nodejs' \
-#     'pkg-config' \
-#     'jupyterlab' \
-#     'jupyter_contrib_nbextensions' \ 
-#     'dash' \
-#     'plotly' \
-#     'ipywidgets' \
-#     'markupsafe' \
-#     'pyspark' \
-#     'ipympl' \
-#     'pexpect==4.9.0' \
-#     'jupyter-resource-usage' \
-#     'jupyter-rsession-proxy==2.2.0' \
-#     'jupyter-server-proxy==4.2.0' \
-#     'jupyterlab-language-pack-fr-fr' \
-#     'jupyterlab_execute_time' \
-#     'nb_conda_kernels' \
-#     'jupyterlab-lsp' \
-#     'jupyter-lsp'  && \
-#     jupyter server extension enable --py jupyter_server_proxy && \
-#     jupyter nbextension enable codefolding/main --sys-prefix && \
-#     jupyter labextension enable \
-#       '@jupyterlab/translation-extension' \
-#       '@jupyterlab/server-proxy' \
-#       'nbdime-jupyterlab' \
-#     && \
-#     jupyter lab build && \
-#     jupyter lab clean && \
-#   clean-layer.sh && \
-#   rm -rf /home/$NB_USER/.cache/yarn && \
-#   rm -rf /home/$NB_USER/.node-gyp && \
-#   fix-permissions $CONDA_DIR && \
-#   fix-permissions /home/$NB_USER
+RUN pip install \
+    'git+https://github.com/betatim/vscode-binder' && \
+    # jupyter_contrib_nbextensions likes to be installed with pip
+    mamba install --quiet --yes -c conda-forge \
+    # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
+    # need to add mamba install pkg-config so R can find freetype related packages
+    'nodejs' \
+    'pkg-config' \
+    'jupyterlab' \
+    'jupyter_contrib_nbextensions' \ 
+    'dash' \
+    'plotly' \
+    'ipywidgets' \
+    'markupsafe' \
+    'pyspark' \
+    'ipympl' \
+    'pexpect==4.9.0' \
+    'jupyter-resource-usage' \
+    'jupyter-rsession-proxy==2.2.0' \
+    'jupyter-server-proxy==4.2.0' \
+    'jupyterlab-language-pack-fr-fr' \
+    'jupyterlab_execute_time' \
+    'nb_conda_kernels' \
+    'jupyterlab-lsp' \
+    'jupyter-lsp'  && \
+    jupyter server extension enable --py jupyter_server_proxy && \
+    jupyter nbextension enable codefolding/main --sys-prefix && \
+    jupyter labextension enable \
+      '@jupyterlab/translation-extension' \
+      '@jupyterlab/server-proxy' \
+      'nbdime-jupyterlab' \
+    && \
+    jupyter lab build && \
+    jupyter lab clean && \
+  clean-layer.sh && \
+  rm -rf /home/$NB_USER/.cache/yarn && \
+  rm -rf /home/$NB_USER/.node-gyp && \
+  fix-permissions $CONDA_DIR && \
+  fix-permissions /home/$NB_USER
 
 # Install python, R, Julia and other useful language servers
 # RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
@@ -264,11 +264,11 @@ RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.maj
     && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
     && rm /tmp/sascfg.py
 
-# RUN jupyter nbextension install --py sas_kernel.showSASLog && \
-#     jupyter nbextension enable sas_kernel.showSASLog --py && \
-#     jupyter nbextension install --py sas_kernel.theme && \
-#     jupyter nbextension enable sas_kernel.theme --py && \
-#     jupyter nbextension list
+RUN jupyter nbextension install --py sas_kernel.showSASLog && \
+    jupyter nbextension enable sas_kernel.showSASLog --py && \
+    jupyter nbextension install --py sas_kernel.theme && \
+    jupyter nbextension enable sas_kernel.theme --py && \
+    jupyter nbextension list
 
 # Must be set in deepest image
 ENV DEFAULT_JUPYTER_URL=/lab 
@@ -287,14 +287,14 @@ RUN apt-get update --yes \
 
 # Forcibly upgrade packages to patch vulnerabilities
 # See https://github.com/StatCan/aaw-private/issues/58#issuecomment-1471863092 for more details.
-# RUN pip3 --no-cache-dir install --quiet \
-#       'wheel==0.40.0' \
-#       'setuptools==67.6.0' \
-#       'pyjwt==2.6.0' \
-#       'oauthlib==3.2.2' \
-#       'mpmath==1.3.0' \
-#       'lxml==5.3.1' \
-#       'pyarrow==14.0.1' \
-#       'cryptography==41.0.6' \
-#       && fix-permissions $CONDA_DIR && \
-#       fix-permissions /home/$NB_USER
+RUN pip3 --no-cache-dir install --quiet \
+      'wheel==0.40.0' \
+      'setuptools==67.6.0' \
+      'pyjwt==2.6.0' \
+      'oauthlib==3.2.2' \
+      'mpmath==1.3.0' \
+      'lxml==5.3.1' \
+      'pyarrow==14.0.1' \
+      'cryptography==41.0.6' \
+      && fix-permissions $CONDA_DIR && \
+      fix-permissions /home/$NB_USER
