@@ -68,14 +68,28 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  mid-jupyterlab:
+  sas-kernel:
     needs: [vars, mid]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "sas-kernel"
+      directory: "sas_kernel"
+      parent-image: "mid"
+      parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  mid-jupyterlab:
+    needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "mid-jupyterlab"
       directory: "jupyterlab"
-      parent-image: "mid"
-      parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
+      parent-image: "sas-kernel"
+      parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -97,13 +111,13 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
   mid-sas:
-    needs: [vars, mid]
+    needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "mid-sas"
       directory: "sas"
-      parent-image: "mid"
-      parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
+      parent-image: "sas-kernel"
+      parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:
