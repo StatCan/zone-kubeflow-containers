@@ -156,20 +156,6 @@ echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 # Have the NLS_LANG setting available in R and Rstudio
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 
-# change python location for vscode
-pythonInterpreterPath='{"python.defaultInterpreterPath": "/opt/conda/bin/python"}'
-
-if [ ! -d /home/jovyan/workspace/.vscode ]; then
-  mkdir -p /home/jovyan/workspace/.vscode;
-fi
-
-if [ ! -f /home/jovyan/workspace/.vscode/settings.json ]; then
-  #Not found
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json  
-else
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json
-fi
-
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
 #echo "Checking if Python venv exists"
@@ -198,13 +184,24 @@ if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
 
-# Create default user directory
-if [ ! -d "$HOME/workspace" ]; then
-  echo "Creating default user directory"
-  mkdir -p "$HOME/workspace"
-  mkdir -p "$HOME/workspace/data"
-  mkdir -p "$HOME/workspace/repositories"
-fi
+# Create default user directories
+WORKSPACE_DIR="$HOME/workspace"
+REPO_DIR="$WORKSPACE_DIR/repositories"
+DATA_DIR="$WORKSPACE_DIR/data"
+VSCODE_DIR="$WORKSPACE_DIR/.vscode"
+VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
+PYTHON_PATH="/opt/conda/bin/python"
+
+echo "Ensuring workspace directories exist..."
+mkdir -p "$REPO_DIR" "$DATA_DIR" "$VSCODE_DIR"
+
+# Set Python interpreter path for VSCode
+echo "Setting Python interpreter for VSCode..."
+cat > "$VSCODE_SETTINGS" <<EOF
+{
+  "python.defaultInterpreterPath": "$PYTHON_PATH"
+}
+EOF
 
 # Retrieving Alias file for oracle client
 # Runs on every startup because this output location is not persisted storage
