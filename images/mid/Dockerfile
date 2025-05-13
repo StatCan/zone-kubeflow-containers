@@ -11,8 +11,8 @@ USER root
     # jupyterlab-spreadsheet
 
 # Install vscode
-ARG VSCODE_VERSION=4.93.1
-ARG VSCODE_SHA=9307ad9dacf30a3de76a26d0d455150d17798cf0394ccf5a4f3705ff20c945d8
+ARG VSCODE_VERSION=4.99.4
+ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
@@ -31,8 +31,8 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_TEMP_HOME/Machine \
     && \ 
     # Manage extensions
-    code-server --install-extension ms-python.python@2024.8.1 && \
-    code-server --install-extension ms-python.debugpy@2024.8.0 && \
+    code-server --install-extension ms-python.python@2025.4.0 && \
+    code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
