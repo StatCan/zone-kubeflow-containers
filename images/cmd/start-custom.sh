@@ -184,7 +184,7 @@ if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
 
-# Create default user directories if missing
+# Create default user directories
 WORKSPACE_DIR="$HOME/workspace"
 REPO_DIR="$WORKSPACE_DIR/repositories"
 DATA_DIR="$WORKSPACE_DIR/data"
@@ -192,20 +192,16 @@ VSCODE_DIR="$WORKSPACE_DIR/.vscode"
 VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
 PYTHON_PATH="/opt/conda/bin/python"
 
-if [ ! -d "$WORKSPACE_DIR" ]; then
-  echo "Creating default user directory"
-  mkdir -p "$REPO_DIR" "$DATA_DIR"
-fi
+echo "Ensuring workspace directories exist..."
+[ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
+[ -d "$REPO_DIR" ] || mkdir -p "$REPO_DIR"
+[ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
+[ -d "$VSCODE_DIR" ] || mkdir -p "$VSCODE_DIR"
 
-# Only create VSCode settings if they don't already exist
+# Set Python interpreter path for VSCode if not already set
 if [ ! -f "$VSCODE_SETTINGS" ]; then
   echo "Setting Python interpreter for VSCode..."
-  mkdir -p "$VSCODE_DIR"
-  cat > "$VSCODE_SETTINGS" <<EOF
-{
-  "python.defaultInterpreterPath": "$PYTHON_PATH"
-}
-EOF
+  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\"}" > "$VSCODE_SETTINGS"
 fi
 
 # Retrieving Alias file for oracle client
