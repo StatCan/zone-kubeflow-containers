@@ -195,6 +195,7 @@ PYTHON_PATH="/opt/conda/bin/python"
 echo "Ensuring workspace directories exist..."
 mkdir -p "$REPO_DIR" "$DATA_DIR" "$VSCODE_DIR"
 
+
 # Set Python interpreter path for VSCode
 echo "Setting Python interpreter for VSCode..."
 cat > "$VSCODE_SETTINGS" <<EOF
