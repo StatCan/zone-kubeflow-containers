@@ -1,0 +1,77 @@
+#!/opt/conda/bin/python
+"""
+Create directory on a filer share.
+"""
+
+import argparse
+import sys
+import botocore.session
+from filers_common import get_filer_env_config
+
+
+def mkdir_filer(path: str):
+    "Create directory on filer S3 interface, using botocore."
+
+    print("Create directory on filer, with full path:", path)
+
+    # Get the filer S3 configuration.
+    url, access_key, secret_key, bucket_name, object_key = get_filer_env_config(path)
+
+    try:
+        # Some adjustments for mkdir.
+        if object_key is None or len(object_key) == 0:
+            raise OSError("Cannot create root of filer.")
+        if object_key[-1] != "/":
+            object_key = object_key + "/"
+
+        # Connect to filer S3 interface.
+        session = botocore.session.get_session()
+        s3_client = session.create_client(
+            "s3",
+            endpoint_url=url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+        # Create an empty object (NetApp CVO way to create directory).
+        s3_client.put_object(
+            Body=b"",
+            Bucket=bucket_name,
+            Key=object_key,
+            ChecksumAlgorithm="SHA256",
+            ChecksumSHA256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        )
+
+        # Status of operation.
+        status_str = "Successfully created"
+        exit_code = 0
+    except OSError as e:
+        # Print details of error.
+        print("Error occurred when attempting to create directory:", e)
+
+        # Status of operation.
+        status_str = "Failed to create"
+        exit_code = 1
+
+    # Print info about operation.
+    print(
+        (
+            f'{status_str} the directory "{path}" on NetApp CVO filer; with endpoint URL {url}; '
+            f'bucket {bucket_name}; object key "{object_key}".'
+        )
+    )
+    return exit_code
+
+
+def main():
+    "Invoked when running filer-mkdir from command line."
+    cmd_parser = argparse.ArgumentParser(description="Create directory on filer.")
+    cmd_parser.add_argument("path", help="path to directory to create")
+    args = cmd_parser.parse_args()
+
+    r = mkdir_filer(args.path)
+    sys.exit(r)
+
+
+if __name__ == "__main__":
+    main()

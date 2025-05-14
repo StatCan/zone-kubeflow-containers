@@ -1,0 +1,29 @@
+#!/opt/conda/bin/python
+"""
+Get MinIO client path for specified filer location.
+"""
+
+import argparse
+from filers_common import get_mc_path
+
+
+def show_mc_path(path: str):
+    """
+    Print MinIO client path for specified input path.
+    """
+    print(get_mc_path(path))
+
+
+def main():
+    "Invoked when running filer-mc-path from command line."
+    cmd_parser = argparse.ArgumentParser(
+        description="Get MinIO client path for filer location."
+    )
+    cmd_parser.add_argument("path", help="filer path to convert to mc format")
+    args = cmd_parser.parse_args()
+
+    show_mc_path(args.path)
+
+
+if __name__ == "__main__":
+    main()
