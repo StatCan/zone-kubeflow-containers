@@ -1,0 +1,103 @@
+#!/opt/conda/bin/python
+"""
+Upload local file to filer.
+"""
+
+import argparse
+import hashlib
+import re
+import sys
+import botocore.session
+from filers_common import get_filer_env_config
+
+
+def put_filer(source_local_path: str, dest_filer_path: str) -> int:
+    "Copy specified local file to filer via S3 interface, using botocore."
+
+    print(f'Upload local file "{source_local_path}" to filer path "{dest_filer_path}".')
+
+    # Get the filer S3 configuration.
+    url, access_key, secret_key, bucket_name, object_key = get_filer_env_config(
+        dest_filer_path
+    )
+    digest = "unknown"
+
+    try:
+        # Validate and adjust destination path.
+        if bucket_name is None:
+            raise OSError("Must specify valid share for upload.")
+        if object_key is None or len(object_key) == 0:
+            object_key = "/"
+
+        # If final output ends in /, put as file within folder.
+        if object_key[-1] == "/":
+            fn = re.sub(r".*\/", "", source_local_path)
+            dest_filer_path += fn
+            object_key += fn
+
+        # Get the SHA256 checksum.
+        with open(source_local_path, "rb") as f:
+            digest = hashlib.file_digest(f, "sha256").hexdigest()
+
+        # Connect to filer S3 interface.
+        session = botocore.session.get_session()
+        s3_client = session.create_client(
+            "s3",
+            endpoint_url=url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+        # Upload the object to filer.
+        with open(source_local_path, "rb") as f:
+            s3_client.put_object(
+                Body=f,
+                Bucket=bucket_name,
+                Key=object_key,
+                ChecksumAlgorithm="SHA256",
+                ChecksumSHA256=digest,
+            )
+
+        # Status of operation.
+        status_str = "Successfully uploaded the file"
+        exit_code = 0
+    except OSError as e:
+        # Print details of error.
+        print("Error occurred when attempting to upload file:", e)
+
+        # Status of operation.
+        status_str = "Failed to upload the file"
+        exit_code = 1
+
+    # Print info about operation.
+    print(
+        (
+            f'{status_str} the local file "{source_local_path}" to remote path '
+            f'"{dest_filer_path}" on NetApp CVO filer; with SHA checksum {digest}; '
+            f'endpoint URL {url}; bucket {bucket_name}; object key "{object_key}".'
+        )
+    )
+    return exit_code
+
+
+def main():
+    "Invoked when running filer-put from command line."
+    cmd_parser = argparse.ArgumentParser(
+        description="Copy file from local path to filer."
+    )
+    cmd_parser.add_argument("source_local_path", help="path to source local file")
+    cmd_parser.add_argument(
+        "dest_filer_path",
+        help=(
+            "path to destination filer file, if directory use "
+            "same filename as source within the directory"
+        ),
+    )
+    args = cmd_parser.parse_args()
+
+    r = put_filer(args.source_local_path, args.dest_filer_path)
+    sys.exit(r)
+
+
+if __name__ == "__main__":
+    main()

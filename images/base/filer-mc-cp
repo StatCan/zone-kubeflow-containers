@@ -1,0 +1,101 @@
+#!/opt/conda/bin/python
+"""
+Copy files to / from filer, using mc cp.
+"""
+
+import argparse
+import os
+import sys
+import subprocess
+
+from filers_common import init_all_filers, get_mc_path, check_filer_path
+
+
+def copy_filer(
+    source_path: str,
+    dest_path: str,
+    recursive: bool = False,
+    indicate_init_done_file: str = "/tmp/_filer_minio_client_init.done",
+) -> int:
+    "Copy files to / from filer, using MinIO client."
+
+    # Print info.
+    rec_str = " recursively" if recursive else ""
+    print(f'Copy "{source_path}" to "{dest_path}"{rec_str}.')
+
+    # Initialize MinIO client aliases to filers.
+    if not os.path.exists(indicate_init_done_file):
+        print("Need to initialize MinIO filer aliases.")
+        init_all_filers()
+    else:
+        print(
+            (
+                "Skip filer alias initialization as indicator file"
+                f" {indicate_init_done_file} already exists."
+            )
+        )
+
+    # Check if each path is to filer, and if so, get MinIO path.
+    if check_filer_path(source_path):
+        source_path = get_mc_path(source_path)
+        print("Converted source path to MinIO path:", source_path)
+
+    if check_filer_path(dest_path):
+        dest_path = get_mc_path(dest_path)
+        print("Converted destination path to MinIO path:", dest_path)
+
+    # Command: build as list, supporting additional options.
+    cmd = ["mc", "cp", "--disable-multipart"]
+    if recursive:
+        cmd.append("--recursive")
+    cmd.append(source_path)
+    cmd.append(dest_path)
+
+    # Run the mc ls command.
+    r = subprocess.run(
+        cmd,
+        check=False,
+    )
+
+    # Print info.
+    if r.returncode != 0:
+        print(f"Error occurred running mc cp command, return code {r.returncode}.")
+    else:
+        print("Successfully performed the copy using mc cp.")
+    return r.returncode
+
+
+def main():
+    "Invoked when running filer-mc-cp from command line."
+    cmd_parser = argparse.ArgumentParser(
+        description="Copy files to / from filer, using mc cp."
+    )
+    cmd_parser.add_argument("source_path", help="path of source file")
+    cmd_parser.add_argument("dest_path", help="path of destination file")
+    cmd_parser.add_argument(
+        "-r",
+        "--recursive",
+        help="copy recursively",
+        action="store_true",
+    )
+    cmd_parser.add_argument(
+        "--indicate-init-done-file",
+        help=(
+            "file that indicates initialization command as been executed, "
+            "default /tmp/_filer_minio_client_init.done"
+        ),
+        default="/tmp/_filer_minio_client_init.done",
+    )
+    args = cmd_parser.parse_args()
+
+    r = copy_filer(
+        args.source_path,
+        args.dest_path,
+        recursive=args.recursive,
+        indicate_init_done_file=args.indicate_init_done_file,
+    )
+    sys.exit(r)
+
+
+if __name__ == "__main__":
+    main()

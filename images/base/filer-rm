@@ -1,0 +1,71 @@
+#!/opt/conda/bin/python
+"""
+Remove individual file from a filer share.
+"""
+
+import argparse
+import sys
+import botocore.session
+from filers_common import get_filer_env_config
+
+
+def rm_filer(path: str) -> int:
+    "Remove specified file on filer S3 interface, using botocore."
+
+    print("Remove file on filer, with full path:", path)
+
+    # Get the filer S3 configuration.
+    url, access_key, secret_key, bucket_name, object_key = get_filer_env_config(path)
+
+    try:
+        # Validate path.
+        if object_key is None or len(object_key) == 0:
+            raise OSError("Cannot remove root of filer.")
+
+        # Connect to filer S3 interface.
+        session = botocore.session.get_session()
+        s3_client = session.create_client(
+            "s3",
+            endpoint_url=url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+        # Remove the object.
+        s3_client.delete_object(Bucket=bucket_name, Key=object_key)
+
+        # Status of operation.
+        status_str = "Successfully removed the file"
+        exit_code = 0
+    except OSError as e:
+        # Print details of error.
+        print("Error occurred when attempting to remove file:", e)
+
+        # Status of operation.
+        status_str = "Failed to remove the file"
+        exit_code = 1
+
+    # Print info about operation.
+    print(
+        (
+            f'{status_str} the file "{path}" on NetApp CVO filer; with endpoint URL {url}; '
+            f'bucket {bucket_name}; object key "{object_key}".'
+        )
+    )
+    return exit_code
+
+
+def main():
+    "Invoked when running filer-rm from command line."
+    cmd_parser = argparse.ArgumentParser(
+        description="Remove individual file from filer."
+    )
+    cmd_parser.add_argument("path", help="path to file to remove")
+    args = cmd_parser.parse_args()
+
+    r = rm_filer(args.path)
+    sys.exit(r)
+
+
+if __name__ == "__main__":
+    main()
