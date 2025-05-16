@@ -132,7 +132,7 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
     # optional: for bcp and sqlcmd
     ACCEPT_EULA=Y apt-get install -y mssql-tools18 && \
     # installing unixODBC
-    apt-get install -y unixodbc unixodbc-dev && \
+    apt-get install -y unixodbc && \
     # libaio1 needed for Oracle Instant Client
     apt-get install -y libaio1t64 && \
     ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1 && \
