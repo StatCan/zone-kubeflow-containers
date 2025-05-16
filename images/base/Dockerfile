@@ -144,6 +144,14 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
 RUN echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc && \
     source ~/.bashrc
 
+# edits the odbc config file with additional settings
+RUN cat <<EOT >> /etc/odbcinst.ini
+
+[ODBC]
+Trace=yes
+TraceFile=/home/$NB_USER/sql.log
+EOT
+
 # installing Oracle Instant Client
 RUN curl -O https://download.oracle.com/otn_software/linux/instantclient/2350000/instantclient-basic-linux.x64-23.5.0.24.07.zip && \
     unzip instantclient-basic-linux.x64-23.5.0.24.07.zip -d /opt/oracle/ && \
