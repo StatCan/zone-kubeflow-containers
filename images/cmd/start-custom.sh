@@ -256,13 +256,15 @@ local({
 EOF
 fi
 
-# Set permissions for .gnupg
-DIR="/home/$NB_USER/.gnupg"
-
-if [ -d "$DIR" ]; then
-  chmod 700 "$DIR"
-  echo "Permissions for $DIR set to 700."
+# Create and set the gpg settings during first boot
+if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
+  echo -e "default-cache-ttl 34560000 \nmax-cache-ttl 34560000 \n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
 fi
+
+# Set permissions on startup
+chmod 700 "/home/$NB_USER/.gnupg"
+echo "Permissions for $DIR set to 700."
+
 
 # Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
