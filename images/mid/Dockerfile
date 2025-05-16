@@ -97,6 +97,7 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' && \
     /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' && \
     mamba install -c conda-forge \
       'python-lsp-server' \
+      'turbodbc' \
     && \
 # These should probably go in a package.json file
 # Copy the file over then use npm ci, much better flexibility for managing deps and CVEs
