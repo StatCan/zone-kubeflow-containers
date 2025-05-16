@@ -258,6 +258,7 @@ fi
 
 # Create and set the gpg settings during first boot
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
+  mkdir -p "/home/$NB_USER/.gnupg"
   echo -e "default-cache-ttl 34560000 \nmax-cache-ttl 34560000 \n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
 fi
 
