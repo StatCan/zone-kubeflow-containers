@@ -120,6 +120,7 @@ Tests are formatted using typical pytest formats
 
 1. Clone the repository with `git clone https://github.com/StatCan/zone-kubeflow-containers`.
 2. Run `make install-python-dev-venv` to build a development Python virtual environment.
+2.5 Add back from statements in Dockerfiles.
 3. Build your image using `make build/IMAGENAME DIRECTORY=STAGENAME`,
 e.g. run `make build/base DIRECTORY=base`.
 4. Test your image using automated tests through `make test/IMAGENAME`,
