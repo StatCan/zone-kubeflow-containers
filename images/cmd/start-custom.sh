@@ -242,7 +242,7 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
 
-pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi-remote/simple
+pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
@@ -256,11 +256,12 @@ local({
 EOF
 fi
 
-# Set permissions for .gnupg
-DIR="/home/$NB_USER/.gnupg"
-
-if [ -d "$DIR" ]; then
-  chmod 700 "$DIR"
+# Create and set the gpg settings during first boot
+if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
+  mkdir -p "/home/$NB_USER/.gnupg"
+  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+  # Set Permissions
+  chmod 700 "/home/$NB_USER/.gnupg"
   echo "Permissions for $DIR set to 700."
 fi
 
