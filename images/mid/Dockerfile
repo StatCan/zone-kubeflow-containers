@@ -55,14 +55,12 @@ COPY coder.json $CS_TEMP_HOME/
 
 RUN pip install \
     'git+https://github.com/betatim/vscode-binder' && \
-    # jupyter_contrib_nbextensions likes to be installed with pip
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -78,7 +76,6 @@ RUN pip install \
     'jupyterlab-lsp' \
     'jupyter-lsp'  && \
     jupyter server extension enable --py jupyter_server_proxy && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
     jupyter labextension enable \
       '@jupyterlab/translation-extension' \
       '@jupyterlab/server-proxy' \
