@@ -63,7 +63,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
