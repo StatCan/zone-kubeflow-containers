@@ -12,6 +12,8 @@ RUN apt-get update --yes \
 
 COPY suspend-server.sh /usr/local/bin
 COPY adjust-server-resources.py /usr/local/bin
+COPY normalize_filer_path.sh /usr/local/bin
+
 
 # https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 RUN mamba install --quiet \
@@ -27,7 +29,8 @@ RUN mamba install --quiet \
       fix-permissions $CONDA_DIR && \
       fix-permissions /home/$NB_USER && \
       chmod +x /usr/local/bin/suspend-server.sh && \
-      chmod +x /usr/local/bin/adjust-server-resources.py
+      chmod +x /usr/local/bin/adjust-server-resources.py && \
+      chmod +x /usr/local/bin/normalize_filer_path.sh
 
 # Add helpers for shell initialization
 COPY shell_helpers.sh /tmp/shell_helpers.sh
