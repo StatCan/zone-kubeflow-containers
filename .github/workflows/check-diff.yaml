@@ -17,7 +17,7 @@ on:
         type: string
     outputs:
       is-diff:
-        description: Is there a difference between the master branch and the current branch
+        description: Is there a difference between the target branch and the current branch
         value: ${{ jobs.check-diff.outputs.is-diff }}
 
 jobs:
@@ -29,26 +29,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch master branch
+      - name: Fetch target branch
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          git fetch origin master
+          git fetch origin ${{ github.event.pull_request.base.ref }}
 
       - name: Check for changes
         id: check-changes
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          echo "Always build on pushes to master and beta"
+          echo "is-diff=true" >> $GITHUB_OUTPUT
+
+      - name: Check for changes
+        id: check-changes
+        if: ${{ github.event_name == 'pull_request' }}
         run: | # Check for changes excluding README.md
-          if [ "${{ inputs.branch-name }}" == "master" ]; then
-            echo "Always build master"
-            echo "is-diff=true" >> $GITHUB_OUTPUT
-          elif [ "${{ inputs.parent-image-is-diff }}" == "true" ]; then
+          if [ "${{ inputs.parent-image-is-diff }}" == "true" ]; then
             echo "Parent is diff"
             echo "is-diff=true" >> $GITHUB_OUTPUT
           # Check if the subdirectory exists in the base branch
-          elif ! git ls-tree -d origin/master -- "images/${{ inputs.directory }}" >/dev/null 2>&1; then
+          elif ! git ls-tree -d origin/${{ github.event.pull_request.base.ref }} -- "images/${{ inputs.directory }}" >/dev/null 2>&1; then
             echo "Subdirectory does not exist in the base branch"
             echo "is-diff='true'" >> $GITHUB_OUTPUT
           else
-            CHANGES=$(git diff --name-only origin/master HEAD -- "images/${{ inputs.directory }}" | grep -v "README.md" || true)
-            NEW_FILES=$(git diff --name-only --diff-filter=A origin/master HEAD -- "images/${{ inputs.directory }}" | grep -v "README.md" || true)
+            CHANGES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/${{ inputs.directory }}" | grep -v "README.md" || true)
+            NEW_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/${{ inputs.directory }}" | grep -v "README.md" || true)
             
             CHANGES="${CHANGES}${NEW_FILES}"
 
