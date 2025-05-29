@@ -169,3 +169,4 @@ ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
 ENV TNS_ADMIN="/opt/oracle/instantclient_23_5/network/admin"
 
 # Adding comment to trigger workflows
+ENV TEST_ENV="true"
