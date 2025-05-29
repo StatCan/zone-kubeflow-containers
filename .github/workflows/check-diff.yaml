@@ -29,13 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for changes
-        id: check-changes
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          echo "Always build on pushes to master and beta"
-          echo "is-diff=true" >> $GITHUB_OUTPUT
-
       - name: Fetch target branch
         if: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -43,9 +36,11 @@ jobs:
 
       - name: Check for changes
         id: check-changes
-        if: ${{ github.event_name == 'pull_request' }}
         run: | # Check for changes excluding README.md
-          if [ "${{ inputs.parent-image-is-diff }}" == "true" ]; then
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "Always build on pushes to master and beta"
+            echo "is-diff=true" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.parent-image-is-diff }}" == "true" ]; then
             echo "Parent is diff"
             echo "is-diff=true" >> $GITHUB_OUTPUT
           # Check if the subdirectory exists in the base branch
