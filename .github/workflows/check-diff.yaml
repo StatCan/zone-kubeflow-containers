@@ -29,17 +29,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch target branch
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-
       - name: Check for changes
         id: check-changes
         if: ${{ github.event_name == 'push' }}
         run: |
           echo "Always build on pushes to master and beta"
           echo "is-diff=true" >> $GITHUB_OUTPUT
+
+      - name: Fetch target branch
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
 
       - name: Check for changes
         id: check-changes
