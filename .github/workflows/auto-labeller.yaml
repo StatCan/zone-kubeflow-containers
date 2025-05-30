@@ -5,7 +5,7 @@ on:
 
 jobs:
   approved:
-    #if: github.event.review.state == 'approved' && ${{ github.event.pull_request.base.ref }} == "beta" 
+    if: github.event.review.state == 'approved' && ${{ github.event.pull_request.base.ref }} == "beta" 
     runs-on: ubuntu-latest
     steps:
       - run: echo "This PR was approved. Adding label for beta"
@@ -13,6 +13,5 @@ jobs:
       - name: add labels
         uses: actions-ecosystem/action-add-labels@v1
         with:
-          github_token: ${{ github.token }}
           labels: "ready for beta"
       
