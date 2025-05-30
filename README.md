@@ -157,7 +157,7 @@ k8scc01covidacr.azurecr.io/sas              v2         2b9acb795079   19 hours a
 GitHub Actions CI is enabled to do building, scanning, automated testing, pushing of our images to ACR.
 The workflows will trigger on the following:
 
-- any push to master
+- any push to master or beta
 - any push to an open PR that edits files in `.github/workflows/` or `/images/`
 
 This allows for easy scanning and automated testing for images.
