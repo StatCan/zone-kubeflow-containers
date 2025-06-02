@@ -257,7 +257,7 @@ fi
 # Create and set the gpg settings during first boot
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   mkdir -p "/home/$NB_USER/.gnupg"
-  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-tty\n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
   # Set Permissions
   chmod 700 "/home/$NB_USER/.gnupg"
   echo "Permissions for $DIR set to 700."
