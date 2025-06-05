@@ -200,7 +200,7 @@ echo "Ensuring workspace directories exist..."
 
 # Set Python interpreter path for VSCode if not already set
 if [ ! -f "$VSCODE_SETTINGS" ]; then
-  echo "Creating default settings for VSCode..."
+  echo "Python default settings for VSCode..."
   echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
 fi
 
