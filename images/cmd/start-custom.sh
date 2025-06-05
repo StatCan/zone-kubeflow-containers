@@ -201,7 +201,7 @@ echo "Ensuring workspace directories exist..."
 # Set Python interpreter path for VSCode if not already set
 if [ ! -f "$VSCODE_SETTINGS" ]; then
   echo "Setting Python interpreter for VSCode..."
-  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\"}" > "$VSCODE_SETTINGS"
+  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
 fi
 
 # Retrieving Alias file for oracle client
