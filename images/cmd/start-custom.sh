@@ -208,7 +208,7 @@ fi
 
 if [ ! -f "$VSCODE_USER_DIR/settings.json" ]; then
   echo "Python default user settings for VSCode..."
-  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\",\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
+  echo "{\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
 fi
 
 # Retrieving Alias file for oracle client
