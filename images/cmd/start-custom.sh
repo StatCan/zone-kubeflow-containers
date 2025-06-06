@@ -191,7 +191,7 @@ DATA_DIR="$WORKSPACE_DIR/data"
 VSCODE_DIR="$WORKSPACE_DIR/.vscode"
 VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
 PYTHON_PATH="/opt/conda/bin/python"
-VSCODE_USER_DIR="$HOME/.local/share/code-server/User/settings.json"
+VSCODE_USER_DIR="$HOME/.local/share/code-server/User"
 
 echo "Ensuring workspace directories exist..."
 [ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
@@ -206,9 +206,9 @@ if [ ! -f "$VSCODE_SETTINGS" ]; then
   echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
 fi
 
-if [ ! -f "$VSCODE_USER_DIR" ]; then
+if [ ! -f "$VSCODE_USER_DIR/settings.json" ]; then
   echo "Python default user settings for VSCode..."
-  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\",\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR"
+  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\",\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
 fi
 
 # Retrieving Alias file for oracle client
