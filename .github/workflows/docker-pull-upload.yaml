@@ -44,9 +44,15 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
+      # If the target is beta, pull from beta
       - name: Pull existing image
         id: pull-existing
-        run: make pull/${{ inputs.image }} REPO=${{ inputs.registry-name }} TAG=v2
+        run: |
+          if [ "${{ github.event.pull_request.base.ref }}" == "beta" ]; then
+            make pull/${{ inputs.image }} REPO=${{ inputs.registry-name }} TAG=beta
+          else
+            make pull/${{ inputs.image }} REPO=${{ inputs.registry-name }} TAG=v2
+          fi
 
       - name: Retag existing image
         run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }} SOURCE_FULL_IMAGE_NAME=${{ steps.pull-existing.outputs.image_name }}
