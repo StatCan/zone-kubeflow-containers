@@ -10,7 +10,7 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
     grep "quarto-${QUARTO_VERSION}-linux-amd64.tar.gz" /tmp/quarto-${QUARTO_VERSION}-checksums.txt | sed "s|quarto-${QUARTO_VERSION}-linux-amd64.tar.gz|/tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz|" | sha256sum -c - && \
     tar -xzvf /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz -C /tmp/ && \
     chmod +x /tmp/quarto-${QUARTO_VERSION} && \
-    mv /tmp/quarto-${QUARTO_VERSION}/bin/quarto /usr/bin/quarto  && \
+    ln -s /tmp/quarto-${QUARTO_VERSION}/bin/quarto /usr/bin/quarto && \
     # Install lmodern, required by LaTeX so Quarto can produce PDFs
     apt-get update && sudo apt-get install lmodern -y && \
     rm -rf /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz && \
