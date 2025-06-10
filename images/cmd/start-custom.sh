@@ -156,20 +156,6 @@ echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 # Have the NLS_LANG setting available in R and Rstudio
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 
-# change python location for vscode
-pythonInterpreterPath='{"python.defaultInterpreterPath": "/opt/conda/bin/python"}'
-
-if [ ! -d /home/jovyan/workspace/.vscode ]; then
-  mkdir -p /home/jovyan/workspace/.vscode;
-fi
-
-if [ ! -f /home/jovyan/workspace/.vscode/settings.json ]; then
-  #Not found
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json  
-else
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json
-fi
-
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
 #echo "Checking if Python venv exists"
@@ -198,12 +184,31 @@ if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
 
-# Create default user directory
-if [ ! -d "$HOME/workspace" ]; then
-  echo "Creating default user directory"
-  mkdir -p "$HOME/workspace"
-  mkdir -p "$HOME/workspace/data"
-  mkdir -p "$HOME/workspace/repositories"
+# Create default user directories
+WORKSPACE_DIR="$HOME/workspace"
+REPO_DIR="$WORKSPACE_DIR/repositories"
+DATA_DIR="$WORKSPACE_DIR/data"
+VSCODE_DIR="$WORKSPACE_DIR/.vscode"
+VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
+PYTHON_PATH="/opt/conda/bin/python"
+VSCODE_USER_DIR="$HOME/.local/share/code-server/User"
+
+echo "Ensuring workspace directories exist..."
+[ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
+[ -d "$REPO_DIR" ] || mkdir -p "$REPO_DIR"
+[ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
+[ -d "$VSCODE_DIR" ] || mkdir -p "$VSCODE_DIR"
+[ -d "$VSCODE_USER_DIR" ] || mkdir -p "$VSCODE_USER_DIR"
+
+# Set Python interpreter path for VSCode if not already set
+if [ ! -f "$VSCODE_SETTINGS" ]; then
+  echo "Python default settings for VSCode..."
+  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
+fi
+
+if [ ! -f "$VSCODE_USER_DIR/settings.json" ]; then
+  echo "Python default user settings for VSCode..."
+  echo "{\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
 fi
 
 # Retrieving Alias file for oracle client
@@ -256,11 +261,12 @@ local({
 EOF
 fi
 
-# Set permissions for .gnupg
-DIR="/home/$NB_USER/.gnupg"
-
-if [ -d "$DIR" ]; then
-  chmod 700 "$DIR"
+# Create and set the gpg settings during first boot
+if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
+  mkdir -p "/home/$NB_USER/.gnupg"
+  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+  # Set Permissions
+  chmod 700 "/home/$NB_USER/.gnupg"
   echo "Permissions for $DIR set to 700."
 fi
 

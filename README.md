@@ -120,6 +120,7 @@ Tests are formatted using typical pytest formats
 
 1. Clone the repository with `git clone https://github.com/StatCan/zone-kubeflow-containers`.
 2. Run `make install-python-dev-venv` to build a development Python virtual environment.
+2.5 Add back from statements in Dockerfiles.
 3. Build your image using `make build/IMAGENAME DIRECTORY=STAGENAME`,
 e.g. run `make build/base DIRECTORY=base`.
 4. Test your image using automated tests through `make test/IMAGENAME`,
@@ -156,7 +157,7 @@ k8scc01covidacr.azurecr.io/sas              v2         2b9acb795079   19 hours a
 GitHub Actions CI is enabled to do building, scanning, automated testing, pushing of our images to ACR.
 The workflows will trigger on the following:
 
-- any push to master
+- any push to master or beta
 - any push to an open PR that edits files in `.github/workflows/` or `/images/`
 
 This allows for easy scanning and automated testing for images.

@@ -1,5 +1,6 @@
 USER root
 
+
 # installs vscode server, python & conda packages and jupyter lab extensions.
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
@@ -11,8 +12,8 @@ USER root
     # jupyterlab-spreadsheet
 
 # Install vscode
-ARG VSCODE_VERSION=4.93.1
-ARG VSCODE_SHA=9307ad9dacf30a3de76a26d0d455150d17798cf0394ccf5a4f3705ff20c945d8
+ARG VSCODE_VERSION=4.99.4
+ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
@@ -31,8 +32,8 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_TEMP_HOME/Machine \
     && \ 
     # Manage extensions
-    code-server --install-extension ms-python.python@2024.8.1 && \
-    code-server --install-extension ms-python.debugpy@2024.8.0 && \
+    code-server --install-extension ms-python.python@2025.4.0 && \
+    code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
@@ -55,14 +56,12 @@ COPY coder.json $CS_TEMP_HOME/
 
 RUN pip install \
     'git+https://github.com/betatim/vscode-binder' && \
-    # jupyter_contrib_nbextensions likes to be installed with pip
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -78,7 +77,6 @@ RUN pip install \
     'jupyterlab-lsp' \
     'jupyter-lsp'  && \
     jupyter server extension enable --py jupyter_server_proxy && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
     jupyter labextension enable \
       '@jupyterlab/translation-extension' \
       '@jupyterlab/server-proxy' \
@@ -214,81 +212,6 @@ RUN python3 -m pip install \
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
-
-# SAS
-
-# Install Quarto
-ARG QUARTO_VERSION=1.5.57
-ARG QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz
-ARG QUARTO_CHECKSUM_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-checksums.txt
-
-RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz && \
-    wget -q ${QUARTO_CHECKSUM_URL} -O /tmp/quarto-${QUARTO_VERSION}-checksums.txt && \
-    grep "quarto-${QUARTO_VERSION}-linux-amd64.tar.gz" /tmp/quarto-${QUARTO_VERSION}-checksums.txt | sed "s|quarto-${QUARTO_VERSION}-linux-amd64.tar.gz|/tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz|" | sha256sum -c - && \
-    tar -xzvf /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz -C /tmp/ && \
-    chmod +x /tmp/quarto-${QUARTO_VERSION} && \
-    ln -s /tmp/quarto-${QUARTO_VERSION}/bin/quarto /usr/bin/quarto && \
-    # Install lmodern, required by LaTeX so Quarto can produce PDFs
-    apt-get update && sudo apt-get install lmodern -y && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN groupadd -g 1002 sasstaff && \
-    usermod -a -G sasstaff jovyan && \
-    echo "jovyan:jovyan" | chpasswd
-
-COPY --from=k8scc01covidacr.azurecr.io/sas4c:0.0.3 /usr/local/SASHome /usr/local/SASHome
-COPY --from=minio/mc:RELEASE.2024-11-17T19-35-25Z /bin/mc /usr/local/bin/mc
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmagic1 \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-    chmod -R 0775 /usr/local/SASHome/studioconfig
-
-WORKDIR /home/jovyan
-
-ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
-
-ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
-
-RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
-
-ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
-
-EXPOSE 8561 8591 38080
-
-# SASPY
-
-ENV SASPY_VERSION="5.4.0"
-
-RUN pip install sas_kernel
-
-COPY sascfg.py /tmp/sascfg.py
-RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
-    && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
-    && rm /tmp/sascfg.py
-
-RUN jupyter nbextension install --py sas_kernel.showSASLog && \
-    jupyter nbextension enable sas_kernel.showSASLog --py && \
-    jupyter nbextension install --py sas_kernel.theme && \
-    jupyter nbextension enable sas_kernel.theme --py && \
-    jupyter nbextension list
-
-# Must be set in deepest image
-ENV DEFAULT_JUPYTER_URL=/lab 
-
-# SAS GConfid
-
-COPY G-CONFID107003ELNX6494M7/ /usr/local/SASHome/gensys/G-CONFID107003ELNX6494M7/
-COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
-
-# Remove libpdfbox-java due to CVE-2019-0228. See https://github.com/StatCan/aaw-kubeflow-containers/issues/249#issuecomment-834808115 for details.
-# Issue opened https://github.com/jupyter/docker-stacks/issues/1299.
-# This line of code should be removed once a solution or better alternative is found.
-RUN apt-get update --yes \
-    && dpkg -r --force-depends libpdfbox-java \
-    && rm -rf /var/lib/apt/lists/*
 
 # Forcibly upgrade packages to patch vulnerabilities
 # See https://github.com/StatCan/aaw-private/issues/58#issuecomment-1471863092 for more details.
