@@ -1,5 +1,6 @@
 USER root
 
+
 # installs vscode server, python & conda packages and jupyter lab extensions.
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
