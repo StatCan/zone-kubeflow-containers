@@ -66,7 +66,7 @@ RUN pip install \
     'plotly' \
     'ipywidgets' \
     'markupsafe' \
-    'pyspark' \
+    'pyspark==3.5.5' \
     'ipympl' \
     'pexpect==4.9.0' \
     'jupyter-resource-usage' \
