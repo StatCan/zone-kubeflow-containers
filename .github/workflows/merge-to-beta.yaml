@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      REPO: ${{ github.event.repository.name }}
+      # REPO: ${{ github.event.repository.name }}
     steps:
-      - name: "Get ready-for-beta PRs"
-        run: gh pr list -l ready-for-beta --repo $REPO
+    - uses: actions/checkout@v4
+
+    - name: "Get ready-for-beta PRs"
+      run: gh pr list -l ready-for-beta
