@@ -1,7 +1,11 @@
 name: Merge to Beta
 on:
   pull_request:
-    types: [opened, edited]
+   types:
+    - opened
+    - edited
+    - synchronize
+    - reopened
   issue_comment:
     types: [created, deleted, edited]
   
