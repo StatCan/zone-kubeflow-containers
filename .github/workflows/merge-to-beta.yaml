@@ -14,13 +14,12 @@ on:
 #     # Execute at 2am EST every day
 #     - cron:  '0 7 * * *'
 
-
-
 jobs:
   auto-merge-beta-prs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.event.repository.name }}
     steps:
       - name: "Get ready-for-beta PRs"
         run: gh pr list -l ready-for-beta
