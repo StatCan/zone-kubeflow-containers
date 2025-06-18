@@ -5,7 +5,7 @@ on:
       - "master"
       - "beta"
     paths:
-      - ".github/workflows/*"
+      # - ".github/workflows/*"
 
       - "images/**"
       - "!images/*/README.md"
@@ -14,7 +14,7 @@ on:
       - "requirements-dev.txt"
   pull_request:
     paths:
-      - ".github/workflows/*"
+      # - ".github/workflows/*"
 
       - "images/**"
       - "!images/*/README.md"
