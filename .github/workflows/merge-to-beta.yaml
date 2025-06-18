@@ -15,4 +15,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Get ready-for-beta PRs"
-        run: gh pr list -f ready-for-beta
+        run: gh pr list -l ready-for-beta
