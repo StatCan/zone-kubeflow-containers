@@ -1,0 +1,15 @@
+name: Merge to Beta
+on:
+  workflow_dispatch
+  
+# on:
+#   schedule:
+#     # Execute at 2am EST every day
+#     - cron:  '0 7 * * *'
+
+jobs:
+  auto-merge-beta-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Get ready-for-beta PRs"
+        run: gh pr list -f ready-for-beta
