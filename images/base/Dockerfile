@@ -47,6 +47,7 @@ RUN apt-get update && \
       'vim' \
       'zip' \
       'zsh' \
+      'pinentry-tty' \
       'dos2unix' \
       # installs necessary tool for kerberos authentication setup
       'krb5-user' \
