@@ -22,4 +22,4 @@ jobs:
       REPO: ${{ github.event.repository.name }}
     steps:
       - name: "Get ready-for-beta PRs"
-        run: gh pr list -l ready-for-beta
+        run: gh pr list -l ready-for-beta --repo $REPO
