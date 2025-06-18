@@ -2,6 +2,8 @@ name: Merge to Beta
 on:
   pull_request:
     types: [opened, edited]
+  issue_comment:
+    types: [created, deleted, edited]
   
 # on:
 #   schedule:
