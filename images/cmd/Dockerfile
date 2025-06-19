@@ -1,7 +1,6 @@
 USER root
 
 # Configure container startup
-
 WORKDIR /home/$NB_USER
 EXPOSE 8888
 COPY start-custom.sh start-oms.sh restart-oms.sh /usr/local/bin/
