@@ -30,8 +30,8 @@ jobs:
     - id: get-pr-numbers
       name: "Get PR numbers for ready-for-beta PRs"
       run: |
-        pr_list = '$(gh pr list -l "ready for beta" --json number --jq "[.[].number]")'
-        echo $pr_list
+        pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number]")
+        echo $pr_list >> "$GITHUB_OUTPUT"
   
   # merge-auto-merge-beta-prs:
   #   runs-on: ubuntu-latest
