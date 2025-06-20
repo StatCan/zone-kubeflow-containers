@@ -27,17 +27,27 @@ jobs:
     # - name: "Get ready-for-beta PRs"
     #   run: gh pr list -l "ready for beta"
 
+    # - id: get-pr-numbers
+    #   name: "Get PR numbers for ready-for-beta PRs"
+    #   run: |
+    #     pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number]")
+    #     echo ${{ toJSON(pr_list) }} >> "$GITHUB_OUTPUT"
+
     - id: get-pr-numbers
       name: "Get PR numbers for ready-for-beta PRs"
       run: |
         pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number]")
-        echo ${{ toJSON(pr_list) }} >> "$GITHUB_OUTPUT"
+        
+        for i in $pr_list
+        do
+          echo "$i"
+        done
   
-  merge-auto-merge-beta-prs:
-    runs-on: ubuntu-latest
-    needs: get-auto-merge-beta-prs
-    env:
-      GH_TOKEN: ${{ github.token }}
-      matrix: ${{ fromJSON(needs.get-auto-merge-beta-prs.outputs.prList) }}
-    steps:
-    - run: echo "$matrix"
+  # merge-auto-merge-beta-prs:
+  #   runs-on: ubuntu-latest
+  #   needs: get-auto-merge-beta-prs
+  #   env:
+  #     GH_TOKEN: ${{ github.token }}
+  #     matrix: ${{ fromJSON(needs.get-auto-merge-beta-prs.outputs.prList) }}
+  #   steps:
+  #   - run: echo "$matrix"
