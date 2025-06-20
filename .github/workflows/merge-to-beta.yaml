@@ -33,11 +33,11 @@ jobs:
         pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number]")
         echo ${{ toJSON($pr_list) }} >> "$GITHUB_OUTPUT"
   
-  # merge-auto-merge-beta-prs:
-  #   runs-on: ubuntu-latest
-  #   needs: get-auto-merge-beta-prs
-  #   env:
-  #     GH_TOKEN: ${{ github.token }}
-  #     matrix: ${{needs.get-auto-merge-beta-prs.outputs.prList}}
-  #   steps:
-  #   - run: echo "$matrix"
+  merge-auto-merge-beta-prs:
+    runs-on: ubuntu-latest
+    needs: get-auto-merge-beta-prs
+    env:
+      GH_TOKEN: ${{ github.token }}
+      matrix: ${{ fromJSON(needs.get-auto-merge-beta-prs.outputs.prList) }}
+    steps:
+    - run: echo "$matrix"
