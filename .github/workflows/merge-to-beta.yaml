@@ -36,10 +36,11 @@ jobs:
     - id: get-pr-numbers
       name: "Get PR numbers for ready-for-beta PRs"
       run: |
-        pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number]")
+        pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number] | @sh")
         
         for i in $pr_list
         do
+          echo "test"
           echo "$i"
         done
   
