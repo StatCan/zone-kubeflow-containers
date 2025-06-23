@@ -226,3 +226,5 @@ RUN pip3 --no-cache-dir install --quiet \
       'cryptography==41.0.6' \
       && fix-permissions $CONDA_DIR && \
       fix-permissions /home/$NB_USER
+
+ENV TEST_ENV="test_value"
