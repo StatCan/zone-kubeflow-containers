@@ -227,4 +227,4 @@ RUN pip3 --no-cache-dir install --quiet \
       && fix-permissions $CONDA_DIR && \
       fix-permissions /home/$NB_USER
 
-ENV TEST_ENV="test_value"
+ENV TEST_ENV="test_value NOW EDITED"
