@@ -1,18 +1,8 @@
 name: Merge to Beta
 on:
-  pull_request:
-   types:
-    - opened
-    - edited
-    - synchronize
-    - reopened
-  issue_comment:
-    types: [created, deleted, edited]
-  
-# on:
-#   schedule:
-#     # Execute at 2am EST every day
-#     - cron:  '0 7 * * *'
+  schedule:
+    - cron: "0 2 * * 3" # Every wednesday
+  workflow_dispatch:
 
 jobs:
   get-auto-merge-beta-prs:
@@ -46,10 +36,10 @@ jobs:
                 && $isMergeable == '"MERGEABLE"'
                 && $review == '"APPROVED"' ]]; then
                 
-                echo "MERGING $i"
+                echo "MERGING PR #$i"
                 gh pr merge $i --delete-branch --squash
             else
-                echo "Not merging $i - $title"
+                echo "Not merging PR #$i - $title"
                 echo ""
                 echo "Target branch should be "beta": is $targetBranch"
                 echo "Merge state should be "CLEAN": is $mergeState"
