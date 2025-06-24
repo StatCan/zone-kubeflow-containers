@@ -1,17 +1,8 @@
 name: Merge to Beta
 on:
-  # schedule:
-  #   # Every wednesdays, at 2/3 am(EST/EDT)
-  #   - cron: "0 7 * * WED"
-  # workflow_dispatch:
-  pull_request:
-   types:
-    - opened
-    - edited
-    - synchronize
-    - reopened
-  issue_comment:
-    types: [created, deleted, edited]
+  schedule:
+    # Every wednesdays, at 2/3 am(EST/EDT)
+    - cron: "0 7 * * WED"
 
 jobs:
   get-auto-merge-beta-prs:
@@ -49,7 +40,7 @@ jobs:
             review=$(echo $prInfo | jq ".reviewDecision")
 
             # if PR matches all our conditions, merge it
-            if [[ "$targetBranch" == '"beta-clone-for-testing"'
+            if [[ "$targetBranch" == '"beta"'
                 && "$mergeState" == '"CLEAN"'
                 && $isDraft == false
                 && $isMergeable == '"MERGEABLE"'
