@@ -24,9 +24,8 @@ jobs:
     - name: Get bi-weekly week number value
       run: |
         numWeek=$((($(date +%-d)-1)/7+1))
-        biweekly=$((numWeek % 2))
-        echo "Week num is $numWeek. biweekly is $biweekly
-        echo "BIWEEKLY=$biweekly" >> $GITHUB_ENV
+        echo "BIWEEKLY=$((numWeek % 2))" >> $GITHUB_ENV
+        echo ${{ env.BIWEEKLY }}
     
     - uses: actions/checkout@v4
       if: env.BIWEEKLY == 0
