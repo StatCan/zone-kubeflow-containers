@@ -31,18 +31,20 @@ jobs:
         for i in $pr_list
         do
             # for each PR, get their relevant info
-            prInfo=$(gh pr view $i --json baseRefName,mergeStateStatus,isDraft,mergeable,title)
+            prInfo=$(gh pr view $i --json baseRefName,mergeStateStatus,isDraft,mergeable,title,reviewDecision)
             targetBranch=$(echo $prInfo | jq ".baseRefName")
             mergeState=$(echo $prInfo | jq ".mergeStateStatus")
             isDraft=$(echo $prInfo | jq ".isDraft")
             isMergeable=$(echo $prInfo | jq ".mergeable")
             title=$(echo $prInfo | jq ".title")
+            review=$(echo $prInfo | jq ".reviewDecision")
 
             # if PR matches all our conditions, merge it
             if [[ "$targetBranch" == '"beta-clone-for-testing"'
                 && "$mergeState" == '"CLEAN"'
                 && $isDraft == false
-                && $isMergeable == '"MERGEABLE"' ]]; then
+                && $isMergeable == '"MERGEABLE"'
+                && $review == '"APPROVED"' ]]; then
                 
                 echo "MERGING $i"
                 gh pr merge $i --delete-branch --squash
@@ -53,6 +55,7 @@ jobs:
                 echo "Merge state should be "CLEAN": is $mergeState"
                 echo "Should not be in draft. Is draft: $isDraft"
                 echo "Should be mergeable. Is mergeable: $isMergeable"
+                echo "Should be reviewed. Review is: $review"
             fi
             echo "----------------------------"
         done
