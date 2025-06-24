@@ -25,7 +25,7 @@ jobs:
       run: |
         numWeek=$((($(date +%-d)-1)/7+1))
         echo "BIWEEKLY=$((numWeek % 2))" >> $GITHUB_ENV
-        echo ${{ env.BIWEEKLY }}
+        echo "Biweekly modulo is at $((numWeek % 2))"
     
     - uses: actions/checkout@v4
       if: env.BIWEEKLY == 0
