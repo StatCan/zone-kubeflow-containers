@@ -46,10 +46,10 @@ jobs:
                 && $isMergeable == '"MERGEABLE"'
                 && $review == '"APPROVED"' ]]; then
                 
-                echo "MERGING PR #$i"
+                echo "Merging PR #$i - $title"
                 gh pr merge $i --delete-branch --squash
             else
-                echo "Not merging PR #$i - $title"
+                echo "NOT merging PR #$i - $title"
                 echo ""
                 echo "Target branch should be "beta": is $targetBranch"
                 echo "Merge state should be "CLEAN": is $mergeState"
