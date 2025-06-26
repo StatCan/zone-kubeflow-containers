@@ -25,6 +25,8 @@ RUN conda config --remove channels conda-forge --system
 
 ENV TESTING="abcd-defg-hijk-elemeno-moredata"
 
+ENV TESTING_SECOND="abcd-defg-hijk-elemeno-moredata"
+
 USER $NB_USER
 ENTRYPOINT ["tini", "--"]
 CMD ["start-custom.sh"]
