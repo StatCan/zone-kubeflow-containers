@@ -46,7 +46,7 @@ jobs:
     
     - name: "Merge Beta to Master"
       #run: git merge origin/beta --verbose --ff --no-edit
-      run: git merge origin/test-branch-beta --verbose --ff --no-edit
+      run: git merge origin/test-beta-with-ff --verbose --ff --no-edit
 
     - name: "Push updated master to remove"
       run: |
