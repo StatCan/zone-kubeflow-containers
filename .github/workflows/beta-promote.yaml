@@ -17,9 +17,10 @@ jobs:
       - name: Get bi-weekly week number value
         id: get-biweekly-modulo
         run: |
-          numWeek=$((($(date +%-d)-1)/7+1))
+          numWeek=$(date +%U)
           echo "biweekly=$((numWeek % 2))" >> $GITHUB_OUTPUT
-          echo "Biweekly modulo is at $((numWeek % 2)). Job will run on value==1"
+          echo "This is week #$numWeek, biweekly modulo is at $((numWeek % 2))."
+          echo "Job will run on value==1"
 
   get-auto-merge-beta-prs:
     runs-on: ubuntu-latest
