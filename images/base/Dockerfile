@@ -17,6 +17,7 @@ COPY adjust-server-resources.py /usr/local/bin
 RUN mamba install --quiet \
       'pillow' \
       'pyyaml' \
+      'mkl' \
       'joblib==1.2.0' \
       # s3 file system tool forked by Zach, ~4 years old, to be upgraded
       's3fs' \ 
