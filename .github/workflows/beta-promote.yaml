@@ -46,14 +46,17 @@ jobs:
     
     - name: "Merge Beta to Master"
       #run: git merge origin/beta --verbose --ff --no-edit
-      run: git merge origin/test-beta-ff --verbose --ff --no-edit
+      run: git merge origin/test-branch-beta --verbose --ff --no-edit
 
     - name: "Push updated master to remove"
       run: |
         if [ -z "$(git status --short)" ]; then
-          echo "Clean working tree. Pushing master"
+          echo "Clean working tree. Pushing to master"
           git push
         else
           echo "Dirty working tree. Not pushing to master"
           git status
+
+          # fail the job
+          exit 1
         fi
