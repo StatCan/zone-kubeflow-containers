@@ -46,7 +46,7 @@ jobs:
 
     - name: "Push updated master to remote"
       run: |
-        if [ -z "$(git status --short)" ]; then
+        if [[ -z "$(git status --porcelain)" ]]; then
           echo "Clean working tree. Pushing to master"
           git push
         else
