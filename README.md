@@ -12,6 +12,7 @@ User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
   - [Testing Images](#testing-images)
     - [Running and Connecting to Images Locally/Interactively](#running-and-connecting-to-images-locallyinteractively)
     - [Automated Testing](#automated-testing)
+- [Beta Process](#beta-process)
 - [General Development Workflow](#general-development-workflow)
   - [Running A Zone Container Locally](#running-a-zone-container-locally)
   - [Testing localy](#testing-localy)
@@ -113,6 +114,28 @@ Tests are formatted using typical pytest formats
 `conftest.py` defines some standard scaffolding for image management, etc.
 
 ---
+
+## Beta Process
+
+To reduce unexpected changes getting introduced into the images used by our users, 
+we introduced a beta process that should be followed when introducting changes to the codebase.
+
+When a change needs to be done, new branches should be created from the `beta` branch. 
+Following this, new pull requests should target the `beta` branch, unless absolutely necessary to target master directly.
+
+Once a pull request has been approved, if the target branch is `beta`, it will automatically be tagged with the `ready for beta` label.
+This label will help us track which new additions are heading in beta. 
+With this, the pull request should not be merged manually as an automated process will handle that.
+
+We have in place a workflow(`beta-auto-merge`) which runs on a schedule and handles merging all the `ready for beta` labelled pull requests into the beta branch.
+This workflow runs every two weeks, and helps us manage the frequency of updates to the beta branch.
+
+Once merged into the beta branch, a workflow will build and tag our images with the `beta` tag instead of `v2`.
+Users will be able to use those `beta` tagged images for their notebook servers if they wish to get early access to new features and fixes.
+
+We also have a second workflow(`beta-promote`) running on a schedule that handles promoting the beta branch to master.
+It also runs every two weeks, but on alternating weeks from the `beta-auto-merge` workflow.
+This means that new features and fixes should live for about one week on the beta branch before they are made official in master
 
 ## General Development Workflow
 
