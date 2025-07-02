@@ -5,6 +5,9 @@
 # Tests / Quality Checks
 
 
+# Beta Process
+- [ ] Should this branch target "beta"?
+
 ## Are there breaking changes?
 Ask yourself the next question;
 - [ ] Do we want to maintain the previous image from which we had to do breaking changes from?
