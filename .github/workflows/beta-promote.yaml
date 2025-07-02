@@ -1,0 +1,58 @@
+name: Promote Beta to Master
+on:
+  schedule:
+    # Every wednesdays, at 2h30/3h30 am(EST/EDT)
+    # running after the beta-auto-merge workflow to avoid overlap
+    - cron: "30 7 * * WED"
+
+jobs:
+  get-bi-weekly-schedule:
+    runs-on: ubuntu-latest
+    outputs:
+      biweekly: ${{ steps.get-biweekly-modulo.outputs.biweekly }}
+    steps:
+      # Step to determine the week number in the year, to run this job bi-weekly
+      # cron schedule doesn't support "every 2 weeks" scenarios.
+      # runs on alternating weeks from the beta-auto-merge.yaml workflow
+      - name: Get bi-weekly week number value
+        id: get-biweekly-modulo
+        run: |
+          numWeek=$(date +%U)
+          echo "biweekly=$((numWeek % 2))" >> $GITHUB_OUTPUT
+          echo "This is week #$numWeek, biweekly modulo is at $((numWeek % 2))."
+          echo "Job will run on value==1"
+
+  promote-beta-to-prod:
+    runs-on: ubuntu-latest
+    needs: get-bi-weekly-schedule
+    if: ${{ needs.get-bi-weekly-schedule.outputs.biweekly == 1 }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:    
+    - name: "Checkout master"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: master
+    
+    # required step for the merge command to work
+    - name: Set Git config
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+    
+    - name: "Merge Beta to Master"
+      run: git merge origin/beta --verbose --ff --no-edit
+
+    - name: "Push updated master to remote"
+      run: |
+        if [[ -z "$(git status --porcelain)" ]]; then
+          echo "Clean working tree. Pushing to master"
+          git push
+        else
+          echo "Dirty working tree. Not pushing to master"
+          git status
+
+          # fail the job
+          exit 1
+        fi
