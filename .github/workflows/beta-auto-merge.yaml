@@ -84,6 +84,7 @@ jobs:
           echo "isDiff=true" >> "$GITHUB_ENV"
         else
           echo "No diff found"
+          echo "isDiff=false" >> "$GITHUB_ENV"
         fi
 
     - name: Create new release release
