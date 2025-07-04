@@ -3,11 +3,6 @@ on:
   schedule:
     # Every wednesdays, at 2/3 am(EST/EDT)
     - cron: "0 7 * * WED"
-  pull_request:
-    types:
-      - 'opened'
-      - 'synchronize'
-      - 'reopened'
 
 jobs:
   get-bi-weekly-schedule:
@@ -37,45 +32,45 @@ jobs:
       with:
         fetch-depth: 0
 
-    # - name: "Merge ready for beta PRs"
-    #   run: |
-    #     # Get list of PR numbers with label "read for beta"
-    #     # pr_list format is "1 24 43 11"
-    #     pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number] | @sh")
+    - name: "Merge ready for beta PRs"
+      run: |
+        # Get list of PR numbers with label "read for beta"
+        # pr_list format is "1 24 43 11"
+        pr_list=$(gh pr list -l "ready for beta" --json number --jq "[.[].number] | @sh")
 
-    #     for i in $pr_list
-    #     do
-    #         # for each PR, get their relevant info
-    #         prInfo=$(gh pr view $i --json baseRefName,mergeStateStatus,isDraft,mergeable,title,reviewDecision)
-    #         targetBranch=$(echo $prInfo | jq ".baseRefName")
-    #         mergeState=$(echo $prInfo | jq ".mergeStateStatus")
-    #         isDraft=$(echo $prInfo | jq ".isDraft")
-    #         isMergeable=$(echo $prInfo | jq ".mergeable")
-    #         title=$(echo $prInfo | jq ".title")
-    #         review=$(echo $prInfo | jq ".reviewDecision")
+        for i in $pr_list
+        do
+            # for each PR, get their relevant info
+            prInfo=$(gh pr view $i --json baseRefName,mergeStateStatus,isDraft,mergeable,title,reviewDecision)
+            targetBranch=$(echo $prInfo | jq ".baseRefName")
+            mergeState=$(echo $prInfo | jq ".mergeStateStatus")
+            isDraft=$(echo $prInfo | jq ".isDraft")
+            isMergeable=$(echo $prInfo | jq ".mergeable")
+            title=$(echo $prInfo | jq ".title")
+            review=$(echo $prInfo | jq ".reviewDecision")
 
-    #         mergedFlag=false
-    #         # if PR matches all our conditions, merge it
-    #         if [[ "$targetBranch" == '"beta"'
-    #             && "$mergeState" == '"CLEAN"'
-    #             && $isDraft == false
-    #             && $isMergeable == '"MERGEABLE"'
-    #             && $review == '"APPROVED"' ]]; then
+            mergedFlag=false
+            # if PR matches all our conditions, merge it
+            if [[ "$targetBranch" == '"beta"'
+                && "$mergeState" == '"CLEAN"'
+                && $isDraft == false
+                && $isMergeable == '"MERGEABLE"'
+                && $review == '"APPROVED"' ]]; then
                 
-    #             echo "Merging PR #$i - $title"
-    #             gh pr merge $i --delete-branch --squash
-    #             merged
-    #         else
-    #             echo "NOT merging PR #$i - $title"
-    #             echo ""
-    #             echo "Target branch should be "beta": is $targetBranch"
-    #             echo "Merge state should be "CLEAN": is $mergeState"
-    #             echo "Should not be in draft. Is draft: $isDraft"
-    #             echo "Should be mergeable. Is mergeable: $isMergeable"
-    #             echo "Should be reviewed. Review is: $review"
-    #         fi
-    #         echo "----------------------------"
-    #     done
+                echo "Merging PR #$i - $title"
+                gh pr merge $i --delete-branch --squash
+                merged
+            else
+                echo "NOT merging PR #$i - $title"
+                echo ""
+                echo "Target branch should be "beta": is $targetBranch"
+                echo "Merge state should be "CLEAN": is $mergeState"
+                echo "Should not be in draft. Is draft: $isDraft"
+                echo "Should be mergeable. Is mergeable: $isMergeable"
+                echo "Should be reviewed. Review is: $review"
+            fi
+            echo "----------------------------"
+        done
 
     - name: check for changes
       run: |
@@ -100,7 +95,7 @@ jobs:
         date=$(date +%F) 
         echo "New tag is $date"
 
-        echo "auto generated release notes will be compared to previous tag $latestTag"
+        echo "Auto generated release notes will be compared to previous tag $latestTag"
 
         # create the release
         gh release create $date --latest --generate-notes --target=beta --notes-start-tag $latestTag
