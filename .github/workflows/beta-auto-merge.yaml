@@ -49,7 +49,6 @@ jobs:
             title=$(echo $prInfo | jq ".title")
             review=$(echo $prInfo | jq ".reviewDecision")
 
-            mergedFlag=false
             # if PR matches all our conditions, merge it
             if [[ "$targetBranch" == '"beta"'
                 && "$mergeState" == '"CLEAN"'
@@ -59,7 +58,6 @@ jobs:
                 
                 echo "Merging PR #$i - $title"
                 gh pr merge $i --delete-branch --squash
-                merged
             else
                 echo "NOT merging PR #$i - $title"
                 echo ""
