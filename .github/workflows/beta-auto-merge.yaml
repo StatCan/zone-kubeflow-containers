@@ -79,12 +79,13 @@ jobs:
 
     - name: check for changes
       run: |
+        # get the latest tag
         latestTag=$(git describe --abbrev=0)
-        echo $latestTag
+        echo "Latest tag found is: $latestTag"
         echo "latestTag=$latestTag" >> "$GITHUB_ENV"
 
         betaDiff=$(git log $latestTag..origin/beta --oneline)
-        echo "Diff is $betaDiff"
+        echo "The diff between the latest tag and beta is $betaDiff"
         if [[ -n $betaDiff ]]; then
           echo "Diff found"
           echo "isDiff=true" >> "$GITHUB_ENV"
@@ -97,9 +98,9 @@ jobs:
       run: |
         # returns the current date in YYYY-MM-DD format
         date=$(date +%F) 
-        echo $date
+        echo "New tag is $date"
 
-        echo $latestTag
+        echo "auto generated release notes will be compared to previous tag $latestTag"
 
         # create the release
         gh release create $date --latest --generate-notes --target=beta --notes-start-tag $latestTag
