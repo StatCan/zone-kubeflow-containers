@@ -3,6 +3,11 @@ on:
   schedule:
     # Every wednesdays, at 2/3 am(EST/EDT)
     - cron: "0 7 * * WED"
+  pull_request:
+    types:
+      - 'opened'
+      - 'synchronize'
+      - 'reopened'
 
 jobs:
   get-bi-weekly-schedule:
@@ -30,7 +35,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-tags: true
 
     - name: "Merge ready for beta PRs"
       run: |
