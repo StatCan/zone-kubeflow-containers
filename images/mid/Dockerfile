@@ -168,7 +168,6 @@ RUN curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Harden rstudio-server
-# Auth timeout minutes must be set to 0 for auth-stay-signed-in-days in to work
 RUN mkdir -p /etc/rstudio && \
     echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf && \
     echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf && \
