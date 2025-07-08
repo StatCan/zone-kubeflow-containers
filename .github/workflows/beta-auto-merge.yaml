@@ -29,6 +29,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: "Merge ready for beta PRs"
       run: |
@@ -67,3 +69,32 @@ jobs:
             fi
             echo "----------------------------"
         done
+
+    - name: check for changes
+      run: |
+        # get the latest tag
+        latestTag=$(git describe --tags $(git rev-list --tags --max-count=1))
+        echo "Latest tag found is: $latestTag"
+        echo "latestTag=$latestTag" >> "$GITHUB_ENV"
+
+        betaDiff=$(git log $latestTag..origin/beta --oneline)
+        echo "The diff between the latest tag and beta is $betaDiff"
+        if [[ -n $betaDiff ]]; then
+          echo "Diff found"
+          echo "isDiff=true" >> "$GITHUB_ENV"
+        else
+          echo "No diff found"
+          echo "isDiff=false" >> "$GITHUB_ENV"
+        fi
+
+    - name: Create new release release
+      if: env.isDiff == 'true'
+      run: |
+        # returns the current date in YYYY-MM-DD format
+        date=$(date +%F) 
+        echo "New tag is $date"
+
+        echo "Auto generated release notes will be compared to previous tag $latestTag"
+
+        # create the release
+        gh release create $date --latest --generate-notes --target=beta --notes-start-tag $latestTag
