@@ -169,6 +169,7 @@ RUN mkdir -p /etc/rstudio && \
     echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf && \
     echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf && \
     echo "www-same-site=lax" >> /etc/rstudio/rserver.conf && \
+    echo "auth-timeout-minutes=10080" >> /etc/rstudio/rserver.conf && \
     echo "restrict-directory-view=1" >> /etc/rstudio/rsession.conf && \
     # Sets the default working dir
     echo "session-default-working-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf && \
