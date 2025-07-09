@@ -5,7 +5,7 @@ from helpers import CondaPackageHelper
 
 LOGGER = logging.getLogger(__name__)
 
-EXPECTED = "2024.12.0+467 (Kousa Dogwood) for Ubuntu Jammy"
+EXPECTED = "2025.05.1+513 (Mariposa Orchid) for Ubuntu Jammy"
 
 @pytest.fixture(scope="function")
 def package_helper(container):
