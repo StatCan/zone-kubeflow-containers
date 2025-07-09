@@ -174,21 +174,20 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
 # install rstudio-server
-ARG RSTUDIO_VERSION=2024.12.0-467
-ARG SHA256=1493188cdabcc1047db27d1bd0e46947e39562cbd831158c7812f88d80e742b3
-# R and RStudio installation with cleanup
-RUN apt-get update \
-    && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
-    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
-    && add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" \
-    && apt install -y --no-install-recommends r-base r-base-core r-recommended r-base-dev \
-    && apt-get update && apt-get -y dist-upgrade \
-    && curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/jammy/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb" > /tmp/rstudio.deb \
-    && echo "${SHA256} /tmp/rstudio.deb" | sha256sum -c - \
-    && apt-get install --no-install-recommends -y /tmp/rstudio.deb \
-    && rm /tmp/rstudio.deb \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ARG RSTUDIO_VERSION=2025.05.1-513
+ARG SHA256=603c0c7bf0f020e3e1948dd47c82505596139a1aab7890b9020ff3245cc3feff
+RUN apt-get update && \
+    apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core && \
+    wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
+    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" && \
+    apt install -y --no-install-recommends r-base r-base-core r-recommended r-base-dev && \
+    apt-get update && apt-get -y dist-upgrade
+
+RUN curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/jammy/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb" > /tmp/rstudio.deb && \
+    echo "${SHA256} /tmp/rstudio.deb" | sha256sum -c - && \
+    apt-get install --no-install-recommends -y /tmp/rstudio.deb && \
+    rm /tmp/rstudio.deb && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Harden rstudio-server
 RUN mkdir -p /etc/rstudio \
@@ -207,7 +206,25 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
-# Configure container startup
+# Install some default R packages
+RUN mamba install --quiet --yes \
+      'r-arrow' \
+      'r-aws.s3' \
+      'r-base=4.5.1' \
+      'r-catools' \
+      'r-e1071' \
+      'r-hdf5r' \
+      'r-markdown' \
+      'r-odbc' \
+      'r-renv' \
+      'r-rodbc' \
+      'r-sf' \
+      'r-sparklyr' \
+      'r-tidyverse' \
+    && \
+    clean-layer.sh && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
 
 # Copy over pip config
 COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
