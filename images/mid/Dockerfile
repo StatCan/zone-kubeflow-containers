@@ -189,7 +189,7 @@ ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 RUN mamba install --quiet --yes \
       'r-arrow' \
       'r-aws.s3' \
-      'r-base=4.4.1' \
+      'r-base=4.5.1' \
       'r-catools' \
       'r-e1071' \
       'r-hdf5r' \
