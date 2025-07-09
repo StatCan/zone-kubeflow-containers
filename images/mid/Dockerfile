@@ -1,5 +1,6 @@
 USER root
 
+
 # installs vscode server, python & conda packages and jupyter lab extensions.
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
@@ -55,14 +56,12 @@ COPY coder.json $CS_TEMP_HOME/
 
 RUN pip install \
     'git+https://github.com/betatim/vscode-binder' && \
-    # jupyter_contrib_nbextensions likes to be installed with pip
     mamba install --quiet --yes -c conda-forge \
     # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
     # need to add mamba install pkg-config so R can find freetype related packages
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -78,7 +77,6 @@ RUN pip install \
     'jupyterlab-lsp' \
     'jupyter-lsp'  && \
     jupyter server extension enable --py jupyter_server_proxy && \
-    jupyter nbextension enable codefolding/main --sys-prefix && \
     jupyter labextension enable \
       '@jupyterlab/translation-extension' \
       '@jupyterlab/server-proxy' \
@@ -144,9 +142,6 @@ RUN apt-get update --yes \
     && fix-permissions ${OMPP_INSTALL_DIR} \
     && pip install /opt/jupyter-ompp-proxy/
 
-# MinIO Client install
-COPY --from=minio/mc:RELEASE.2024-11-17T19-35-25Z /bin/mc /usr/local/bin/mc
-
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
@@ -174,6 +169,7 @@ RUN mkdir -p /etc/rstudio && \
     echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf && \
     echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf && \
     echo "www-same-site=lax" >> /etc/rstudio/rserver.conf && \
+    echo "auth-timeout-minutes=10080" >> /etc/rstudio/rserver.conf && \
     echo "restrict-directory-view=1" >> /etc/rstudio/rsession.conf && \
     # Sets the default working dir
     echo "session-default-working-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf && \
