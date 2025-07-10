@@ -150,7 +150,7 @@ ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transform
 
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.05.1-513
-ARG SHA256=9a5cd20b902cc3e29af2d66c083e87de9bac0254b7f7ace3d0ba50da267ab81a
+ARG SHA256=8E49CA68D154D5D17AE5FCC386E9C93473F9B73F6F573A1511866051E288B547
 RUN apt-get update && \
     apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core && \
     wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
