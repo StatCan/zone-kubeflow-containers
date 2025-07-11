@@ -61,6 +61,26 @@ RUN apt-get update && \
       'libfreetype6' && \
     rm -rf /var/lib/apt/lists/*
 
+ARG S6_VERSION=v3.2.1.0
+ARG S6_ARCH="x86_64"
+
+# install - s6 overlay
+RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz" -o /tmp/s6-overlay-noarch.tar.xz \
+ && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz.sha256" -o /tmp/s6-overlay-noarch.tar.xz.sha256 \
+ && echo "$(cat /tmp/s6-overlay-noarch.tar.xz.sha256 | awk '{ print $1; }')  /tmp/s6-overlay-noarch.tar.xz" | sha256sum -c - \
+ && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" -o /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+ && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.xz.sha256" -o /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 \
+ && echo "$(cat /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 | awk '{ print $1; }')  /tmp/s6-overlay-${S6_ARCH}.tar.xz" | sha256sum -c - \
+ && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+ && tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+ && rm /tmp/s6-overlay-noarch.tar.xz  \
+       /tmp/s6-overlay-noarch.tar.xz.sha256 \
+       /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+       /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256
+
+# # fix permissions of '/run' folder for s6
+# # https://github.com/just-containers/s6-overlay/blob/v3.2.0.0/layout/rootfs-overlay/package/admin/s6-overlay-%40VERSION%40/libexec/preinit#L86
+# RUN chmod 0775 /run
 
 ARG KUBECTL_VERSION=v1.29.10
 ARG KUBECTL_URL=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
