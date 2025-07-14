@@ -80,7 +80,7 @@ RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/
 
 # # fix permissions of '/run' folder for s6
 # # https://github.com/just-containers/s6-overlay/blob/v3.2.0.0/layout/rootfs-overlay/package/admin/s6-overlay-%40VERSION%40/libexec/preinit#L86
-# RUN chmod 0775 /run
+RUN chmod 0775 /run
 
 ARG KUBECTL_VERSION=v1.29.10
 ARG KUBECTL_URL=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
@@ -187,3 +187,5 @@ RUN chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
 ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
 ENV TNS_ADMIN="/opt/oracle/instantclient_23_5/network/admin"
+
+ENTRYPOINT ["/init"]

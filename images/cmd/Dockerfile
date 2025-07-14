@@ -24,5 +24,8 @@ ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 RUN conda config --remove channels conda-forge --system
 
 USER $NB_USER
-ENTRYPOINT ["tini", "--"]
-CMD ["start-custom.sh"]
+# ENTRYPOINT ["tini", "--"]
+# CMD ["start-custom.sh"]
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
