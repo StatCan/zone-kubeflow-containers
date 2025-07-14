@@ -28,4 +28,4 @@ USER $NB_USER
 # CMD ["start-custom.sh"]
 
 # s6 - copy scripts
-COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6-overlay/ /etc/s6-overlay/s6-rc.d
