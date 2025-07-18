@@ -1,0 +1,104 @@
+#!/opt/conda/bin/python
+"""
+Get individual file from a filer share and copy to local file.
+"""
+
+import argparse
+import os
+import re
+import sys
+import botocore.session
+from filers_common import get_filer_env_config
+
+
+def get_filer(source_filer_path: str, dest_local_path: str) -> int:
+    "Copy specified file on filer S3 interface to local, using botocore."
+
+    print(
+        f'Download file on filer "{source_filer_path}" to local path "{dest_local_path}".'
+    )
+
+    # Get the filer S3 configuration.
+    url, access_key, secret_key, bucket_name, object_key = get_filer_env_config(
+        source_filer_path
+    )
+
+    try:
+        # Validate source path.
+        if object_key is None:
+            raise OSError("Must specify specific file for download.")
+
+        # Validate destination path.
+        if len(dest_local_path) == 0:
+            raise OSError("Missing destination path, use ./ for current directory.")
+
+        # If final output ends in /, put as file within folder.
+        if dest_local_path[-1] == "/":
+            dest_local_path += re.sub(r".*\/", "", source_filer_path)
+
+        # Connect to filer S3 interface.
+        session = botocore.session.get_session()
+        s3_client = session.create_client(
+            "s3",
+            endpoint_url=url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+        # Copy the object to local path, in 8 MiB chunks.
+        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+
+        with open(dest_local_path, "wb") as data:
+            for chunk in response["Body"].iter_chunks(8388608):
+                data.write(chunk)
+
+        # Status of operation.
+        status_str = "Successfully downloaded the file"
+        exit_code = 0
+    except OSError as e:
+        # Print details of error.
+        print("Error occurred when attempting to download file:", e)
+
+        # Remove any partially downloaded file if present.
+        try:
+            os.remove(dest_local_path)
+            print("Removed partially created local file:", dest_local_path)
+        except OSError:
+            pass
+
+        # Status of operation.
+        status_str = "Failed to download the file"
+        exit_code = 1
+
+    # Print info about operation.
+    print(
+        (
+            f'{status_str} the remote file "{source_filer_path}" on NetApp CVO filer '
+            f'to local path "{dest_local_path}"; with endpoint URL {url}; '
+            f'bucket {bucket_name}; object key "{object_key}".'
+        )
+    )
+    return exit_code
+
+
+def main():
+    "Invoked when running filer-get from command line."
+    cmd_parser = argparse.ArgumentParser(
+        description="Copy file from filer to local path."
+    )
+    cmd_parser.add_argument("source_filer_path", help="path to source filer file")
+    cmd_parser.add_argument(
+        "dest_local_path",
+        help=(
+            "path to destination local file, if directory use "
+            "same filename as source within the directory"
+        ),
+    )
+    args = cmd_parser.parse_args()
+
+    r = get_filer(args.source_filer_path, args.dest_local_path)
+    sys.exit(r)
+
+
+if __name__ == "__main__":
+    main()

@@ -13,6 +13,17 @@ RUN apt-get update --yes \
 COPY suspend-server.sh /usr/local/bin
 COPY adjust-server-resources.py /usr/local/bin
 
+COPY filers_common.py /usr/local/bin
+COPY filer-get.py /usr/local/bin
+COPY filer-mc-cp.py /usr/local/bin
+COPY filer-mc-init.py /usr/local/bin
+COPY filer-mc-ls.py /usr/local/bin
+COPY filer-mc-path.py /usr/local/bin
+COPY filer-mkdir.py /usr/local/bin
+COPY filer-put.py /usr/local/bin
+COPY filer-rm.py /usr/local/bin
+COPY filer-rmdir.py /usr/local/bin
+
 # https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 RUN mamba install --quiet \
       'pillow' \
