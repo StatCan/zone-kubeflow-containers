@@ -155,7 +155,7 @@ echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
 echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
-echo "SPARK_HOME=$SPARK_HOME" >> /opt/conda/lib/R/etc/Renviron
+echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
 
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
