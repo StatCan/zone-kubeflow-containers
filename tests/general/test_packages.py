@@ -10,9 +10,9 @@ It's a basic test aiming to prove that the package is working properly.
 The goal is to detect import errors that can be caused by incompatibilities between packages for example:
 
 - #1012: issue importing `sympy`
-- #966: issue importing `pyarrow`
+- #966: isssue importing `pyarrow`
 
-This module checks dynamically, through the `CondaPackageHelper`, only the specified packages i.e. packages requested by `conda install` in the `Dockerfiles`.
+This module checks dynmamically, through the `CondaPackageHelper`, only the specified packages i.e. packages requested by `conda install` in the `Dockerfiles`.
 This means that it does not check dependencies. This choice is a tradeoff to cover the main requirements while achieving reasonable test duration.
 However it could be easily changed (or completed) to cover also dependencies `package_helper.installed_packages()` instead of `package_helper.specified_packages()`.
 
@@ -70,11 +70,11 @@ EXCLUDED_PACKAGES = [
     "python",
     "hdf5",
     "bzip2",
-    "nodejs",
+    'nodejs', 
     # Jupyterlab extensions
-    "jupyter-dash",
-    "jupyterlab-translate",
-    "python-lsp-server",
+    'jupyter-dash',
+    'jupyterlab-translate',
+    'python-lsp-server',
     "jupyter-lsp",
     "jupyter-pluto-proxy",
     "jupyter-resource-usage",
@@ -83,7 +83,7 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-language-pack-fr-fr",
     "jupyterlab-lsp",
     # Other
-    "conda-forge::blas=[build",  # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
+    "conda-forge::blas=[build", # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
     "protobuf",
     "r-irkernel",
     "unixodbc",
@@ -101,7 +101,7 @@ EXCLUDED_PACKAGES = [
     # pytables is the package but we import tables
     "tables",
     "pytables",
-    "pkg-config",
+    "pkg-config"
 ]
 
 
@@ -119,7 +119,7 @@ def packages(package_helper):
 
 def package_map(package):
     """Perform a mapping between the python package name and the name used for the import"""
-    _package = package.split("[")[0]  # Remove bracketed metadata
+    _package = package.split("[")[0] # Remove bracketed metadata
     if _package in PACKAGE_MAPPING:
         _package = PACKAGE_MAPPING.get(_package)
     return _package
@@ -175,14 +175,11 @@ def _import_packages(package_helper, filtered_packages, check_function, max_fail
         except AssertionError as err:
             failures[package] = err
     if len(failures) > max_failures:
-        raise AssertionError(
-            "Caught the following import error.  "
+        raise AssertionError("Caught the following import error.  "
             "If you're adding new conda installs to this build that cannot "
             "be imported by python or R (eg: jupyterlab extensions, etc) see "
             "README.md instructions and add to test_packages.py's exclusion "
-            "list",
-            failures,
-        )
+            "list", failures)
     elif len(failures) > 0:
         LOGGER.warning(f"Some import(s) has(have) failed: {failures}")
 
