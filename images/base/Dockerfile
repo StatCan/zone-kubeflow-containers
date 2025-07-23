@@ -55,7 +55,6 @@ COPY adjust-server-resources.py /usr/local/bin
 RUN mamba install --quiet \
       'pillow' \
       'pyyaml' \
-      'mkl' \
       'joblib==1.2.0' \
       's3fs' \ 
       'fire==0.5.0' \
