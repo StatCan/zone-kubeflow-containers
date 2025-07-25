@@ -1,0 +1,48 @@
+name: Create automatic release for master
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
+
+jobs:
+  create_release_for_master:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:    
+    - name: "Checkout master"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: check for changes
+      run: |
+        # get the latest tag
+        latestTag=$(git describe --tags $(git rev-list --tags --max-count=1))
+        echo "Latest tag found is: $latestTag"
+        echo "latestTag=$latestTag" >> "$GITHUB_ENV"
+
+        masterDiff=$(git log $latestTag..origin/master --oneline)
+        echo "The diff between the latest tag and master is $masterDiff"
+        if [[ -n $masterDiff ]]; then
+          echo "Diff found"
+          echo "isDiff=true" >> "$GITHUB_ENV"
+        else
+          echo "No diff found"
+          echo "isDiff=false" >> "$GITHUB_ENV"
+        fi
+
+    - name: Create new release release
+      if: env.isDiff == 'true'
+      run: |
+        # returns the current date in YYYY-MM-DD format
+        date=$(date +%F) 
+        echo "New tag is $date"
+
+        echo "Auto generated release notes will be compared to previous tag $latestTag"
+
+        # create the release
+        gh release create $date --latest --generate-notes --target=master --notes-start-tag $latestTag
