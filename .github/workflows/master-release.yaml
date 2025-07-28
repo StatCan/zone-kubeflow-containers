@@ -35,7 +35,7 @@ jobs:
           echo "isDiff=false" >> "$GITHUB_ENV"
         fi
 
-    - name: Create new release release
+    - name: Create new release
       if: env.isDiff == 'true'
       run: |
         # returns the current date in YYYY-MM-DD format
