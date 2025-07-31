@@ -44,6 +44,7 @@ fi
 # Clone example notebooks (with retries because it sometimes initially fails)
 if [[ ! -d  ~/aaw-contrib-jupyter-notebooks ]]; then
   echo "Cloning examples notebooks"
+
   RETRIES_NO=5
   RETRY_DELAY=3
   for i in $(seq 1 $RETRIES_NO); do
@@ -56,6 +57,7 @@ if [[ ! -d  ~/aaw-contrib-jupyter-notebooks ]]; then
 else
   echo "Example notebooks already cloned."
 fi
+
 if [ ! -e /home/$NB_USER/.Rprofile ]; then
     cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
 fi
@@ -181,12 +183,14 @@ echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 #fi
 
 echo "Checking for .condarc file in hom directory"
+
 if [[ -f "$HOME/.condarc" ]]; then
   echo ".condarc file exists, not going to do anything"
 else
   echo "Creating basic .condarc file"
   printf 'envs_dirs:\n  - $HOME/.conda/envs' > $HOME/.condarc
 fi
+
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
 
 # Copy default config and extensions on first start up
@@ -204,7 +208,9 @@ VSCODE_DIR="$WORKSPACE_DIR/.vscode"
 VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
 PYTHON_PATH="/opt/conda/bin/python"
 VSCODE_USER_DIR="$HOME/.local/share/code-server/User"
+
 echo "Ensuring workspace directories exist..."
+
 [ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
 [ -d "$REPO_DIR" ] || mkdir -p "$REPO_DIR"
 [ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
@@ -300,4 +306,5 @@ echo "--------------------starting jupyter--------------------"
                  --ServerApp.authenticate_prometheus=False \
                  --ServerApp.base_url=${NB_PREFIX} \
                  --ServerApp.default_url=${DEFAULT_JUPYTER_URL:-/tree}
+
 echo "--------------------shutting down, persisting VS_CODE settings--------------------"
