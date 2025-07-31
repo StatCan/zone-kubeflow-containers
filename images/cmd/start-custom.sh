@@ -1,8 +1,10 @@
 #!/bin/bash
+
 echo "--------------------Starting up--------------------"
 if [ -d /var/run/secrets/kubernetes.io/serviceaccount ]; then
   while ! curl -s -f http://127.0.0.1:15020/healthz/ready; do sleep 1; done
 fi
+
 echo "Checking if we want to sleep infinitely"
 if [[ -z "${INFINITY_SLEEP}" ]]; then
   echo "Not sleeping"
@@ -10,6 +12,7 @@ else
   echo "--------------------zzzzzz--------------------"
   sleep infinity
 fi
+
 # Set up Git Credential Manager
 # only if it wasn't already setup
 if grep -q "export GPG_TTY" ~/.bashrc; then
@@ -56,6 +59,7 @@ fi
 if [ ! -e /home/$NB_USER/.Rprofile ]; then
     cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
 fi
+
 # Configure the shell! If not already configured.
 if [ ! -f /home/$NB_USER/.zsh-installed ]; then
     if [ -f /tmp/oh-my-zsh-install.sh ]; then
@@ -70,6 +74,7 @@ if [ ! -f /home/$NB_USER/.zsh-installed ]; then
     touch /home/$NB_USER/.zsh-installed
     touch /home/$NB_USER/.hushlogin
 fi
+
 # add rm wrapper:
 # https://jirab.statcan.ca/browse/ZPS-40
 if [ ! -f /home/$NB_USER/.local/bin/rm ]; then
@@ -83,9 +88,12 @@ if [ ! -f /home/$NB_USER/.local/bin/rm ]; then
 else
   echo "rm wrapper already exists"
 fi
+
 export VISUAL="/usr/bin/nano"
 export EDITOR="$VISUAL"
+
 echo "shell has been configured"
+
 # create .profile
 cat <<EOF > $HOME/.profile
 if [ -n "$BASH_VERSION" ]; then
@@ -94,7 +102,9 @@ if [ -n "$BASH_VERSION" ]; then
     fi
 fi
 EOF
+
 echo ".profile has been created"
+
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
     if [ "${KF_LANG}" = "en" ]; then
@@ -121,7 +131,9 @@ if [ -n "${KF_LANG}" ]; then
         fi
     fi
 fi
+
 echo "language has been configured"
+
 # Configure KFP multi-user
 if [ -n "${NB_NAMESPACE}" ]; then
 mkdir -p $HOME/.config/kfp
@@ -129,37 +141,34 @@ cat <<EOF > $HOME/.config/kfp/context.json
 {"namespace": "${NB_NAMESPACE}"}
 EOF
 fi
+
 echo "KFP multi-user has been configured"
+
 # Introduced by RStudio 1.4
 # See https://github.com/jupyterhub/jupyter-rsession-proxy/issues/95
 # And https://github.com/blairdrummond/jupyter-rsession-proxy/blob/master/jupyter_rsession_proxy/__init__.py
 export RSERVER_WWW_ROOT_PATH=$NB_PREFIX/rstudio
+
 # Remove a Jupyterlab 2.x config setting that breaks Jupyterlab 3.x
 NOTEBOOK_CONFIG="$HOME/.jupyter/jupyter_notebook_config.json"
 NOTEBOOK_CONFIG_TMP="$HOME/.jupyter/jupyter_notebook_config.json.tmp"
+
 if [ -f "$NOTEBOOK_CONFIG" ]; then
   jq 'del(.NotebookApp.server_extensions)' "$NOTEBOOK_CONFIG" > "$NOTEBOOK_CONFIG_TMP" \
       && mv -f "$NOTEBOOK_CONFIG_TMP" "$NOTEBOOK_CONFIG"
 fi
+
 echo "broken configuration settings removed"
+
 export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+
 # Have NB_PREFIX and NB_NAMESPACE available in R and Rstudio
 echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
 echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 # Have the NLS_LANG setting available in R and Rstudio
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
-# change python location for vscode
-pythonInterpreterPath='{"python.defaultInterpreterPath": "/opt/conda/bin/python"}'
-if [ ! -d /home/jovyan/workspace/.vscode ]; then
-  mkdir -p /home/jovyan/workspace/.vscode;
-fi
-if [ ! -f /home/jovyan/workspace/.vscode/settings.json ]; then
-  #Not found
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json  
-else
-  echo "$pythonInterpreterPath" > /home/jovyan/workspace/.vscode/settings.json
-fi
+
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
 #echo "Checking if Python venv exists"
@@ -170,6 +179,7 @@ fi
 #  python3 -m venv $HOME/base-python-venv
 #  echo "adding include-system-site-packages"
 #fi
+
 echo "Checking for .condarc file in hom directory"
 if [[ -f "$HOME/.condarc" ]]; then
   echo ".condarc file exists, not going to do anything"
@@ -178,12 +188,14 @@ else
   printf 'envs_dirs:\n  - $HOME/.conda/envs' > $HOME/.condarc
 fi
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
+
 # Copy default config and extensions on first start up
 if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   echo "Creating code-server default settings and extentions"
   mkdir -p "$CS_DEFAULT_HOME"
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
+
 # Create default user directories
 WORKSPACE_DIR="$HOME/workspace"
 REPO_DIR="$WORKSPACE_DIR/repositories"
@@ -198,15 +210,18 @@ echo "Ensuring workspace directories exist..."
 [ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
 [ -d "$VSCODE_DIR" ] || mkdir -p "$VSCODE_DIR"
 [ -d "$VSCODE_USER_DIR" ] || mkdir -p "$VSCODE_USER_DIR"
+
 # Set Python interpreter path for VSCode if not already set
 if [ ! -f "$VSCODE_SETTINGS" ]; then
   echo "Python default settings for VSCode..."
   echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
 fi
+
 if [ ! -f "$VSCODE_USER_DIR/settings.json" ]; then
   echo "Python default user settings for VSCode..."
   echo "{\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
 fi
+
 # Retrieving Alias file for oracle client
 # Runs on every startup because this output location is not persisted storage
 # Implemented with a retry because it sometimes fails for some reason
@@ -225,6 +240,7 @@ for i in $(seq 1 $RETRIES_NO); do
   [[ $i -eq $RETRIES_NO ]] && echo "Failed to clone the tnsnames.ora after $RETRIES_NO retries"
   sleep ${RETRY_DELAY}
 done
+
 # Add sasstudio default
 if [[ -z "${SASSTUDIO_TEMP_HOME}" ]]; then
   echo "No sas studio default settings created"
@@ -233,6 +249,7 @@ else
   mkdir -p "$HOME/.sasstudio"
   cp -r "$SASSTUDIO_TEMP_HOME/." "$HOME/.sasstudio"
 fi
+
 # Retrieve service account details
 serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
 serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
@@ -240,7 +257,9 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
+
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
   echo "Creating rprofile"
@@ -252,6 +271,7 @@ local({
 })
 EOF
 fi
+
 # Create and set the gpg settings during first boot
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   mkdir -p "/home/$NB_USER/.gnupg"
@@ -261,11 +281,15 @@ if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   chmod 600 "/home/$NB_USER/.gnupg/*" 2>/dev/null || true
   echo "GPG directory configured with proper permissions."
 fi
+
 # Launch GPG agent to ensure availability across all interfaces
 gpgconf --launch gpg-agent
+
 # Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
+
 echo "--------------------starting jupyter--------------------"
+
 /opt/conda/bin/jupyter server --notebook-dir=/home/${NB_USER} \
                  --ip=0.0.0.0 \
                  --no-browser \
