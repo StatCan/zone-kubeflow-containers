@@ -67,6 +67,7 @@ if [ ! -f /home/$NB_USER/.zsh-installed ]; then
     if [ -f /tmp/oh-my-zsh-install.sh ]; then
       sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh
     fi
+
     if conda --help > /dev/null 2>&1; then
       conda init bash
       conda init zsh
@@ -183,7 +184,6 @@ echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 #fi
 
 echo "Checking for .condarc file in hom directory"
-
 if [[ -f "$HOME/.condarc" ]]; then
   echo ".condarc file exists, not going to do anything"
 else
@@ -210,7 +210,6 @@ PYTHON_PATH="/opt/conda/bin/python"
 VSCODE_USER_DIR="$HOME/.local/share/code-server/User"
 
 echo "Ensuring workspace directories exist..."
-
 [ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
 [ -d "$REPO_DIR" ] || mkdir -p "$REPO_DIR"
 [ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
