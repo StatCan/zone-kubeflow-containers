@@ -277,17 +277,17 @@ local({
 EOF
 fi
 
-# Create and set the GPG settings during first boot
-if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
-  mkdir -p "/home/$NB_USER/.gnupg"
-  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
-  echo "GPG directory created with agent configuration."
-fi
+# Create and set the GPG settings
+mkdir -p "/home/$NB_USER/.gnupg"
+echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
 
 # Always ensure proper GPG permissions on every startup
 chmod 700 "/home/$NB_USER/.gnupg"
-find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \;
-find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \;
+find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \; 2>/dev/null || true
+find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \; 2>/dev/null || true
+
+# Remove any stale lock files that might prevent proper operation
+find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
 echo "GPG directory permissions secured."
 
 # Create a wrapper script for GPG that ensures proper environment
@@ -307,24 +307,130 @@ chmod +x /home/$NB_USER/.local/bin/gpg-wrapper
 # Configure Git to use our GPG wrapper
 git config --global gpg.program "/home/$NB_USER/.local/bin/gpg-wrapper"
 
-# Preload GPG passphrase if a passphrase file exists
-if [ -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
-  # Get the keygrip of the first secret key
-  KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
-  
-  if [ -n "$KEYGRIP" ]; then
-    # Preset the passphrase using the keygrip
-    /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < "/home/$NB_USER/.gnupg/passphrase.txt"
-    echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
-  else
-    echo "Warning: No secret key found to preload passphrase"
+# Create a comprehensive setup script for GPG and pass
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-and-pass
+#!/bin/bash
+echo "Setting up GPG and pass..."
+
+# Generate GPG key if it doesn't exist
+if ! gpg --list-secret-keys | grep -q "test@example.com"; then
+  echo "Generating GPG key..."
+  gpg --batch --generate-key <<INNER_EOF
+Key-Type: RSA
+Key-Length: 2048
+Subkey-Type: RSA
+Subkey-Length: 2048
+Name-Real: Test User
+Name-Email: test@example.com
+Expire-Date: 0
+Passphrase: test123
+%commit
+%echo done
+INNER_EOF
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate GPG key"
+    exit 1
   fi
 else
-  echo "Info: No passphrase file found at /home/$NB_USER/.gnupg/passphrase.txt. GPG passphrase not preloaded."
+  echo "GPG key already exists."
 fi
 
-# Launch GPG agent to ensure availability across all interfaces
+# Initialize pass if not already initialized
+if [ ! -d "/home/$NB_USER/.password-store" ]; then
+  echo "Initializing password store..."
+  pass init test@example.com
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to initialize password store"
+    exit 1
+  fi
+else
+  echo "Password store already initialized."
+fi
+
+# Generate a test password if it doesn't exist
+if ! pass ls test-secret >/dev/null 2>&1; then
+  echo "Generating test password..."
+  pass generate test-secret 20
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate test password"
+    exit 1
+  fi
+else
+  echo "Test password already exists."
+fi
+
+# Create passphrase file if it doesn't exist
+if [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  echo "Creating passphrase file..."
+  echo "test123" > ~/.gnupg/passphrase.txt
+  chmod 600 ~/.gnupg/passphrase.txt
+else
+  echo "Passphrase file already exists."
+fi
+
+# Get keygrip and preload passphrase
+KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+if [ -n "$KEYGRIP" ]; then
+  /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < ~/.gnupg/passphrase.txt
+  echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+else
+  echo "Warning: No secret key found to preload passphrase"
+fi
+
+# Restart GPG agent
+gpgconf --kill gpg-agent
 gpgconf --launch gpg-agent
+
+echo "Setup complete. Test with: pass show test-secret"
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-and-pass
+
+# Create a user-friendly setup script for manual passphrase entry
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-passphrase
+#!/bin/bash
+echo "Setting up GPG passphrase preloading..."
+echo "This will store your GPG passphrase in a file for automatic unlocking."
+echo "Only use this if you understand the security implications."
+read -p "Enter your GPG passphrase: " -s PASSPHRASE
+echo
+echo "$PASSPHRASE" > ~/.gnupg/passphrase.txt
+chmod 600 ~/.gnupg/passphrase.txt
+
+# Get keygrip and preload passphrase
+KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+if [ -n "$KEYGRIP" ]; then
+  /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < ~/.gnupg/passphrase.txt
+  echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+else
+  echo "Warning: No secret key found to preload passphrase"
+fi
+
+# Restart GPG agent
+gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+
+echo "Passphrase file created at ~/.gnupg/passphrase.txt"
+echo "Setup complete. Test with: pass show test-secret"
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-passphrase
+
+# Launch GPG agent first
+gpgconf --launch gpg-agent
+
+# Check if we need to run the setup automatically
+# Run if either the GPG key doesn't exist, the password store doesn't exist, or the passphrase file doesn't exist
+if ! gpg --list-secret-keys | grep -q "test@example.com" || [ ! -d "/home/$NB_USER/.password-store" ] || [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  echo "Running initial GPG and pass setup..."
+  /home/$NB_USER/.local/bin/setup-gpg-and-pass
+  if [ $? -eq 0 ]; then
+    touch "/home/$NB_USER/.gnupg/.setup_complete"
+  else
+    echo "Warning: Initial GPG setup failed. You can run '/home/$NB_USER/.local/bin/setup-gpg-and-pass' manually."
+  fi
+fi
+
+# Remove any stale lock files again after setup
+find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
 
 # Create a setup script for GPG passphrase preloading
 cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-passphrase
