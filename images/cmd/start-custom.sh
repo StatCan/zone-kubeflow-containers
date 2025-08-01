@@ -281,11 +281,14 @@ fi
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   mkdir -p "/home/$NB_USER/.gnupg"
   echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
-  # Set Permissions
-  chmod 700 "/home/$NB_USER/.gnupg"
-  chmod 600 "/home/$NB_USER/.gnupg/*" 2>/dev/null || true
-  echo "GPG directory configured with proper permissions."
+  echo "GPG directory created with agent configuration."
 fi
+
+# Always ensure proper GPG permissions on every startup
+chmod 700 "/home/$NB_USER/.gnupg"
+find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \;
+find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \;
+echo "GPG directory permissions secured."
 
 # Launch GPG agent to ensure availability across all interfaces
 gpgconf --launch gpg-agent
