@@ -277,7 +277,7 @@ local({
 EOF
 fi
 
-# Create and set the gpg settings during first boot
+# Create and set the GPG settings during first boot
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   mkdir -p "/home/$NB_USER/.gnupg"
   echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-tty" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
@@ -305,8 +305,39 @@ chmod +x /home/$NB_USER/.local/bin/gpg-wrapper
 # Configure Git to use our GPG wrapper
 git config --global gpg.program "/home/$NB_USER/.local/bin/gpg-wrapper"
 
+# Preload GPG passphrase if a passphrase file exists
+if [ -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  # Get the keygrip of the first secret key
+  KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+  
+  if [ -n "$KEYGRIP" ]; then
+    # Preset the passphrase using the keygrip
+    /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < "/home/$NB_USER/.gnupg/passphrase.txt"
+    echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+  else
+    echo "Warning: No secret key found to preload passphrase"
+  fi
+else
+  echo "Info: No passphrase file found at /home/$NB_USER/.gnupg/passphrase.txt. GPG passphrase not preloaded."
+fi
+
 # Launch GPG agent to ensure availability across all interfaces
 gpgconf --launch gpg-agent
+
+# Create a setup script for GPG passphrase preloading
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-passphrase
+#!/bin/bash
+echo "Setting up GPG passphrase preloading..."
+echo "This will store your GPG passphrase in a file for automatic unlocking."
+echo "Only use this if you understand the security implications."
+read -p "Enter your GPG passphrase: " -s PASSPHRASE
+echo
+echo "$PASSPHRASE" > ~/.gnupg/passphrase.txt
+chmod 600 ~/.gnupg/passphrase.txt
+echo "Passphrase file created at ~/.gnupg/passphrase.txt"
+echo "Restart your notebook server for the changes to take effect."
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-passphrase
 
 # Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
