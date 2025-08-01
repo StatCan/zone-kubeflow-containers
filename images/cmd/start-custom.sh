@@ -280,7 +280,7 @@ fi
 # Create and set the gpg settings during first boot
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   mkdir -p "/home/$NB_USER/.gnupg"
-  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-tty" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
   echo "GPG directory created with agent configuration."
 fi
 
@@ -289,6 +289,21 @@ chmod 700 "/home/$NB_USER/.gnupg"
 find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \;
 find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \;
 echo "GPG directory permissions secured."
+
+# Create a wrapper script for GPG that ensures proper environment
+cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-wrapper
+#!/bin/bash
+# Ensure GPG_TTY is set for GUI applications
+if [ -z "$GPG_TTY" ]; then
+  export GPG_TTY=$(tty)
+fi
+# Launch the actual GPG command
+/usr/bin/gpg "$@"
+EOF
+chmod +x /home/$NB_USER/.local/bin/gpg-wrapper
+
+# Configure Git to use our GPG wrapper
+git config --global gpg.program "/home/$NB_USER/.local/bin/gpg-wrapper"
 
 # Launch GPG agent to ensure availability across all interfaces
 gpgconf --launch gpg-agent
