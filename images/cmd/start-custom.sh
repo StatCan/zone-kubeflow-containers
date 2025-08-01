@@ -280,7 +280,7 @@ fi
 # Create and set the GPG settings during first boot
 if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
   mkdir -p "/home/$NB_USER/.gnupg"
-  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-tty" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
   echo "GPG directory created with agent configuration."
 fi
 
@@ -297,6 +297,8 @@ cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-wrapper
 if [ -z "$GPG_TTY" ]; then
   export GPG_TTY=$(tty)
 fi
+# Set PINENTRY_USER_DATA for consistent behavior
+export PINENTRY_USER_DATA="USE_CURSES=1"
 # Launch the actual GPG command
 /usr/bin/gpg "$@"
 EOF
