@@ -277,8 +277,12 @@ local({
 EOF
 fi
 
+# Fix parent directory permissions to prevent setgid inheritance
+chmod 755 /home/$NB_USER
+
 # Create and set the GPG settings
 mkdir -p "/home/$NB_USER/.gnupg"
+chmod 700 "/home/$NB_USER/.gnupg"
 echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
 
 # Always ensure proper GPG permissions on every startup
