@@ -1,8 +1,10 @@
 #!/bin/bash
+
 echo "--------------------Starting up--------------------"
 if [ -d /var/run/secrets/kubernetes.io/serviceaccount ]; then
   while ! curl -s -f http://127.0.0.1:15020/healthz/ready; do sleep 1; done
 fi
+
 echo "Checking if we want to sleep infinitely"
 if [[ -z "${INFINITY_SLEEP}" ]]; then
   echo "Not sleeping"
@@ -10,6 +12,7 @@ else
   echo "--------------------zzzzzz--------------------"
   sleep infinity
 fi
+
 # Set up Git Credential Manager
 # only if it wasn't already setup
 if grep -q "export GPG_TTY" ~/.bashrc; then
@@ -37,9 +40,11 @@ EOF
   echo "GPG_TTY=\$(tty)" >> /opt/conda/lib/R/etc/Renviron
   echo "PINENTRY_USER_DATA='USE_CURSES=1'" >> /opt/conda/lib/R/etc/Renviron
 fi
+
 # Clone example notebooks (with retries because it sometimes initially fails)
 if [[ ! -d  ~/aaw-contrib-jupyter-notebooks ]]; then
   echo "Cloning examples notebooks"
+
   RETRIES_NO=5
   RETRY_DELAY=3
   for i in $(seq 1 $RETRIES_NO); do
@@ -52,14 +57,17 @@ if [[ ! -d  ~/aaw-contrib-jupyter-notebooks ]]; then
 else
   echo "Example notebooks already cloned."
 fi
+
 if [ ! -e /home/$NB_USER/.Rprofile ]; then
     cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
 fi
+
 # Configure the shell! If not already configured.
 if [ ! -f /home/$NB_USER/.zsh-installed ]; then
     if [ -f /tmp/oh-my-zsh-install.sh ]; then
       sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh
     fi
+
     if conda --help > /dev/null 2>&1; then
       conda init bash
       conda init zsh
@@ -69,6 +77,7 @@ if [ ! -f /home/$NB_USER/.zsh-installed ]; then
     touch /home/$NB_USER/.zsh-installed
     touch /home/$NB_USER/.hushlogin
 fi
+
 # add rm wrapper:
 # https://jirab.statcan.ca/browse/ZPS-40
 if [ ! -f /home/$NB_USER/.local/bin/rm ]; then
@@ -82,9 +91,12 @@ if [ ! -f /home/$NB_USER/.local/bin/rm ]; then
 else
   echo "rm wrapper already exists"
 fi
+
 export VISUAL="/usr/bin/nano"
 export EDITOR="$VISUAL"
+
 echo "shell has been configured"
+
 # create .profile
 cat <<EOF > $HOME/.profile
 if [ -n "$BASH_VERSION" ]; then
@@ -93,7 +105,9 @@ if [ -n "$BASH_VERSION" ]; then
     fi
 fi
 EOF
+
 echo ".profile has been created"
+
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
     if [ "${KF_LANG}" = "en" ]; then
@@ -120,7 +134,9 @@ if [ -n "${KF_LANG}" ]; then
         fi
     fi
 fi
+
 echo "language has been configured"
+
 # Configure KFP multi-user
 if [ -n "${NB_NAMESPACE}" ]; then
 mkdir -p $HOME/.config/kfp
@@ -128,26 +144,34 @@ cat <<EOF > $HOME/.config/kfp/context.json
 {"namespace": "${NB_NAMESPACE}"}
 EOF
 fi
+
 echo "KFP multi-user has been configured"
+
 # Introduced by RStudio 1.4
 # See https://github.com/jupyterhub/jupyter-rsession-proxy/issues/95
 # And https://github.com/blairdrummond/jupyter-rsession-proxy/blob/master/jupyter_rsession_proxy/__init__.py
 export RSERVER_WWW_ROOT_PATH=$NB_PREFIX/rstudio
+
 # Remove a Jupyterlab 2.x config setting that breaks Jupyterlab 3.x
 NOTEBOOK_CONFIG="$HOME/.jupyter/jupyter_notebook_config.json"
 NOTEBOOK_CONFIG_TMP="$HOME/.jupyter/jupyter_notebook_config.json.tmp"
+
 if [ -f "$NOTEBOOK_CONFIG" ]; then
   jq 'del(.NotebookApp.server_extensions)' "$NOTEBOOK_CONFIG" > "$NOTEBOOK_CONFIG_TMP" \
       && mv -f "$NOTEBOOK_CONFIG_TMP" "$NOTEBOOK_CONFIG"
 fi
+
 echo "broken configuration settings removed"
+
 export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+
 # Have NB_PREFIX and NB_NAMESPACE available in R and Rstudio
 echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
 echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 # Have the NLS_LANG setting available in R and Rstudio
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
+
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
 #echo "Checking if Python venv exists"
@@ -158,6 +182,7 @@ echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 #  python3 -m venv $HOME/base-python-venv
 #  echo "adding include-system-site-packages"
 #fi
+
 echo "Checking for .condarc file in hom directory"
 if [[ -f "$HOME/.condarc" ]]; then
   echo ".condarc file exists, not going to do anything"
@@ -165,13 +190,16 @@ else
   echo "Creating basic .condarc file"
   printf 'envs_dirs:\n  - $HOME/.conda/envs' > $HOME/.condarc
 fi
+
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
+
 # Copy default config and extensions on first start up
 if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
   echo "Creating code-server default settings and extentions"
   mkdir -p "$CS_DEFAULT_HOME"
   cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
 fi
+
 # Create default user directories
 WORKSPACE_DIR="$HOME/workspace"
 REPO_DIR="$WORKSPACE_DIR/repositories"
@@ -180,21 +208,25 @@ VSCODE_DIR="$WORKSPACE_DIR/.vscode"
 VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
 PYTHON_PATH="/opt/conda/bin/python"
 VSCODE_USER_DIR="$HOME/.local/share/code-server/User"
+
 echo "Ensuring workspace directories exist..."
 [ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
 [ -d "$REPO_DIR" ] || mkdir -p "$REPO_DIR"
 [ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
 [ -d "$VSCODE_DIR" ] || mkdir -p "$VSCODE_DIR"
 [ -d "$VSCODE_USER_DIR" ] || mkdir -p "$VSCODE_USER_DIR"
+
 # Set Python interpreter path for VSCode if not already set
 if [ ! -f "$VSCODE_SETTINGS" ]; then
   echo "Python default settings for VSCode..."
   echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
 fi
+
 if [ ! -f "$VSCODE_USER_DIR/settings.json" ]; then
   echo "Python default user settings for VSCode..."
   echo "{\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
 fi
+
 # Retrieving Alias file for oracle client
 # Runs on every startup because this output location is not persisted storage
 # Implemented with a retry because it sometimes fails for some reason
@@ -213,6 +245,7 @@ for i in $(seq 1 $RETRIES_NO); do
   [[ $i -eq $RETRIES_NO ]] && echo "Failed to clone the tnsnames.ora after $RETRIES_NO retries"
   sleep ${RETRY_DELAY}
 done
+
 # Add sasstudio default
 if [[ -z "${SASSTUDIO_TEMP_HOME}" ]]; then
   echo "No sas studio default settings created"
@@ -221,6 +254,7 @@ else
   mkdir -p "$HOME/.sasstudio"
   cp -r "$SASSTUDIO_TEMP_HOME/." "$HOME/.sasstudio"
 fi
+
 # Retrieve service account details
 serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
 serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
@@ -228,7 +262,9 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
+
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
   echo "Creating rprofile"
@@ -240,19 +276,24 @@ local({
 })
 EOF
 fi
+
 # Fix parent directory permissions to prevent setgid inheritance
 chmod 755 /home/$NB_USER
+
 # Create and set the GPG settings
 mkdir -p "/home/$NB_USER/.gnupg"
 chmod 700 "/home/$NB_USER/.gnupg"
 echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+
 # Always ensure proper GPG permissions on every startup
 chmod 700 "/home/$NB_USER/.gnupg"
 find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \; 2>/dev/null || true
 find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \; 2>/dev/null || true
+
 # Remove any stale lock files that might prevent proper operation
 find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
 echo "GPG directory permissions secured."
+
 # Create a wrapper script for GPG that ensures proper environment
 cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-wrapper
 #!/bin/bash
@@ -266,8 +307,10 @@ export PINENTRY_USER_DATA="USE_CURSES=1"
 /usr/bin/gpg "$@"
 EOF
 chmod +x /home/$NB_USER/.local/bin/gpg-wrapper
+
 # Configure Git to use our GPG wrapper
 git config --global gpg.program "/home/$NB_USER/.local/bin/gpg-wrapper"
+
 # Create a comprehensive setup script for GPG and pass
 cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-and-pass
 #!/bin/bash
@@ -338,6 +381,7 @@ gpgconf --launch gpg-agent
 echo "Setup complete. Test with: pass show test-secret"
 EOF
 chmod +x /home/$NB_USER/.local/bin/setup-gpg-and-pass
+
 # Create a user-friendly setup script for manual passphrase entry
 cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-passphrase
 #!/bin/bash
@@ -363,8 +407,10 @@ echo "Passphrase file created at ~/.gnupg/passphrase.txt"
 echo "Setup complete. Test with: pass show test-secret"
 EOF
 chmod +x /home/$NB_USER/.local/bin/setup-gpg-passphrase
+
 # Launch GPG agent first
 gpgconf --launch gpg-agent
+
 # Check if we need to run the setup automatically
 # Run if either the GPG key doesn't exist, the password store doesn't exist, or the passphrase file doesn't exist
 if ! gpg --list-secret-keys | grep -q "test@example.com" || [ ! -d "/home/$NB_USER/.password-store" ] || [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
@@ -376,8 +422,10 @@ if ! gpg --list-secret-keys | grep -q "test@example.com" || [ ! -d "/home/$NB_US
     echo "Warning: Initial GPG setup failed. You can run '/home/$NB_USER/.local/bin/setup-gpg-and-pass' manually."
   fi
 fi
+
 # Remove any stale lock files again after setup
 find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
+
 # Create a diagnostic tool for GPG/pass issues
 cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-diagnose
 #!/bin/bash
@@ -404,9 +452,12 @@ echo ""
 echo "=== End Diagnostics ==="
 EOF
 chmod +x /home/$NB_USER/.local/bin/gpg-diagnose
+
 # Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
+
 echo "--------------------starting jupyter--------------------"
+
 /opt/conda/bin/jupyter server --notebook-dir=/home/${NB_USER} \
                  --ip=0.0.0.0 \
                  --no-browser \
@@ -417,4 +468,5 @@ echo "--------------------starting jupyter--------------------"
                  --ServerApp.authenticate_prometheus=False \
                  --ServerApp.base_url=${NB_PREFIX} \
                  --ServerApp.default_url=${DEFAULT_JUPYTER_URL:-/tree}
+
 echo "--------------------shutting down, persisting VS_CODE settings--------------------"
