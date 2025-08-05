@@ -13,16 +13,32 @@ else
   sleep infinity
 fi
 
-# Step up Git Credential Manager
+# Set up Git Credential Manager
 # only if it wasn't already setup
 if grep -q "export GPG_TTY" ~/.bashrc; then
   echo "Git Credential Manager already setup"
 else
   echo "Setting up Git Credential Manager"
-
+  # Create pass wrapper for consistent GPG environment
+  mkdir -p /home/$NB_USER/.local/bin
+  cat << 'EOF' > /home/$NB_USER/.local/bin/pass-wrapper
+#!/bin/bash
+export GPG_TTY=$(tty)
+export PINENTRY_USER_DATA="USE_CURSES=1"
+gpgconf --launch gpg-agent
+/usr/bin/pass "$@"
+EOF
+  chmod +x /home/$NB_USER/.local/bin/pass-wrapper
+  
   git config --global credential.credentialStore gpg
-  git config --global credential.helper manager
+  git config --global credential.helper "/home/$NB_USER/.local/bin/pass-wrapper"
   echo "export GPG_TTY=\$(tty)" >> ~/.bashrc
+  echo "export PINENTRY_USER_DATA='USE_CURSES=1'" >> ~/.bashrc
+  echo "export GPG_TTY=\$(tty)" >> ~/.zshrc
+  echo "export PINENTRY_USER_DATA='USE_CURSES=1'" >> ~/.zshrc
+  # Add to R environment for RStudio compatibility
+  echo "GPG_TTY=\$(tty)" >> /opt/conda/lib/R/etc/Renviron
+  echo "PINENTRY_USER_DATA='USE_CURSES=1'" >> /opt/conda/lib/R/etc/Renviron
 fi
 
 # Clone example notebooks (with retries because it sometimes initially fails)
@@ -261,14 +277,181 @@ local({
 EOF
 fi
 
-# Create and set the gpg settings during first boot
-if [ ! -f "/home/$NB_USER/.gnupg/gpg-agent.conf" ]; then
-  mkdir -p "/home/$NB_USER/.gnupg"
-  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
-  # Set Permissions
-  chmod 700 "/home/$NB_USER/.gnupg"
-  echo "Permissions for $DIR set to 700."
+# Fix parent directory permissions to prevent setgid inheritance
+chmod 755 /home/$NB_USER
+
+# Create and set the GPG settings
+mkdir -p "/home/$NB_USER/.gnupg"
+chmod 700 "/home/$NB_USER/.gnupg"
+echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+
+# Always ensure proper GPG permissions on every startup
+chmod 700 "/home/$NB_USER/.gnupg"
+find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \; 2>/dev/null || true
+find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \; 2>/dev/null || true
+
+# Remove any stale lock files that might prevent proper operation
+find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
+echo "GPG directory permissions secured."
+
+# Create a wrapper script for GPG that ensures proper environment
+cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-wrapper
+#!/bin/bash
+# Ensure GPG_TTY is set for GUI applications
+if [ -z "$GPG_TTY" ]; then
+  export GPG_TTY=$(tty)
 fi
+# Set PINENTRY_USER_DATA for consistent behavior
+export PINENTRY_USER_DATA="USE_CURSES=1"
+# Launch the actual GPG command
+/usr/bin/gpg "$@"
+EOF
+chmod +x /home/$NB_USER/.local/bin/gpg-wrapper
+
+# Configure Git to use our GPG wrapper
+git config --global gpg.program "/home/$NB_USER/.local/bin/gpg-wrapper"
+
+# Create a comprehensive setup script for GPG and pass
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-and-pass
+#!/bin/bash
+echo "Setting up GPG and pass..."
+# Generate GPG key if it doesn't exist
+if ! gpg --list-secret-keys | grep -q "test@example.com"; then
+  echo "Generating GPG key..."
+  gpg --batch --generate-key <<INNER_EOF
+Key-Type: RSA
+Key-Length: 2048
+Subkey-Type: RSA
+Subkey-Length: 2048
+Name-Real: Test User
+Name-Email: test@example.com
+Expire-Date: 0
+Passphrase: test123
+%commit
+%echo done
+INNER_EOF
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate GPG key"
+    exit 1
+  fi
+else
+  echo "GPG key already exists."
+fi
+# Initialize pass if not already initialized
+if [ ! -d "/home/$NB_USER/.password-store" ]; then
+  echo "Initializing password store..."
+  pass init test@example.com
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to initialize password store"
+    exit 1
+  fi
+else
+  echo "Password store already initialized."
+fi
+# Generate a test password if it doesn't exist
+if ! pass ls test-secret >/dev/null 2>&1; then
+  echo "Generating test password..."
+  pass generate test-secret 20
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate test password"
+    exit 1
+  fi
+else
+  echo "Test password already exists."
+fi
+# Create passphrase file if it doesn't exist
+if [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  echo "Creating passphrase file..."
+  echo "test123" > ~/.gnupg/passphrase.txt
+  chmod 600 ~/.gnupg/passphrase.txt
+else
+  echo "Passphrase file already exists."
+fi
+# Get keygrip and preload passphrase
+KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+if [ -n "$KEYGRIP" ]; then
+  /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < ~/.gnupg/passphrase.txt
+  echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+else
+  echo "Warning: No secret key found to preload passphrase"
+fi
+# Restart GPG agent
+gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+echo "Setup complete. Test with: pass show test-secret"
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-and-pass
+
+# Create a user-friendly setup script for manual passphrase entry
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-passphrase
+#!/bin/bash
+echo "Setting up GPG passphrase preloading..."
+echo "This will store your GPG passphrase in a file for automatic unlocking."
+echo "Only use this if you understand the security implications."
+read -p "Enter your GPG passphrase: " -s PASSPHRASE
+echo
+echo "$PASSPHRASE" > ~/.gnupg/passphrase.txt
+chmod 600 ~/.gnupg/passphrase.txt
+# Get keygrip and preload passphrase
+KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+if [ -n "$KEYGRIP" ]; then
+  /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < ~/.gnupg/passphrase.txt
+  echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+else
+  echo "Warning: No secret key found to preload passphrase"
+fi
+# Restart GPG agent
+gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+echo "Passphrase file created at ~/.gnupg/passphrase.txt"
+echo "Setup complete. Test with: pass show test-secret"
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-passphrase
+
+# Launch GPG agent first
+gpgconf --launch gpg-agent
+
+# Check if we need to run the setup automatically
+# Run if either the GPG key doesn't exist, the password store doesn't exist, or the passphrase file doesn't exist
+if ! gpg --list-secret-keys | grep -q "test@example.com" || [ ! -d "/home/$NB_USER/.password-store" ] || [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  echo "Running initial GPG and pass setup..."
+  /home/$NB_USER/.local/bin/setup-gpg-and-pass
+  if [ $? -eq 0 ]; then
+    touch "/home/$NB_USER/.gnupg/.setup_complete"
+  else
+    echo "Warning: Initial GPG setup failed. You can run '/home/$NB_USER/.local/bin/setup-gpg-and-pass' manually."
+  fi
+fi
+
+# Remove any stale lock files again after setup
+find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
+
+# Create a diagnostic tool for GPG/pass issues
+cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-diagnose
+#!/bin/bash
+echo "=== GPG/Pass Diagnostics ==="
+echo "GPG Agent Status:"
+gpgconf --list-dirs agent-socket
+echo ""
+echo "GPG Configuration:"
+cat ~/.gnupg/gpg-agent.conf
+echo ""
+echo "GPG Keys:"
+gpg --list-secret-keys --keyid-format LONG
+echo ""
+echo "Pass Status:"
+pass ls
+echo ""
+echo "Environment Variables:"
+echo "GPG_TTY: $GPG_TTY"
+echo "PINENTRY_USER_DATA: $PINENTRY_USER_DATA"
+echo ""
+echo "File Permissions:"
+ls -la ~/.gnupg/
+echo ""
+echo "=== End Diagnostics ==="
+EOF
+chmod +x /home/$NB_USER/.local/bin/gpg-diagnose
 
 # Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
