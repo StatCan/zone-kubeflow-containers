@@ -23,6 +23,9 @@ ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 # Point conda to Artifactory repository
 RUN conda config --remove channels conda-forge --system
 
+# Fix home directory permissions to prevent setgid inheritance
+RUN chmod 755 /home/$NB_USER
+
 USER $NB_USER
 ENTRYPOINT ["tini", "--"]
 CMD ["start-custom.sh"]
