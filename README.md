@@ -117,25 +117,31 @@ Tests are formatted using typical pytest formats
 
 ## Beta Process
 
+![Flowchart of the beta release process](./docs/images/beta_process_v2.drawio.png)
+
 To reduce unexpected changes getting added into the images used by our users, 
 we implemented a beta process that should be followed when introducing changes to the codebase.
 
-When a change needs to be done, new branches should be created from the `beta` branch. 
-Following this, new pull requests should target the `beta` branch, unless absolutely necessary to target master directly.
+When a change needs to be done, new feature branches should be created from the `beta` branch. 
+Following this, new pull requests should target the `beta` branch, unless absolutely necessary to target `master` directly.
 
-Once a pull request has been approved, if the target branch is `beta`, it will automatically be tagged with the `ready for beta` label.
+Once a pull request has been approved, if the target branch is `beta`, it will automatically be set with the `ready for beta` label.
 This label will help us track which new additions are heading into beta. 
 With this, the pull request should not be merged manually as an automated process will handle that.
 
-We have in place a workflow(`beta-auto-merge`) which runs on a schedule and handles merging all the `ready for beta` labelled pull requests into the beta branch.
-This workflow runs every two weeks, and helps us manage the frequency of updates to the beta branch.
+We have in place a workflow(`beta-auto-merge`) which runs on a schedule and handles merging all the `ready for beta` labelled pull requests into `beta`.
+This workflow runs every two weeks, and helps us manage the frequency of updates to the `beta` branch.
 
-Once merged into the beta branch, a workflow will build and tag our images with the `beta` tag instead of `v2`.
-Users will be able to use those `beta` tagged images for their notebook servers if they wish to get early access to new features and fixes.
+Once merged into the beta branch, a workflow will build and tag our container images with the `beta` tag instead of `v2`.
+Users will then be able to use those `beta` tagged images for their notebook servers if they wish to get early access to new features and fixes.
 
-We also have a second workflow(`beta-promote`) running on a schedule that handles promoting the beta branch to master.
+We also have a second workflow(`beta-promote`) running on a schedule that handles creating a new pull request to promote the beta branch to master.
 It also runs every two weeks, but on alternating weeks from the `beta-auto-merge` workflow.
-This means that new features and fixes should live for about one week on the beta branch before they are made official in master
+This means that new features and fixes should live for about one week on the beta branch before they are made official in master.
+
+Once we have this new pull request created, someone can manually review it, fix any potential problems, and then finally merge it.
+After this pull request is merged, we have a third workflow(`master-release.yaml`) that will handle creating a Github release for `master`.
+This release can help us communicate what changes have been done to our container images.
 
 ## General Development Workflow
 
