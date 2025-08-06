@@ -20,15 +20,15 @@ jobs:
           numWeek=$(date +%U)
           echo "biweekly=$((numWeek % 2))" >> $GITHUB_OUTPUT
           echo "This is week #$numWeek, biweekly modulo is at $((numWeek % 2))."
-          echo "Job will run on value==0"        
-
+          echo "Job will run on value==0"
+          
   create-pr-beta-to-master:
     runs-on: ubuntu-latest
     needs: get-bi-weekly-schedule
     if: ${{ needs.get-bi-weekly-schedule.outputs.biweekly == 0 }}
     env:
       GH_TOKEN: ${{ github.token }}
-    steps:
+    steps:    
     - name: "Checkout beta"
       uses: actions/checkout@v4
       with:
