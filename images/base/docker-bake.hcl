@@ -67,5 +67,5 @@ target "custom-notebook" {
     args = {
         BASE_IMAGE = "datascience-notebook"
     }
-    tags = ["custom-jupyter"]
+    tags = ["localhost:5000/custom-base:latest"]
 }
