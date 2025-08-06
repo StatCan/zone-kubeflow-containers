@@ -8,7 +8,7 @@ group "default" {
 }
 
 target "foundation" {
-    context = "https://github.com/jupyter/docker-stacks.git#main:images/docker-stacks-foundation"
+    context = "https://github.com/jupyter/docker-stacks/tree/main/images/docker-stacks-foundation"
     args = {
         PYTHON_VERSION = "3.13"
     }
@@ -16,7 +16,7 @@ target "foundation" {
 }
 
 target "base-notebook" {
-    context = "https://github.com/jupyter/docker-stacks.git#main:images/base-notebook"
+    context = "https://github.com/jupyter/docker-stacks/tree/main/images/base-notebook"
     contexts = {
         docker-stacks-foundation = "target:foundation"
     }
@@ -27,7 +27,7 @@ target "base-notebook" {
 }
 
 target "minimal-notebook" {
-    context = "https://github.com/jupyter/docker-stacks.git#main:images/minimal-notebook"
+    context = "https://github.com/jupyter/docker-stacks/tree/main/images/minimal-notebook"
     contexts = {
         base-notebook = "target:base-notebook"
     }
@@ -38,7 +38,7 @@ target "minimal-notebook" {
 }
 
 target "scipy-notebook" {
-    context = "https://github.com/jupyter/docker-stacks.git#main:images/scipy-notebook"
+    context = "https://github.com/jupyter/docker-stacks/tree/main/images/scipy-notebook"
     contexts = {
         minimal-notebook = "target:minimal-notebook"
     }
@@ -49,7 +49,7 @@ target "scipy-notebook" {
 }
 
 target "datascience-notebook" {
-    context = "https://github.com/jupyter/docker-stacks.git#main:images/datascience-notebook"
+    context = "https://github.com/jupyter/docker-stacks/tree/main/images/datascience-notebook"
     contexts = {
         scipy-notebook = "target:scipy-notebook"
     }
