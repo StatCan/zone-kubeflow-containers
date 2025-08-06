@@ -1,5 +1,6 @@
 USER root
 
+
 # installs vscode server, python & conda packages and jupyter lab extensions.
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
@@ -35,7 +36,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
-    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.91.0 && \
+    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
     code-server --install-extension dvirtz.parquet-viewer@2.9.0 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
@@ -61,7 +62,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -162,9 +162,6 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
     && rm -rf /root/.npm \
     && fix-permissions ${OMPP_INSTALL_DIR}
 
-# MinIO Client install
-COPY --from=minio/mc:RELEASE.2024-11-17T19-35-25Z /bin/mc /usr/local/bin/mc
-
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
@@ -189,11 +186,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Harden rstudio-server
-RUN mkdir -p /etc/rstudio \
-    && echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf \
-    && echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf \
-    && echo "www-same-site=lax" >> /etc/rstudio/rserver.conf \
-    && echo "restrict-directory-view=1" >> /etc/rstudio/rsession.conf \
+RUN mkdir -p /etc/rstudio && \
+    echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf && \
+    echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf && \
+    echo "www-same-site=lax" >> /etc/rstudio/rserver.conf && \
+    echo "auth-timeout-minutes=10080" >> /etc/rstudio/rserver.conf && \
+    echo "restrict-directory-view=1" >> /etc/rstudio/rsession.conf && \
     # Sets the default working dir
     && echo "session-default-working-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf \
     && echo "session-default-new-project-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf \
