@@ -39,6 +39,7 @@ target "minimal-notebook" {
 
 target "custom-notebook" {
     context = "."
+    dockerfile = "Dockerfile"
     contexts = {
         minimal-notebook = "target:minimal-notebook"
     }

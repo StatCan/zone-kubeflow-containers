@@ -81,7 +81,7 @@ jobs:
         id: build-parent
         if: inputs.parent-image == ''
         run: |
-          docker buildx bake -f images/base/docker-bake.hcl
+          docker buildx bake -f images/base/bake/docker-bake.hcl
           docker tag custom-base localhost:5000/custom-base:latest
           docker push localhost:5000/custom-base:latest
 
