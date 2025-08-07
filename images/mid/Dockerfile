@@ -25,7 +25,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix \
     && apt-get update \
-    && apt-get install -y --no-install-recommends nginx build-essential gdb \
+    && apt-get install -y --no-install-recommends nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
@@ -56,6 +56,8 @@ COPY languagepacks.json $CS_TEMP_HOME/
 # Sets the default workspace for vscode
 COPY coder.json $CS_TEMP_HOME/
 
+# https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
+# need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
     'nodejs' \
@@ -92,6 +94,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
         'git+https://github.com/betatim/vscode-binder' \
         'jupyter-rsession-proxy==2.2.0' \
+        # Forcibly upgrade packages to patch vulnerabilities
         'wheel==0.40.0' \
         'setuptools==67.6.0' \
         'pyjwt==2.6.0' \
@@ -151,6 +154,8 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
     && mkdir -p ${OMPP_INSTALL_DIR} \
     && tar -xf /tmp/ompp.tar.gz -C ${OMPP_INSTALL_DIR} --strip-components=1 \
     && rm -f /tmp/ompp.tar.gz \
+    # Customize and rebuild omp-ui for jupyter-ompp-proxy install
+    # issue with making a relative publicPath https://github.com/quasarframework/quasar/issues/8513
     && sed -i -e 's/history/hash/' ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
     && sed -i -e "s/OMS_URL:.*''/OMS_URL: '.'/" ${OMPP_INSTALL_DIR}/ompp-ui/quasar.config.js \
     && npm install --prefix ${OMPP_INSTALL_DIR}/ompp-ui @babel/traverse@7.23.2 \

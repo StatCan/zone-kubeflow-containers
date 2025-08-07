@@ -34,7 +34,9 @@ RUN apt-get update --yes \
         zip \
         zsh \
         dos2unix \
+        # installs necessary tool for kerberos authentication setup
         krb5-user \
+        # these are required by some r packages, adding these here so they get installed into all images.
         libfreetype6-dev \
         libpng-dev \
         libtiff5-dev \
@@ -52,6 +54,7 @@ COPY suspend-server.sh /usr/local/bin
 COPY adjust-server-resources.py /usr/local/bin
 
 # Install Python dependencies and tools
+# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 RUN mamba install --quiet \
       'pillow' \
       'pyyaml' \
@@ -109,15 +112,19 @@ RUN chmod +x /usr/local/bin/ktutil-keytab
 
 # ODBC drivers and Oracle client in one layer
 RUN \
-    # Microsoft ODBC drivers
+    # Microsoft ODBC drivers, add the signature to trust the Microsoft repo
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg \
     && echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" > /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
+    # Install the driver
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
         msodbcsql18 \
+        # optional: for bcp and sqlcmd
         mssql-tools18 \
         unixodbc \
+        # installing unixODBC
         unixodbc-dev \
+        # libaio1 needed for Oracle Instant Client
         libaio1t64 \
     && ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1 \
     && pip install --no-cache-dir --quiet pyodbc \
@@ -146,6 +153,7 @@ COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIEN
 COPY dbConnection/*.ora /opt/oracle/instantclient_23_5/network/admin/
 RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
     && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
+#give users permissions to edit the alias file
 
 # Oracle environment variables
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
