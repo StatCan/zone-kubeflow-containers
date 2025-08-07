@@ -81,7 +81,7 @@ jobs:
         id: build-parent
         if: inputs.parent-image == ''
         run: |
-          docker buildx bake -f images/base/bake/docker-bake.hcl --allow fs.read=images/base/bake/docker-bake.hcl
+          docker buildx bake -f images/base/bake/docker-bake.hcl --allow fs.read=images/base/bake
           docker image ls
 
       - name: Set BASE_IMAGE variable
