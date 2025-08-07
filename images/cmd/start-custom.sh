@@ -150,11 +150,12 @@ echo "broken configuration settings removed"
 export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 
-# Have NB_PREFIX and NB_NAMESPACE available in R and Rstudio
+# Setup environment variables for R and Rstudio
 echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
 echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
-# Have the NLS_LANG setting available in R and Rstudio
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
+printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
+echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
 
 # Revert forced virtualenv, was causing issues with users
 #export PIP_REQUIRE_VIRTUALENV=true
@@ -174,8 +175,6 @@ else
   echo "Creating basic .condarc file"
   printf 'envs_dirs:\n  - $HOME/.conda/envs' > $HOME/.condarc
 fi
-
-printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
 
 # Copy default config and extensions on first start up
 if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
