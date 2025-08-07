@@ -5,6 +5,8 @@ on:
       - "master"
       - "beta"
     paths:
+      - ".github/workflows/*"
+
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
