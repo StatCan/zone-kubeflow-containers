@@ -39,7 +39,6 @@ target "minimal-notebook" {
 
 target "custom-notebook" {
     context = "."
-    dockerfile = "debug/Dockerfile"
     contexts = {
         minimal-notebook = "target:minimal-notebook"
     }

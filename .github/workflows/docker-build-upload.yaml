@@ -82,15 +82,14 @@ jobs:
         if: inputs.parent-image == ''
         run: |
           docker buildx bake -f images/base/bake/docker-bake.hcl
-          docker tag custom-base localhost:5000/custom-base:latest
-          docker push localhost:5000/custom-base:latest
+          docker image ls
 
       - name: Set BASE_IMAGE variable
         run: |
           if [ "${{ inputs.base-image }}" == "" ]; then
             echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
           else
-            echo "localhost:5000/custom-base:latest" >> $GITHUB_ENV
+            echo "BASE_IMAGE=custom-base" >> $GITHUB_ENV
           fi
 
       - name: Set FROM and as in Dockerfile
