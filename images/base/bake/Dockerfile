@@ -1,2 +1,2 @@
-ARG BASE_IMAGE=minimal-notebook
+ARG BASE_IMAGE=datascience-notebook
 FROM ${BASE_IMAGE}

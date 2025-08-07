@@ -37,13 +37,35 @@ target "minimal-notebook" {
     tags = ["minimal-notebook"]
 }
 
-target "custom-notebook" {
-    context = "images/base/bake"
+target "scipy-notebook" {
+    context = "https://github.com/jupyter/docker-stacks.git#main:images/scipy-notebook"
     contexts = {
         minimal-notebook = "target:minimal-notebook"
     }
     args = {
         BASE_IMAGE = "minimal-notebook"
+    }
+    tags = ["scipy-notebook"]
+}
+
+target "datascience-notebook" {
+    context = "https://github.com/jupyter/docker-stacks.git#main:images/datascience-notebook"
+    contexts = {
+        scipy-notebook = "target:scipy-notebook"
+    }
+    args = {
+        BASE_IMAGE = "scipy-notebook"
+    }
+    tags = ["datascience-notebook"]
+}
+
+target "custom-notebook" {
+    context = "images/base/bake"
+    contexts = {
+        datascience-notebook = "target:datascience-notebook"
+    }
+    args = {
+        BASE_IMAGE = "datascience-notebook"
     }
     tags = ["custom-base"]
 }
