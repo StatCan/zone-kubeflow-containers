@@ -38,7 +38,7 @@ target "minimal-notebook" {
 }
 
 target "custom-notebook" {
-    context = "."
+    context = "images/base/bake"
     contexts = {
         minimal-notebook = "target:minimal-notebook"
     }
