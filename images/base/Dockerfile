@@ -151,9 +151,9 @@ RUN \
 # Oracle configuration
 COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIENT_WALLET
 COPY dbConnection/*.ora /opt/oracle/instantclient_23_5/network/admin/
+# give users permissions to edit the alias file
 RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
     && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
-#give users permissions to edit the alias file
 
 # Oracle environment variables
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
