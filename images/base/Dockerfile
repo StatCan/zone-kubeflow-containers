@@ -60,6 +60,7 @@ RUN mamba install --quiet \
       'pyyaml' \
       'joblib==1.2.0' \
       's3fs' \ 
+      'mkl' \
       'fire==0.5.0' \
       'graphviz' \
     && pip install --no-cache-dir 'kubeflow-training' \
