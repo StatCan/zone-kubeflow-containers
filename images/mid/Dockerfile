@@ -1,6 +1,5 @@
 USER root
 
-
 # installs vscode server, python & conda packages and jupyter lab extensions.
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
@@ -64,6 +63,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
+    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
