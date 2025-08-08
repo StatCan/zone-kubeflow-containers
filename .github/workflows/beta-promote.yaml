@@ -39,4 +39,3 @@ jobs:
         gh pr create --base master --title "chore: promote beta to master" \
           --body "Automatically generated PR to merge beta to master" \
           --label auto-deploy
-
