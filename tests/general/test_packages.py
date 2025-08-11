@@ -137,7 +137,7 @@ def python_package_predicate(package):
 
 def r_package_predicate(package):
     """Predicate matching R packages"""
-    return not excluded_package_predicate(package) and package.startswith("r-")
+    return package.startswith("r-") and not excluded_package_predicate(package) 
 
 
 def _check_import_package(package_helper, command):
@@ -195,9 +195,13 @@ def r_packages(packages):
 
 def test_python_packages(package_helper, python_packages, max_failures=0):
     """Test the import of specified python packages"""
-    return _import_packages(
+    a = _import_packages(
         package_helper, python_packages, check_import_python_package, max_failures
     )
+    print("*********************************************************************************************************************")
+    print(a)
+    print("*********************************************************************************************************************")
+    return a
 
 
 @pytest.fixture(scope="function")
