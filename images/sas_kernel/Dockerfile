@@ -24,12 +24,15 @@ RUN groupadd -g 1002 sasstaff && \
     echo "jovyan:jovyan" | chpasswd
 
 # BlobPorter
+ARG ACCOUNT_NAME=${ACCOUNT_NAME}
+ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
 RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
     tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
     mv /tmp/linux_amd64/blobporter /usr/local/bin/blobporter && \
     rm -rf /tmp/* && \
     chmod a+x /usr/local/bin/blobporter
 
+# So this is just sashome?
 RUN cd /usr/local/ && \
     blobporter -f https://bryantestsas.blob.core.windows.net/sasblobcontainer/SASHome.tar.gz -c sasblobcontainer -n SASHome.tar.gz -t blob-file && \
     tar -xzpf SASHome.tar.gz && \
