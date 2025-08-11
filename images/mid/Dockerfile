@@ -91,18 +91,18 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sf' \
     'r-sparklyr' \
     'r-tidyverse' \
-    && pip install --no-cache-dir \
-        'git+https://github.com/betatim/vscode-binder' \
-        'jupyter-rsession-proxy==2.2.0' \
-        # Forcibly upgrade packages to patch vulnerabilities
-        'wheel==0.40.0' \
-        'setuptools==67.6.0' \
-        'pyjwt==2.6.0' \
-        'oauthlib==3.2.2' \
-        'mpmath==1.3.0' \
-        'lxml==5.3.1' \
-        'pyarrow==14.0.1' \
-        'cryptography==41.0.6' \
+    # && pip install --no-cache-dir \
+    #     'git+https://github.com/betatim/vscode-binder' \
+    #     'jupyter-rsession-proxy==2.2.0' \
+    #     # Forcibly upgrade packages to patch vulnerabilities
+    #     'wheel==0.40.0' \
+    #     'setuptools==67.6.0' \
+    #     'pyjwt==2.6.0' \
+    #     'oauthlib==3.2.2' \
+    #     'mpmath==1.3.0' \
+    #     'lxml==5.3.1' \
+    #     'pyarrow==14.0.1' \
+    #     'cryptography==41.0.6' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter nbextension enable codefolding/main --sys-prefix \
     && jupyter labextension enable \
