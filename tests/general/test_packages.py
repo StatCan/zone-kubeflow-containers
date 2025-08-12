@@ -97,6 +97,7 @@ EXCLUDED_PACKAGES = [
     "mamba",
     # Python
     "graphviz",
+    "mkl",
     # pytables has been added because it is causing issues, TODO: understand issue and resolve
     # pytables is the package but we import tables
     "tables",
