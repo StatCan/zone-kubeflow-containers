@@ -124,8 +124,8 @@ def package_map(package):
         _package = PACKAGE_MAPPING.get(_package)
     return _package
 
-
 def excluded_package_predicate(package):
+    LOGGER.debug((package, package in EXCLUDED_PACKAGES))
     """Return whether a package is excluded from the list (i.e. a package that cannot be tested with standard imports)"""
     return package in EXCLUDED_PACKAGES
 
@@ -192,17 +192,11 @@ def r_packages(packages):
         lambda package: package_map(package[2:]), filter(r_package_predicate, packages)
     )
 
-
 def test_python_packages(package_helper, python_packages, max_failures=0):
     """Test the import of specified python packages"""
-    a = _import_packages(
+    return _import_packages(
         package_helper, python_packages, check_import_python_package, max_failures
     )
-    LOGGER.debug("*********************************************************************************************************************")
-    LOGGER.debug(a)
-    LOGGER.debug("*********************************************************************************************************************")
-    return a
-
 
 @pytest.fixture(scope="function")
 def python_packages(packages):
