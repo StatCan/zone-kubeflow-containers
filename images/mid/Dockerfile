@@ -229,6 +229,3 @@ COPY .Rprofile /tmp/.Rprofile
 
 # Copy over Instructions to Home directory
 ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
-
-# Point conda to Artifactory repository
-RUN conda config --remove channels conda-forge --system
