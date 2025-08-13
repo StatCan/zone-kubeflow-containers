@@ -14,6 +14,8 @@ ARG ARGO_CLI_CHECKSUM_URL=https://github.com/argoproj/argo-workflows/releases/do
 ARG GIT_CRED_MANAGER_VERSION=2.5.1
 ARG GIT_CRED_MANAGER_URL=https://github.com/git-ecosystem/git-credential-manager/releases/download/v${GIT_CRED_MANAGER_VERSION}/gcm-linux_amd64.${GIT_CRED_MANAGER_VERSION}.deb
 ARG GIT_CRED_MANAGER_SHA=03c7b174a6f90e1ae860980ba5fda4490f04e5b9aaa802e2d469e72ec5dae6a4
+ARG S6_VERSION=v3.2.1.0
+ARG S6_ARCH="x86_64"
 
 COPY clean-layer.sh /usr/bin/clean-layer.sh
 
