@@ -50,8 +50,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-    chmod -R 0775 /usr/local/SASHome/studioconfig
+#RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
+RUN chmod -R 0775 /usr/local/SASHome/studioconfig
     
 # Don't need the `ADD scripts` from Will's dockerfile, as unused. 
 # This WORKDIR is diff from /home/sas as done in sas4c but should be ok, seeing as we already use this in our Zone images and is proven working
