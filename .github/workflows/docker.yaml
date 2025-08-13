@@ -80,11 +80,11 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  mid-jupyterlab:
+  jupyterlab-cpu:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "mid-jupyterlab"
+      image: "jupyterlab-cpu"
       directory: "jupyterlab"
       parent-image: "sas-kernel"
       parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
@@ -94,42 +94,14 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  jupyterlab-cpu:
-    needs: [vars, mid-jupyterlab]
-    uses: ./.github/workflows/docker-steps.yaml
-    with:
-      image: "jupyterlab-cpu"
-      directory: "cmd"
-      parent-image: "mid-jupyterlab"
-      parent-image-is-diff: "${{ needs.mid-jupyterlab.outputs.is-diff }}"
-      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
-    secrets:
-      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-
-  mid-sas:
+  sas:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "mid-sas"
+      image: "sas"
       directory: "sas"
       parent-image: "sas-kernel"
       parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
-      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
-    secrets:
-      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-
-  sas:
-    needs: [vars, mid-sas]
-    uses: ./.github/workflows/docker-steps.yaml
-    with:
-      image: "sas"
-      directory: "cmd"
-      parent-image: "mid-sas"
-      parent-image-is-diff: "${{ needs.mid-sas.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:
