@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# this script used to be named start-custom.sh
+
 echo "--------------------Starting up--------------------"
 if [ -d /var/run/secrets/kubernetes.io/serviceaccount ]; then
   while ! curl -s -f http://127.0.0.1:15020/healthz/ready; do sleep 1; done
