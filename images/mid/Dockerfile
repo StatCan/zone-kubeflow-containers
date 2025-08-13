@@ -211,9 +211,12 @@ ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
 
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
 # Configure container startup
 
-WORKDIR /home/$NB_USER
+# WORKDIR /home/$NB_USER
 EXPOSE 8888
 COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
@@ -229,6 +232,3 @@ COPY .Rprofile /tmp/.Rprofile
 
 # Copy over Instructions to Home directory
 ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
-
-# s6 - copy scripts
-COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
