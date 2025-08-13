@@ -75,6 +75,21 @@ COPY shell_helpers.sh /tmp/shell_helpers.sh
 
 # Combined tool installations with cleanup
 RUN \
+    # S6 Overlay
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz" -o /tmp/s6-overlay-noarch.tar.xz \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz.sha256" -o /tmp/s6-overlay-noarch.tar.xz.sha256 \
+    && echo "$(cat /tmp/s6-overlay-noarch.tar.xz.sha256 | awk '{ print $1; }')  /tmp/s6-overlay-noarch.tar.xz" | sha256sum -c - \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" -o /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.xz.sha256" -o /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 \
+    && echo "$(cat /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 | awk '{ print $1; }')  /tmp/s6-overlay-${S6_ARCH}.tar.xz" | sha256sum -c - \
+    && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+    && rm /tmp/s6-overlay-noarch.tar.xz  \
+        /tmp/s6-overlay-noarch.tar.xz.sha256 \
+        /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+        /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 \
+    && chmod 0775 /run \
+    && \
     # kubectl
     curl -LO "${KUBECTL_URL}" \
     && curl -LO "${KUBECTL_URL}.sha256" \
@@ -169,3 +184,5 @@ RUN rm -rf /tmp/* /var/tmp/* \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+ENTRYPOINT ["/init"]
