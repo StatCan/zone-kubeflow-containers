@@ -216,19 +216,19 @@ COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
 # Configure container startup
 
-# WORKDIR /home/$NB_USER
 EXPOSE 8888
 COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/start-oms.sh && \
     chmod +x /usr/local/bin/restart-oms.sh
 
+# Copying some files in /tmp so that they can be copied to /home in start-custom.sh after the volume mount
+
 # Add --user to all pip install calls and point pip to Artifactory repository
-# COPY pip.conf /tmp/pip.conf
-# RUN cat /tmp/pip.conf >> /etc/pip.conf && rm /tmp/pip.conf
+COPY pip.conf /tmp/pip.conf
 
 # Add .Rprofile to /tmp so we can install it in start-custom.sh
 COPY .Rprofile /tmp/.Rprofile
 
-# Copy over Instructions to Home directory
-ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
+# filer instructions
+COPY connect-to-filer.md /tmp/connect-to-filer.md

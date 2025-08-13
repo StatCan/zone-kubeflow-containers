@@ -48,6 +48,14 @@ if [ ! -e /home/$NB_USER/.Rprofile ]; then
     cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
 fi
 
+if [ -e /tmp/pip.conf ]; then
+    cat /tmp/pip.conf >> /etc/pip.conf && rm /tmp/pip.conf
+fi
+
+if [ ! -e /home/$NB_USER/connect-to-filer.md ]; then
+    cat /tmp/connect-to-filer.md >> /home/$NB_USER/connect-to-filer.md && rm -rf /tmp/connect-to-filer.md
+fi
+
 # Configure the shell! If not already configured.
 if [ ! -f /home/$NB_USER/.zsh-installed ]; then
     if [ -f /tmp/oh-my-zsh-install.sh ]; then
@@ -247,7 +255,7 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
-# conda config --remove channels conda-forge --system
+conda config --remove channels conda-forge --system
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
