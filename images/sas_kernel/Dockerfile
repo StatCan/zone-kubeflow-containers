@@ -1,3 +1,4 @@
+# SAS
 # Install Quarto
 ENV QUARTO_VERSION=1.8.1
 ARG QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz
@@ -18,7 +19,6 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
 # SAS setup. Inspired by https://github.com/govcloud/docker-sas4c/blob/master/Dockerfile
 # Bryan PR https://github.com/StatCan/aaw-kubeflow-containers/pull/634
 #COPY --from=k8scc01covidacr.azurecr.io/sas4c:0.0.3 /usr/local/SASHome /usr/local/SASHome
-
 RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
@@ -97,4 +97,3 @@ COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
-    
