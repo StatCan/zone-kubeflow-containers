@@ -68,7 +68,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'plotly' \
     'ipywidgets' \
     'markupsafe' \
-    'pyspark' \
+    'pyspark==3.5.5' \
     'ipympl' \
     'pexpect==4.9.0' \
     'jupyter-resource-usage' \
@@ -210,18 +210,3 @@ ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
-
-# Forcibly upgrade packages to patch vulnerabilities
-# See https://github.com/StatCan/aaw-private/issues/58#issuecomment-1471863092 for more details.
-# RUN pip3 --no-cache-dir install --quiet \
-#       'wheel==0.40.0' \
-#       'setuptools==67.6.0' \
-#       'pyjwt==2.6.0' \
-#       'oauthlib==3.2.2' \
-#       'mpmath==1.3.0' \
-#       'lxml==5.3.1' \
-#       'pyarrow==14.0.1' \
-#       'cryptography==41.0.6' \
-#       && fix-permissions $CONDA_DIR && \
-#       fix-permissions /home/$NB_USER
-
