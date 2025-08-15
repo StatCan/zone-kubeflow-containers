@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=base
+FROM $BASE_IMAGE
+
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
@@ -210,3 +216,25 @@ ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+# Configure container startup
+
+EXPOSE 8888
+COPY start-oms.sh restart-oms.sh /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/start-oms.sh && \
+    chmod +x /usr/local/bin/restart-oms.sh
+
+# Copying some files in /tmp so that they can be copied to /home in start-custom.sh after the volume mount
+
+# Add --user to all pip install calls and point pip to Artifactory repository
+COPY pip.conf /tmp/pip.conf
+
+# Add .Rprofile to /tmp so we can install it in start-custom.sh
+COPY .Rprofile /tmp/.Rprofile
+
+# filer instructions
+COPY connect-to-filer.md /tmp/connect-to-filer.md

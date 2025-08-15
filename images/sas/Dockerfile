@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=sas_kernel
+FROM $BASE_IMAGE
+
 USER root
 
 # Jupyter SASStudio Proxy
@@ -9,3 +15,5 @@ COPY SWE.folderShortcuts.key /etc/sasstudio/preferences/SWE.folderShortcuts.key
 
 # Enable X command on SAS Studio
 COPY spawner_usermods.sh /usr/local/SASHome/studioconfig/spawner/
+
+USER $NB_USER
