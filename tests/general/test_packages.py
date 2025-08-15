@@ -83,6 +83,7 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-language-pack-fr-fr",
     "jupyterlab-lsp",
     # Other
+    "blas=[build",
     "blas=", # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
     "protobuf",
     "r-irkernel",
