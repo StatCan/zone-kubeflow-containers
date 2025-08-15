@@ -71,6 +71,9 @@ jobs:
           python -m pip install --upgrade pip
           make install-python-dev-venv
 
+      - name: Echo disk usage before testing
+        run: ./.github/scripts/echo_usage.sh
+
       - name: Test image
         run: make test/${{ inputs.image }} TAG=${{ inputs.tag }}
 
