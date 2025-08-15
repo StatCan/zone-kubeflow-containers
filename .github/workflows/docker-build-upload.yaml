@@ -96,7 +96,7 @@ jobs:
         run: |
           docker buildx bake ${{ inputs.directory }} \
             --set ${{ inputs.directory }}.args.BASE_IMAGE=${{ env.BASE_IMAGE}} \
-            --set ${{ inputs.directory }}.tags=["${{ inputs.registry-name }}/${{ inputs.directory }}:${{inputs.branch-name}}"]
+            --set ${{ inputs.directory }}.tags=${{ inputs.registry-name }}/${{ inputs.directory }}:${{inputs.branch-name}}
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
