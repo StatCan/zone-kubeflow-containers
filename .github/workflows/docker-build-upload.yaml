@@ -85,14 +85,18 @@ jobs:
             echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
           fi
 
-      - name: Set FROM and as in Dockerfile
-        run: |
-          sed -i '1i FROM ${{ env.BASE_IMAGE}} as ${{ inputs.image }}' ./images/${{ inputs.directory }}/Dockerfile
+      # - name: Set FROM and as in Dockerfile
+      #   run: |
+      #     sed -i '1i FROM ${{ env.BASE_IMAGE}} as ${{ inputs.image }}' ./images/${{ inputs.directory }}/Dockerfile
 
       # make build emits full_image_name, image_tag, and image_repo outputs
       - name: Build image
         id: build-image
-        run: make build/${{ inputs.image }} REPO=${{ inputs.registry-name }} DIRECTORY=${{ inputs.directory }}
+        # run: make build/${{ inputs.image }} REPO=${{ inputs.registry-name }} DIRECTORY=${{ inputs.directory }}
+        run: |
+          docker buildx bake ${{ inputs.directory }} \
+            --set ${{ inputs.directory }}.args.BASE_IMAGE=${{ env.BASE_IMAGE}} \
+            --set ${{ inputs.directory }}.tags=[${{ inputs.registry-name }}/${{ inputs.directory }}:${{inputs.branch-name}}]
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
