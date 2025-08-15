@@ -6,10 +6,6 @@ env:
 on:
   workflow_call:
     inputs:
-      parent-image:
-        description: Parent image name
-        required: true
-        type: string
       directory:
         description: The directory of the image files
         required: true
@@ -72,18 +68,19 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Pull parent image
-        id: pull-parent
-        if: inputs.parent-image != ''
-        run: make pull/${{ inputs.parent-image }} REPO=${{ inputs.registry-name }}
+      # TODO: move those two next steps up a level to docker-steps? At least improve on how to determine the base_image
+      # - name: Pull parent image
+      #   id: pull-parent
+      #   if: inputs.parent-image != ''
+      #   run: make pull/${{ inputs.parent-image }} REPO=${{ inputs.registry-name }}
 
-      - name: Set BASE_IMAGE variable
-        run: |
-          if [ "${{ inputs.base-image }}" == "" ]; then
-            echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
-          else
-            echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
-          fi
+      # - name: Set BASE_IMAGE variable
+      #   run: |
+      #     if [ "${{ inputs.base-image }}" == "" ]; then
+      #       echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
+      #     else
+      #       echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
+      #     fi
 
       # - name: Set FROM and as in Dockerfile
       #   run: |
@@ -95,8 +92,8 @@ jobs:
         # run: make build/${{ inputs.image }} REPO=${{ inputs.registry-name }} DIRECTORY=${{ inputs.directory }}
         run: |
           docker buildx bake ${{ inputs.directory }} \
-            --set ${{ inputs.directory }}.args.BASE_IMAGE=${{ env.BASE_IMAGE}} \
-            --set ${{ inputs.directory }}.tags=${{ inputs.registry-name }}/${{ inputs.directory }}:${{inputs.branch-name}}
+            --set ${{ inputs.directory }}.args.BASE_IMAGE=${{ inputs.base-image }} \
+            --set ${{ inputs.directory }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{inputs.branch-name}}
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
