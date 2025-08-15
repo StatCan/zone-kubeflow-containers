@@ -22,7 +22,7 @@ target "sas_kernel" {
     tags = ["sas_kernel"]
 }
 
-target "sas_kernel" {
+target "jupyterlab" {
     context = "./images/jupyterlab"
     args = {
         BASE_IMAGE="sas_kernel"
