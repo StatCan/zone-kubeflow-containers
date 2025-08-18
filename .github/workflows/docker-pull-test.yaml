@@ -99,8 +99,6 @@ jobs:
             echo ${{ inputs.image }}
             echo ${{ inputs.tag }}
 
-            docker pull ${{ inputs.registry-name }}/${{ inputs.image }}:${{ inputs.tag }}
-
             echo $(trivy --version)
 
             trivy image \
