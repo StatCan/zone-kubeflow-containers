@@ -30,7 +30,7 @@ target "mid-jupyterlab" {
     tags = ["mid-jupyterlab"]
 }
 
-target "jupyterlab" {
+target "jupyterlab-cpu" {
     context = "./images/cmd"
     args = {
         BASE_IMAGE="mid-jupyterlab"
