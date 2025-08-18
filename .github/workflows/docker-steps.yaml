@@ -52,24 +52,37 @@ jobs:
       parent-image-is-diff: ${{ inputs.parent-image-is-diff }}
       branch-name: ${{ inputs.branch-name }}
 
-  print-variables:
+  set-and-print-variables:
     needs: [check-diff]
     runs-on: ubuntu-latest
+    outputs:
+      base-image: ${{ steps.set-base.outputs.base-image }}
     steps:
       - name: print inputs
         run: echo "${{ toJSON(inputs) }}"
       - name: print check-diff
         run: echo "${{ toJSON(needs.check-diff) }}"
+      - name: set BASE_IMAGE env
+        id: set-base
+        # if base image is given, then it is from upstream
+        # otherwise, set the base image to use our registry
+        run: |
+          if [ "${{ inputs.base-image }}" != "" ]; then
+            echo "BASE_IMAGE=${{ inputs.base-image }}"
+            echo "base-image=${{ inputs.base-image }}" >> $GITHUB_OUTPUT
+          else
+            echo "BASE_IMAGE=${{ inputs.registry-name }}/${{ inputs.parent-image }}:${{ inputs.branch-name }}"
+            echo "base-image=${{ inputs.registry-name }}/${{ inputs.parent-image }}:${{ inputs.branch-name }}" >> $GITHUB_OUTPUT
+          fi
 
   build-upload:
-    needs: [check-diff]
+    needs: [check-diff, set-and-print-variables]
     if: ${{ needs.check-diff.outputs.is-diff == 'true' }}
     uses: ./.github/workflows/docker-build-upload.yaml
     with:
-      parent-image: ${{ inputs.parent-image }}
       directory: ${{ inputs.directory }}
       image: ${{ inputs.image }}
-      base-image: ${{ inputs.base-image }}
+      base-image: ${{ needs.set-and-print-variables.outputs.base-image }}
       registry-name: ${{ inputs.registry-name }}
       branch-name: ${{ inputs.branch-name }}
     secrets:

@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=sas_kernel
+FROM $BASE_IMAGE
+
 USER root
 
 # Install AMD AOCL
