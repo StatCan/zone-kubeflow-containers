@@ -38,7 +38,7 @@ jobs:
         ports:
           - 5000:5000
     env:
-      TRIVY_VERSION: "0.57.0"
+      TRIVY_VERSION: "0.65.0"
       TRIVY_DATABASES: '"ghcr.io/aquasecurity/trivy-db:2","public.ecr.aws/aquasecurity/trivy-db"'
       TRIVY_JAVA_DATABASES: '"ghcr.io/aquasecurity/trivy-java-db:1","public.ecr.aws/aquasecurity/trivy-java-db"'
       TRIVY_MAX_RETRIES: 5
@@ -98,6 +98,10 @@ jobs:
             echo ${{ inputs.registry-name }}
             echo ${{ inputs.image }}
             echo ${{ inputs.tag }}
+
+            docker pull ${{ inputs.registry-name }}/${{ inputs.image }}:${{ inputs.tag }}
+
+            echo $(trivy --version)
 
             trivy image \
               --db-repository ${{ env.TRIVY_DATABASES }} \
