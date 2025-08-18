@@ -68,43 +68,37 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # - name: Pull parent image
-      #   id: pull-parent
-      #   if: inputs.parent-image != ''
-      #   run: make pull/${{ inputs.parent-image }} REPO=${{ inputs.registry-name }}
-
-      # - name: Set BASE_IMAGE variable
-      #   run: |
-      #     if [ "${{ inputs.base-image }}" == "" ]; then
-      #       echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
-      #     else
-      #       echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
-      #     fi
-
-      # - name: Set FROM and as in Dockerfile
-      #   run: |
-      #     sed -i '1i FROM ${{ env.BASE_IMAGE}} as ${{ inputs.image }}' ./images/${{ inputs.directory }}/Dockerfile
+      - name: Set short SHA
+        run: |
+          shortSha=$(git rev-parse --short ${{ github.sha}})
+          echo "COMMIT_SHORT_SHA=$shortSha"
+          echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
 
       # make build emits full_image_name, image_tag, and image_repo outputs
       - name: Build image
         id: build-image
-        # run: make build/${{ inputs.image }} REPO=${{ inputs.registry-name }} DIRECTORY=${{ inputs.directory }}
-        # change inputs.image to inputs.directory when the cmd layer gets removed(expected for the last one in the new tags value).
         run: |
           docker buildx bake ${{ inputs.image }} \
             --set ${{ inputs.image }}.args.BASE_IMAGE=${{ inputs.base-image }} \
             --set ${{ inputs.image }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{inputs.branch-name}}
+            --set ${{ inputs.image }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{env.COMMIT_SHORT_SHA}}
+            --set ${{ inputs.image }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{github.sha}}
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
 
-      - name: Add standard tags (short sha, sha, and branch) and any other post-build activity
-        if: ${{ inputs.branch-name != 'master' }}
-        run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }}
+      # - name: Add standard tags (short sha, sha, and branch) and any other post-build activity
+      #   if: ${{ inputs.branch-name != 'master' }}
+      #   run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }}
 
-      - name: Add master and standard tags (v2, latest; short sha, sha, and branch) and any other post-build activity
+      # - name: Add master and standard tags (v2, latest; short sha, sha, and branch) and any other post-build activity
+      #   if: ${{ inputs.branch-name == 'master' }}
+      #   run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }} IMAGE_VERSION=v2 IS_LATEST=true
+      - name: Add master tags(v2, latest)
         if: ${{ inputs.branch-name == 'master' }}
-        run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }} IMAGE_VERSION=v2 IS_LATEST=true
+        run: |
+          docker tag ${{ inputs.registry-name }}/${{ inputs.image }} ${{ inputs.registry-name }}/${{ inputs.image }}:v2
+          docker tag ${{ inputs.registry-name }}/${{ inputs.image }} ${{ inputs.registry-name }}/${{ inputs.image }}:latest
 
       - name: Push image to registry (default pushes all tags)
         run: make push/${{ inputs.image }} REPO=${{ inputs.registry-name }}
