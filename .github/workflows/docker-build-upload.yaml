@@ -77,18 +77,13 @@ jobs:
         if: inputs.parent-image != ''
         run: make pull/${{ inputs.parent-image }} REPO=${{ inputs.registry-name }}
 
-      - name: Build base image
-        id: build-parent
-        if: inputs.parent-image == ''
-        run: |
-          docker buildx bake -f images/base/bake/docker-bake.hcl
-
       - name: Set BASE_IMAGE variable
         run: |
           if [ "${{ inputs.base-image }}" == "" ]; then
             echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
           else
-            echo "BASE_IMAGE=custom-base" >> $GITHUB_ENV
+            echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
+            # echo "BASE_IMAGE=custom-base" >> $GITHUB_ENV
           fi
 
       - name: Set FROM and as in Dockerfile
