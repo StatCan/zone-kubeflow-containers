@@ -93,11 +93,11 @@ jobs:
           for ((i=0; i<${{ env.TRIVY_MAX_RETRIES }}; i++)); do
             echo "Attempt $((i + 1)) of ${{ env.TRIVY_MAX_RETRIES }}..."
 
-            echo ${ env.TRIVY_DATABASES }
-            echo ${ env.TRIVY_JAVA_DATABSES }
-            echo ${ inputs.registry-name }
-            echo ${ inputs.image }
-            echo ${ inputs.tag }
+            echo ${{ env.TRIVY_DATABASES }}
+            echo ${{ env.TRIVY_JAVA_DATABSES }}
+            echo ${{ inputs.registry-name }}
+            echo ${{ inputs.image }}
+            echo ${{ inputs.tag }}
 
             trivy image \
               --db-repository ${{ env.TRIVY_DATABASES }} \
