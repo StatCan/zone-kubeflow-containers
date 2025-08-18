@@ -14,18 +14,18 @@ target "mid" {
     tags = ["mid"]
 }
 
-target "sas_kernel" {
+target "sas-kernel" {
     context = "./images/sas_kernel"
     args = {
         BASE_IMAGE="mid"
     }
-    tags = ["sas_kernel"]
+    tags = ["sas-kernel"]
 }
 
 target "mid-jupyterlab" {
     context = "./images/jupyterlab"
     args = {
-        BASE_IMAGE="sas_kernel"
+        BASE_IMAGE="sas-kernel"
     }
     tags = ["mid-jupyterlab"]
 }
@@ -41,7 +41,7 @@ target "jupyterlab" {
 target "mid-sas" {
     context = "./images/sas"
     args = {
-        BASE_IMAGE="sas_kernel"
+        BASE_IMAGE="sas-kernel"
     }
     tags = ["mid-sas"]
 }
