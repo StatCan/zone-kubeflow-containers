@@ -83,7 +83,6 @@ jobs:
             echo "BASE_IMAGE=${{ steps.pull-parent.outputs.image_name }}" >> $GITHUB_ENV
           else
             echo "BASE_IMAGE=${{ inputs.base-image }}" >> $GITHUB_ENV
-            # echo "BASE_IMAGE=custom-base" >> $GITHUB_ENV
           fi
 
       - name: Set FROM and as in Dockerfile
