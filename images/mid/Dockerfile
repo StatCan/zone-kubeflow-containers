@@ -205,7 +205,7 @@ RUN mkdir -p /etc/rstudio \
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
-ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
+ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
