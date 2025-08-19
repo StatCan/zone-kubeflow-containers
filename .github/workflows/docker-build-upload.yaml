@@ -86,14 +86,6 @@ jobs:
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
-
-      # - name: Add standard tags (short sha, sha, and branch) and any other post-build activity
-      #   if: ${{ inputs.branch-name != 'master' }}
-      #   run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }}
-
-      # - name: Add master and standard tags (v2, latest; short sha, sha, and branch) and any other post-build activity
-      #   if: ${{ inputs.branch-name == 'master' }}
-      #   run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }} IMAGE_VERSION=v2 IS_LATEST=true
       - name: Add master tags(v2, latest)
         if: ${{ inputs.branch-name == 'master' }}
         run: |
