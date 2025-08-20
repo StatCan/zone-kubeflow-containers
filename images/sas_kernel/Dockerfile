@@ -36,10 +36,15 @@ RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_lin
     chmod a+x /usr/local/bin/blobporter
 
 # So this is just sashome?
-RUN cd /usr/local/ && \
+# Jose test, because the way I zipped it creates / goes to /usr/local/SASHome already so dont need to cd to /usr/local, but root
+#RUN cd /usr/local/ && \
+RUN cd / && \
     blobporter -f https://zonesasoct2025.blob.core.windows.net/sasblobcontainer/October2025SAS.tar.gz -c sasblobcontainer -n October2025SAS.tar.gz -t blob-file && \
     tar -xzpf October2025SAS.tar.gz && \
     rm October2025SAS.tar.gz && \
+    # A couple debugging LS's
+    ls /usr/local && \
+    ls /usr/local/SASHome && \ 
     chown -R jovyan:sasstaff /usr/local/SASHome && \
     ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas
 
