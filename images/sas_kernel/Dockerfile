@@ -23,8 +23,6 @@ RUN groupadd -g 1002 sasstaff && \
 # BlobPorter
 ARG ACCOUNT_NAME=${ACCOUNT_NAME}
 ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
-RUN if [ -z "$SRC_ACCOUNT_KEY" ]; then echo "The variable is empty."; else echo "not empty"; fi
-RUN if [ -z "$ACCOUNT_NAME" ]; then echo "The variable is empty."; else echo "not empty"; fi
 
 RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
     tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
