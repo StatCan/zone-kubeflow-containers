@@ -16,9 +16,6 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
     rm -rf /tmp/quarto-${QUARTO_VERSION}-checksums.txt && \
     rm -rf /var/lib/apt/lists/*
 
-# SAS setup. Inspired by https://github.com/govcloud/docker-sas4c/blob/master/Dockerfile
-# Bryan PR https://github.com/StatCan/aaw-kubeflow-containers/pull/634
-#COPY --from=k8scc01covidacr.azurecr.io/sas4c:0.0.3 /usr/local/SASHome /usr/local/SASHome
 RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
@@ -35,18 +32,14 @@ RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_lin
     rm -rf /tmp/* && \
     chmod a+x /usr/local/bin/blobporter
 
-# So this is just sashome?
-# Jose test, because the way I zipped it creates / goes to /usr/local/SASHome already so dont need to cd to /usr/local, but root
-#RUN cd /usr/local/ && \
+# cd to ROOT and not /usr/local, because the way this was zipped was to include /usr/local
 RUN cd / && \
     blobporter -f https://zonesasoct2025.blob.core.windows.net/sasblobcontainer/October2025SAS.tar.gz -c sasblobcontainer -n October2025SAS.tar.gz -t blob-file && \
     tar -xzpf October2025SAS.tar.gz && \
     rm October2025SAS.tar.gz && \
-    # A couple debugging LS's
-    ls /usr/local && \
-    ls /usr/local/SASHome && \ 
     chown -R jovyan:sasstaff /usr/local/SASHome && \
-    ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas
+    ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
+    rm /usr/local/bin/blobporter
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
@@ -55,30 +48,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-#RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-#RUN chmod -R 0775 /usr/local/SASHome/studioconfig
-    
-# Don't need the `ADD scripts` from Will's dockerfile, as unused. 
-# This WORKDIR is diff from /home/sas as done in sas4c but should be ok, seeing as we already use this in our Zone images and is proven working
 WORKDIR /home/jovyan
 
-# Verify this 9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
-
-# Verify this 9.4/jre/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
-# Verify this 9.4/bin/setuid.sh
 RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
 
-# This is good
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
-# This is good
 EXPOSE 8561 8591 38080
 
 # SASPY
-
 ENV SASPY_VERSION="5.4.0"
 
 RUN pip install sas_kernel
