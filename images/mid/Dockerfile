@@ -68,7 +68,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'plotly' \
     'ipywidgets' \
     'markupsafe' \
-    'pyspark==3.5.6' \
+    'pyspark==3.5.5' \
     'ipympl' \
     'pexpect==4.9.0' \
     'jupyter-resource-usage' \
