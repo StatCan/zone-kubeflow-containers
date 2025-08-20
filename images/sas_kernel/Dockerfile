@@ -37,9 +37,9 @@ RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_lin
 
 # So this is just sashome?
 RUN cd /usr/local/ && \
-    blobporter -f https://bryantestsas.blob.core.windows.net/sasblobcontainer/SASHome.tar.gz -c sasblobcontainer -n SASHome.tar.gz -t blob-file && \
-    tar -xzpf SASHome.tar.gz && \
-    rm SASHome.tar.gz && \
+    blobporter -f https://zonesasoct2025.blob.core.windows.net/sasblobcontainer/October2025SAS.tar.gz -c sasblobcontainer -n October2025SAS.tar.gz -t blob-file && \
+    tar -xzpf October2025SAS.tar.gz && \
+    rm October2025SAS.tar.gz && \
     chown -R jovyan:sasstaff /usr/local/SASHome && \
     ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas
 
