@@ -78,11 +78,8 @@ jobs:
       - name: Build image
         id: build-image
         run: |
-          docker buildx bake ${{ inputs.image }} \
-            --set ${{ inputs.image }}.args.BASE_IMAGE=${{ inputs.base-image }} \
-            --set ${{ inputs.image }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{inputs.branch-name}} \
-            --set ${{ inputs.image }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{env.COMMIT_SHORT_SHA}} \
-            --set ${{ inputs.image }}.tags=${{ inputs.registry-name }}/${{ inputs.image }}:${{github.sha}}
+          make bake/${{ inputs.image }} BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} \
+            TAGS="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh

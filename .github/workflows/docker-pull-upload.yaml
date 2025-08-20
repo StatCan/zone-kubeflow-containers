@@ -48,11 +48,14 @@ jobs:
       - name: Pull existing image
         id: pull-existing
         run: |
+          image_name=${{ inputs.registry-name }}/${{ inputs.image }}:v2
           if [ "${{ github.event.pull_request.base.ref }}" == "beta" ]; then
-            make pull/${{ inputs.image }} REPO=${{ inputs.registry-name }} TAG=beta
-          else
-            make pull/${{ inputs.image }} REPO=${{ inputs.registry-name }} TAG=v2
+            image_name=${{ inputs.registry-name }}/${{ inputs.image }}:beta
           fi
+
+          docker pull ${image_name}
+          
+          echo "image_name=$image_name" >> $GITHUB_OUTPUT
 
       - name: Retag existing image
         run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }} SOURCE_FULL_IMAGE_NAME=${{ steps.pull-existing.outputs.image_name }}
