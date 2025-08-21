@@ -20,7 +20,7 @@ target "base" {
             mode = "max"
         }
     ]
-    output = [{ type = "docker" }]
+    output = [{ type = "registry" }]
     tags = ["base"]
 }
 
