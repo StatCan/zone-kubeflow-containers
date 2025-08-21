@@ -73,8 +73,10 @@ jobs:
           shortSha=$(git rev-parse --short ${{ github.sha}})
           echo "COMMIT_SHORT_SHA=$shortSha"
           echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # make build emits full_image_name, image_tag, and image_repo outputs
       - name: Build image
         id: build-image
         run: |
