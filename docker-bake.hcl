@@ -2,11 +2,14 @@ variable "CACHE_REF" {
   default = "k8scc01covidacr.azurecr.io/build-cache"
 }
 
+variable "OUTPUT_TYPE" {
+  default = "docker"
+}
+
 target "base" {
     args = {
         BASE_IMAGE="quay.io/jupyter/datascience-notebook:2025-03-05"
     }
-    context = "./images/base"
     cache-from = [
         {
             type = "registry"
@@ -20,12 +23,15 @@ target "base" {
             mode = "max"
         }
     ]
-    output = [{ type = "registry" }]
+    context = "./images/base"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["base"]
 }
 
 target "mid" {
-    context = "./images/mid"
+    args = {
+        BASE_IMAGE="base"
+    }
     cache-from = [
         {
             type = "registry"
@@ -39,14 +45,15 @@ target "mid" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="base"
-    }
+    context = "./images/mid"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["mid"]
 }
 
 target "sas-kernel" {
-    context = "./images/sas_kernel"
+    args = {
+        BASE_IMAGE="mid"
+    }
     cache-from = [
         {
             type = "registry"
@@ -60,14 +67,15 @@ target "sas-kernel" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="mid"
-    }
+    context = "./images/sas_kernel"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["sas-kernel"]
 }
 
 target "mid-jupyterlab" {
-    context = "./images/jupyterlab"
+    args = {
+        BASE_IMAGE="sas-kernel"
+    }
     cache-from = [
         {
             type = "registry"
@@ -81,14 +89,15 @@ target "mid-jupyterlab" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="sas-kernel"
-    }
+    context = "./images/jupyterlab"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["mid-jupyterlab"]
 }
 
 target "jupyterlab-cpu" {
-    context = "./images/cmd"
+    args = {
+        BASE_IMAGE="mid-jupyterlab"
+    }
     cache-from = [
         {
             type = "registry"
@@ -102,14 +111,15 @@ target "jupyterlab-cpu" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="mid-jupyterlab"
-    }
+    context = "./images/cmd"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["jupyterlab-cpu"]
 }
 
 target "mid-sas" {
-    context = "./images/sas"
+    args = {
+        BASE_IMAGE="sas-kernel"
+    }
     cache-from = [
         {
             type = "registry"
@@ -123,14 +133,15 @@ target "mid-sas" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="sas-kernel"
-    }
+    context = "./images/sas"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["mid-sas"]
 }
 
 target "sas" {
-    context = "./images/cmd"
+    args = {
+        BASE_IMAGE="mid-sas"
+    }
     cache-from = [
         {
             type = "registry"
@@ -144,8 +155,7 @@ target "sas" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="mid-sas"
-    }
+    context = "./images/cmd"
+    output = [{ type = "${OUTPUT_TYPE}" }]
     tags = ["sas"]
 }
