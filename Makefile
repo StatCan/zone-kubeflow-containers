@@ -18,7 +18,7 @@ pytorch-CUDA    := 11.8.0
 
 # Misc Directories
 TESTS_DIR := ./tests
-MAKE_HELPERS := ./make_helpers/
+MAKE_HELPERS := ./make_helpers
 PYTHON_VENV := .venv
 
 # Executables

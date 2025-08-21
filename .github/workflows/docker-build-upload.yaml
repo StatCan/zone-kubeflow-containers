@@ -73,9 +73,6 @@ jobs:
           shortSha=$(git rev-parse --short ${{ github.sha}})
           echo "COMMIT_SHORT_SHA=$shortSha"
           echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Build image
         id: build-image
@@ -93,8 +90,8 @@ jobs:
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
 
-      # - name: Push image to registry (default pushes all tags)
-      #   run: make push/${{ inputs.image }} REPO=${{ inputs.registry-name }}
+      - name: Push image to registry (default pushes all tags)
+        run: make push/${{ inputs.image }} REPO=${{ inputs.registry-name }}
 
       # Free up space from build process (containerscan action will run out of space if we don't)
       - run: ./.github/scripts/cleanup_runner.sh
