@@ -3,7 +3,8 @@ variable "CACHE_REF" {
 }
 
 variable "OUTPUT_TYPE" {
-  default = "docker"
+    # default = "docker"
+    default = "registry"
 }
 
 target "base" {
