@@ -68,7 +68,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'plotly' \
     'ipywidgets' \
     'markupsafe' \
-    'pyspark==4.0.0' \
     'ipympl' \
     'pexpect==4.9.0' \
     'jupyter-resource-usage' \
@@ -94,6 +93,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
         'git+https://github.com/betatim/vscode-binder' \
         'jupyter-rsession-proxy==2.2.0' \
+        'pyspark[ml]==3.5.5' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter nbextension enable codefolding/main --sys-prefix \
     && jupyter labextension enable \
