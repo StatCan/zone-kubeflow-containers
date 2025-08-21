@@ -80,16 +80,18 @@ jobs:
       - name: Build image
         id: build-image
         run: |
+          tags="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
+          
+          # adds tags for master
+          if [ ${{ inputs.branch-name }} == 'master' ]; then
+            tags="${tags} v2 latest"
+          fi
+
           make bake/${{ inputs.image }} BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} \
-            TAGS="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
+            TAGS="${tags}"
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
-      - name: Add master tags(v2, latest)
-        if: ${{ inputs.branch-name == 'master' }}
-        run: |
-          docker tag ${{ inputs.registry-name }}/${{ inputs.image }} ${{ inputs.registry-name }}/${{ inputs.image }}:v2
-          docker tag ${{ inputs.registry-name }}/${{ inputs.image }} ${{ inputs.registry-name }}/${{ inputs.image }}:latest
 
       - name: Push image to registry (default pushes all tags)
         run: make push/${{ inputs.image }} REPO=${{ inputs.registry-name }}
