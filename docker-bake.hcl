@@ -3,6 +3,9 @@ variable "CACHE_REF" {
 }
 
 target "base" {
+    args = {
+        BASE_IMAGE="quay.io/jupyter/datascience-notebook:2025-03-05"
+    }
     context = "./images/base"
     cache-from = [
         {
@@ -17,9 +20,7 @@ target "base" {
             mode = "max"
         }
     ]
-    args = {
-        BASE_IMAGE="quay.io/jupyter/datascience-notebook:2025-03-05"
-    }
+    output = [{ type = "docker" }]
     tags = ["base"]
 }
 
