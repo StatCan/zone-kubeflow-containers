@@ -91,7 +91,8 @@ jobs:
           fi
 
           make bake/${{ inputs.image }} BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} \
-            TAGS="${tags}"
+            TAGS="${tags}" DARGS="--set ${{ inputs.image }}.args.ACCOUNT_NAME=${{ secrets.SAS_SA_NAME }} \
+            --set ${{ inputs.image }}.args.SRC_ACCOUNT_KEY=${{ secrets.SAS_SA_KEY_1 }}"
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
