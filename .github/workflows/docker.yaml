@@ -79,6 +79,8 @@ jobs:
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      SAS_SA_NAME: ${{ secrets.SAS_SA_NAME }}
+      SAS_SA_KEY_1: ${{ secrets.SAS_SA_KEY_1 }}
 
   mid-jupyterlab:
     needs: [vars, sas-kernel]
@@ -93,7 +95,7 @@ jobs:
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-
+      
   jupyterlab-cpu:
     needs: [vars, mid-jupyterlab]
     uses: ./.github/workflows/docker-steps.yaml
