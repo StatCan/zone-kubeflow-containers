@@ -49,7 +49,7 @@ The relationship between the stages and the final product is as shown below.
 
 These images are chained together to perform the multi-staged build for our final images
 
-Docker | Notes
+Image | Notes
 --- | ---
 [base](./images/base) | Base Image pulling from docker-stacks
 [mid](./images/mid) | Installs various tools on top of the base image
@@ -62,7 +62,7 @@ Docker | Notes
 
 These are the final images from our build process and are intended to be used on Kubeflow Notebooks
 
-Image Name | Notes | Installations
+Image | Notes | Installations
 --- | --- | ---
 jupyterlab-cpu | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
 sas | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
@@ -71,9 +71,9 @@ sas | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
 
 ### Building Images
 
-We have setup [Docker Bake](https://docs.docker.com/build/bake/) to help with building our images. Docker Bake let us define our build configuration for our images through a file instead of CLI instructions.
+We have setup [Docker Bake](https://docs.docker.com/build/bake/) to help with building our images. Docker Bake lets us define our build configuration for our images through a file instead of CLI instructions.
 
-To build an image, you can use either `make bake/IMAGE` or `docker buildx bake IMAGE`. Traditional uses of `docker build` commands will still work if desired.
+To build an image, you can use either `make bake/IMAGE` or `docker buildx bake IMAGE`. `docker build` commands can still work if desired.
 
 `make bake` accepts overrides for BASE_IMAGE, REPO and TAGS to adjust these values for the build.
 
@@ -199,34 +199,34 @@ In such cases it may be more relevant to make an image under [aaw-contrib-contai
 2. Create a new subdirectory in the `/images/` directory for the stage
 3. Add a new target to the `docker-bake.hcl` file for the new stage.
     ```
-      # general format for a bake target
-      target "stage-name" {
-        args = {
-          BASE_IMAGE="BASE_IMAGE"         # ARGS values from the dockerfile
-        }
-        context = "./images/stage-name"   # points to the location of the dockerfile
-        tags = ["stage-name"]             # name given to the built docker image
+    # general format for a bake target
+    target "stage-name" {
+      args = {
+        BASE_IMAGE="BASE_IMAGE"         # ARGS values from the dockerfile
       }
+      context = "./images/stage-name"   # points to the location of the dockerfile
+      tags = ["stage-name"]             # name given to the built docker image
+    }
     ```
 4. Add a new job to the `./github/workflows/docker.yaml` for the new stage.
 
     ```yaml
-      # yaml to create an image
-      stage-name:                                                         # The name of the stage, will be shown in the CICD workflow
-        needs: [vars, parent]                                             # All stages need vars, any stages with a parent must link their direct parent
-        uses: ./.github/workflows/docker-steps.yaml
-        with:
-          image: "stage-name"                                             # The name of the current stage/image
-          directory: "directory-name"                                     # The name of the directory in the /images/ folder. /images/base would be "base"
-          base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
-          parent-image: "parent"                                          # The name of the parent stage/image. Omit if stage uses an upsteam image
-          parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
-          # The following values are static between differnt stages
-          registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-          branch-name: "${{ needs.vars.outputs.branch-name }}"
-        secrets:
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+    # yaml to create an image
+    stage-name:                                                         # The name of the stage, will be shown in the CICD workflow
+      needs: [vars, parent]                                             # All stages need vars, any stages with a parent must link their direct parent
+      uses: ./.github/workflows/docker-steps.yaml
+      with:
+        image: "stage-name"                                             # The name of the current stage/image
+        directory: "directory-name"                                     # The name of the directory in the /images/ folder. /images/base would be "base"
+        base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
+        parent-image: "parent"                                          # The name of the parent stage/image. Omit if stage uses an upsteam image
+        parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
+        # The following values are static between differnt stages
+        registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+        branch-name: "${{ needs.vars.outputs.branch-name }}"
+      secrets:
+        REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
     ```
 
 5. If this stage was inserted between two existing stages,
@@ -236,19 +236,19 @@ A job must be added to test the image in `./github/workflows/docker.yaml`,
 and the image name must be added to the matrix in `./github/workflows/docker-nightly.yaml`
 
     ```yaml
-      # yaml to create a test
-      imagename-test:                                       # The name of the test job, usually  imagename-test
-        needs: [vars, imagename]                            # Must contain vars and the image that will be tested
-        uses: ./.github/workflows/docker-pull-test.yaml
-        with:
-          image: "imagename"                                # The name of the image that will be tested
-          # The following values are static between differnt tests
-          registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-          tag: "${{ needs.vars.outputs.branch-name }}"
-        secrets:
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-          CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+    # yaml to create a test
+    imagename-test:                                       # The name of the test job, usually  imagename-test
+      needs: [vars, imagename]                            # Must contain vars and the image that will be tested
+      uses: ./.github/workflows/docker-pull-test.yaml
+      with:
+        image: "imagename"                                # The name of the image that will be tested
+        # The following values are static between differnt tests
+        registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+        tag: "${{ needs.vars.outputs.branch-name }}"
+      secrets:
+        REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
     ```
 
 7. Update the documentation for the new stage.
