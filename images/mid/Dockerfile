@@ -68,7 +68,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'plotly' \
     'ipywidgets' \
     'markupsafe' \
-    'pyspark==3.5.5' \
     'ipympl' \
     'pexpect==4.9.0' \
     'jupyter-resource-usage' \
@@ -94,15 +93,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
         'git+https://github.com/betatim/vscode-binder' \
         'jupyter-rsession-proxy==2.2.0' \
-        # Forcibly upgrade packages to patch vulnerabilities
-        'wheel==0.40.0' \
-        'setuptools==67.6.0' \
-        'pyjwt==2.6.0' \
-        'oauthlib==3.2.2' \
-        'mpmath==1.3.0' \
-        'lxml==5.3.1' \
-        'pyarrow==14.0.1' \
-        'cryptography==41.0.6' \
+        'pyspark[ml]==3.5.5' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter nbextension enable codefolding/main --sys-prefix \
     && jupyter labextension enable \
@@ -205,7 +196,7 @@ RUN mkdir -p /etc/rstudio \
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
-ENV SPARK_HOME="/opt/conda/lib/python3.12/site-packages/pyspark"
+ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
