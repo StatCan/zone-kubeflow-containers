@@ -1,9 +1,10 @@
-# Zone-kubelfow-containers  <!-- omit in toc -->
+# Zone-kubelfow-containers
 
 Container images to be used with [The Zone](https://zone.statcan.ca).
 User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
 
-## Table of Contents <!-- omit in toc -->
+## Table of Contents
+<!-- toc -->
 - [Introduction](#introduction)
 - [List of maintained images in this github repository](#list-of-maintained-images-in-this-github-repository)
 - [Usage](#usage)
@@ -12,21 +13,22 @@ User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
   - [Testing Images](#testing-images)
     - [Running and Connecting to Images Locally/Interactively](#running-and-connecting-to-images-locallyinteractively)
     - [Automated Testing](#automated-testing)
-- [Beta Process](#beta-process)
 - [General Development Workflow](#general-development-workflow)
+  - [Overview of Images](#overview-of-images)
   - [Running A Zone Container Locally](#running-a-zone-container-locally)
   - [Testing locally](#testing-locally)
   - [Testing On-Platform](#testing-on-platform)
-  - [Overview of Images](#overview-of-images)
   - [Adding new software](#adding-new-software)
   - [Adding new Images](#adding-new-images)
   - [Modifying and Testing CI](#modifying-and-testing-ci)
+- [Beta Process](#beta-process)
 - [Other Development Notes](#other-development-notes)
   - [Github CI](#github-ci)
   - [The `v2` and `latest` tags for the master branch](#the-v2-and-latest-tags-for-the-master-branch)
   - [Set User File Permissions](#set-user-file-permissions)
   - [Troubleshooting](#troubleshooting)
 - [Structure](#structure)
+<!-- tocstop -->
 
 ## Introduction
 
@@ -35,48 +37,51 @@ We chose those images because they are continuously updated and install the most
 This enables us to focus only on the additional toolsets that we require to enable our data scientists.
 These customized images are maintained by the Zone team and are the default images available on The Zone.
 
-## List of maintained images in this github repository
+## Overview of Images
 
-| Image Name     | Notes                                                   | Installations    |
-| -------------- | ------------------------------------------------------- | ---------------- |
-| jupyterlab-cpu | The base experience. A jupyterlab notebook with various | VsCode, R, Julia |
-| sas            | Similar to our jupyterlab-cpu image, except with SAS    |                  |
+Each directory in the images folder makes up one stage of the build process.
+They each contain the Dockerfile that directs the build, and all related files.
+
+The relationship between the stages and the final product is as shown below.
+![The flowchart showing the stages and their order](./docs/images/image-stages.png)
+
+### Base Images
+
+These images are chained together to perform the multi-staged build for our final images
+
+Docker | Notes
+--- | ---
+[base](./images/base) | Base Image pulling from docker-stacks
+[mid](./images/mid) | Installs various tools on top of the base image
+[sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our mid image
+[mid-jupyterlab](./images/jupyterlab) | Installs Jupyterlab specific tools
+[mid-sas](./images/sas) | Installs SAS specific tools
+[cmd](./images/cmd) | Configures container startup
+
+### Zone Images
+
+These are the final images from our build process and are intended to be used on Kubeflow Notebooks
+
+Image Name | Notes | Installations
+--- | --- | ---
+jupyterlab-cpu | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
+sas | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
 
 ## Usage
 
-### Building and Tagging Docker Images
+### Building Images
 
-Use `make build/IMAGENAME` to build a `Dockerfile`.
-This by default generates images with:
-* `repo=k8scc01covidacr.azurecr.io`
-* `tag=BRANCH_NAME`
-For example: `k8scc01covidacr.azurecr.io/IMAGENAME:BRANCH_NAME`.  
+We have setup [Docker Bake](https://docs.docker.com/build/bake/) to help with building our images. Docker Bake let us define our build configuration for our images through a file instead of CLI instructions.
 
-`make build` also accepts arguments for REPO and TAG to override these behaviours.
-For example, `make build/jupyterlab-cpu REPO=myrepo TAG=notLatest`.
+To build an image, you can use either `make bake/IMAGE` or `docker buildx bake IMAGE`. Traditional uses of `docker build` commands will still work if desired.
 
-`make post-build/IMAGENAME` is meant for anything that is commonly done after building an image,
-but currently only adds common tags.
-It adds tags of SHA, SHORT_SHA, and BRANCH_NAME to the given image,
-and accepts a `SOURCE_FULL_IMAGE_NAME` argument if you're trying to tag an existing image that has a non-typical name.
-For example:
+`make bake` accepts overrides for BASE_IMAGE, REPO and TAGS to adjust these values for the build.
 
-* `make post-build/IMAGENAME` will apply SHA, SHORT_SHA, and BRANCH_NAME tags to `k8scc01covidacr.azurecr.io/IMAGENAME:BRANCH_NAME`
-(eg: using the default REPO and TAG names)
-* `make post-build/IMAGENAME SOURCE_FULL_IMAGE_NAME=oldRepo/oldImage:oldTag REPO=newRepo`
-will make the following new aliases for `oldRepo/oldImage:oldTag REPO=newRepo`:
-  * `newRepo/IMAGENAME:SHA`
-  * `newRepo/IMAGENAME:SHORT_SHA`
-  * `newRepo/IMAGENAME:BRANCH_NAME`
+To review any parameters for the image builds, you can review and edit the [docker-bake.hcl](./docker-bake.hcl) file. 
+This file is currently setup for local development. We use parameter overrides for our github workflows to adjust the docker bake file for our CI/CD process.
 
-### Pulling and Pushing Docker Images
-
-`make pull/IMAGENAME` and `make push/IMAGENAME` work similarly to `make build/IMAGENAME`.
-They either push a local image to the acr, or pull an exisitng one from acr to local.
-`REPO` and `TAG` arguments are available to override their default values.
-
-**Note:** To use `make pull` or `make push`, 
-you must first log in to ACR (`az acr login -n k8scc01covidacr`)
+**Note:** Our workflows save all our images in our Azure Container Registry. To pull and push to our ACR locally, 
+you will first have to login using `az acr login -n k8scc01covidacr`
 
 **Note:** `make push` by default does `docker push --all-tags` in order to push the SHA, SHORT_SHA, etc., tags.  
 
@@ -115,34 +120,6 @@ Tests are formatted using typical pytest formats
 
 ---
 
-## Beta Process
-
-![Flowchart of the beta release process](./docs/images/beta_process_v2.drawio.png)
-
-To reduce unexpected changes getting added into the images used by our users, 
-we implemented a beta process that should be followed when introducing changes to the codebase.
-
-When a change needs to be done, new feature branches should be created from the `beta` branch. 
-Following this, new pull requests should target the `beta` branch, unless absolutely necessary to target `master` directly.
-
-Once a pull request has been approved, if the target branch is `beta`, it will automatically be set with the `ready for beta` label.
-This label will help us track which new additions are heading into beta. 
-With this, the pull request should not be merged manually as an automated process will handle that.
-
-We have in place a workflow(`beta-auto-merge`) which runs on a schedule and handles merging all the `ready for beta` labelled pull requests into `beta`.
-This workflow runs every two weeks, and helps us manage the frequency of updates to the `beta` branch.
-
-Once merged into the beta branch, a workflow will build and tag our container images with the `beta` tag instead of `v2`.
-Users will then be able to use those `beta` tagged images for their notebook servers if they wish to get early access to new features and fixes.
-
-We also have a second workflow(`beta-promote`) running on a schedule that handles creating a new pull request to promote the beta branch to master.
-It also runs every two weeks, but on alternating weeks from the `beta-auto-merge` workflow.
-This means that new features and fixes should live for about one week on the beta branch before they are made official in master.
-
-Once we have this new pull request created, someone can manually review it, fix any potential problems, and then finally merge it.
-After this pull request is merged, we have a third workflow(`master-release.yaml`) that will handle creating a Github release for `master`.
-This release can help us communicate what changes have been done to our container images.
-
 ## General Development Workflow
 
 ### Running A Zone Container Locally
@@ -150,8 +127,8 @@ This release can help us communicate what changes have been done to our containe
 1. Clone the repository with `git clone https://github.com/StatCan/zone-kubeflow-containers`.
 2. Run `make install-python-dev-venv` to build a development Python virtual environment.
 2.5 Add back from statements in Dockerfiles.
-3. Build your image using `make build/IMAGENAME DIRECTORY=STAGENAME`,
-e.g. run `make build/base DIRECTORY=base`.
+3. Build your image using `make bake/IMAGENAME`,
+e.g. run `make bake/base`.
 4. Test your image using automated tests through `make test/IMAGENAME`,
 e.g. run `make test/sas`.
 Remember that tests are designed for the final stage of a build.
@@ -172,13 +149,15 @@ k8scc01covidacr.azurecr.io/sas              v2         2b9acb795079   19 hours a
 ### Testing locally
 
 1. Clone the repo
-2. (optional) `make pull/IMAGENAME TAG=SOMEEXISTINGTAG` to pull an existing version of the image you are working on
-(this could be useful as a build cache to reduce development time below)
-3. Edit an image via the [image stages](/images) that are used to create it.
-4. Build your edited stages and any dependencies using `make build/IMAGENAME DIRECTORY=STAGENAME`
-5. Test your image:
-   - using automated tests through `make test/IMAGENAME`
-   - manually by `docker run -it -p 8888:8888 REPO/IMAGENAME:TAG`,
+2. Edit an image via the [image stages](/images) that are used to create it.
+3. Build your edited stages and any dependencies using `make bake/IMAGENAME`
+    * (optional) Run `docker pull REPO/IMAGENAME:TAG` to pull an existing version of the image you are working on 
+    (this could be useful as a build cache to reduce development time below)
+    * (optional) If the BASE_IMAGE is not build locally for the image stage you want to build, you will have to either run `make bake/BASE_IMAGE` to build it locally, 
+    or you will have to pull the image.
+4. Test your image:
+    * using automated tests through `make test/IMAGENAME`
+    * manually by `docker run -it -p 8888:8888 REPO/IMAGENAME:TAG`,
      then opening it in [http://localhost:8888](http://localhost:8888)
 
 ### Testing On-Platform
@@ -204,14 +183,6 @@ Pushes to master will also have the following tags:
 - artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:latest
 - artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:v2
 
-### Overview of Images
-
-Each directory in the images folder makes up one stage of the build process.
-They each contain the Dockerfile that directs the build, and all related files.
-
-The relationship between the stages and the final product is as shown below.
-![The flowchart showing the stages and their order](./docs/images/image-stages.png)
-
 ### Adding new software
 
 Software needs to be added by modifying the relevant image stage,
@@ -224,55 +195,64 @@ In such cases it may be more relevant to make an image under [aaw-contrib-contai
 
 ### Adding new Images
 
-
 1. Identify where the new stage will be placed in the build order
 2. Create a new subdirectory in the `/images/` directory for the stage
-3. Add a new job to the `./github/workflows/docker.yaml` for the new stage.
-See below for a description of all the fields.
-4. If this stage was inserted between two existing stages,
+3. Add a new target to the `docker-bake.hcl` file for the new stage.
+    ```
+      # general format for a bake target
+      target "stage-name" {
+        args = {
+          BASE_IMAGE="BASE_IMAGE"         # ARGS values from the dockerfile
+        }
+        context = "./images/stage-name"   # points to the location of the dockerfile
+        tags = ["stage-name"]             # name given to the built docker image
+      }
+    ```
+4. Add a new job to the `./github/workflows/docker.yaml` for the new stage.
+
+    ```yaml
+      # yaml to create an image
+      stage-name:                                                         # The name of the stage, will be shown in the CICD workflow
+        needs: [vars, parent]                                             # All stages need vars, any stages with a parent must link their direct parent
+        uses: ./.github/workflows/docker-steps.yaml
+        with:
+          image: "stage-name"                                             # The name of the current stage/image
+          directory: "directory-name"                                     # The name of the directory in the /images/ folder. /images/base would be "base"
+          base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
+          parent-image: "parent"                                          # The name of the parent stage/image. Omit if stage uses an upsteam image
+          parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
+          # The following values are static between differnt stages
+          registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+          branch-name: "${{ needs.vars.outputs.branch-name }}"
+        secrets:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+    ```
+
+5. If this stage was inserted between two existing stages,
 update the parent values of any children of this stage
-5. If this stage creates an image that will be deployed to users.
+6. If this stage creates an image that will be deployed to users.
 A job must be added to test the image in `./github/workflows/docker.yaml`,
 and the image name must be added to the matrix in `./github/workflows/docker-nightly.yaml`
-See below for a description of all the fields
-6. Update the documentation for the new stage.
+
+    ```yaml
+      # yaml to create a test
+      imagename-test:                                       # The name of the test job, usually  imagename-test
+        needs: [vars, imagename]                            # Must contain vars and the image that will be tested
+        uses: ./.github/workflows/docker-pull-test.yaml
+        with:
+          image: "imagename"                                # The name of the image that will be tested
+          # The following values are static between differnt tests
+          registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+          tag: "${{ needs.vars.outputs.branch-name }}"
+        secrets:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+    ```
+
+7. Update the documentation for the new stage.
 This is generally updating `images-stages.png` and `image-stages.drawio` in the `docs/images` folder using draw.io.
-
-
-yaml to create an image
-```yaml
-  stage-name:                                                         # The name of the stage, will be shown in the CICD workflow
-    needs: [vars, parent]                                             # All stages need vars, any stages with a parent must link their direct parent
-    uses: ./.github/workflows/docker-steps.yaml
-    with:
-      image: "stage-name"                                             # The name of the current stage/image
-      directory: "directory-name"                                     # The name of the directory in the /images/ folder. /images/base would be "base"
-      base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
-      parent-image: "parent"                                          # The name of the parent stage/image. Omit if stage uses an upsteam image
-      parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
-      # The following values are static between differnt stages
-      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
-    secrets:
-      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-```
-
-yaml to create a test
-```yaml
-  imagename-test:                                       # The name of the test job, usually  imagename-test
-    needs: [vars, imagename]                            # Must contain vars and the image that will be tested
-    uses: ./.github/workflows/docker-pull-test.yaml
-    with:
-      image: "imagename"                                # The name of the image that will be tested
-      # The following values are static between differnt tests
-      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
-    secrets:
-      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
-```
 
 ### Modifying and Testing CI
 
@@ -301,6 +281,34 @@ If making changes to CI that cannot be done on a branch (eg: changes to issue_co
 3. In your forked repo, define secrets for REGISTRY_USERNAME and REGISTRY_PASSWORD with your dockerhub credentials (you should use an API token, not your actual dockerhub password)
 
 ---
+
+## Beta Process
+
+![Flowchart of the beta release process](./docs/images/beta_process_v2.drawio.png)
+
+To reduce unexpected changes getting added into the images used by our users, 
+we implemented a beta process that should be followed when introducing changes to the codebase.
+
+When a change needs to be done, new feature branches should be created from the `beta` branch. 
+Following this, new pull requests should target the `beta` branch, unless absolutely necessary to target `master` directly.
+
+Once a pull request has been approved, if the target branch is `beta`, it will automatically be set with the `ready for beta` label.
+This label will help us track which new additions are heading into beta. 
+With this, the pull request should not be merged manually as an automated process will handle that.
+
+We have in place a workflow(`beta-auto-merge`) which runs on a schedule and handles merging all the `ready for beta` labelled pull requests into `beta`.
+This workflow runs every two weeks, and helps us manage the frequency of updates to the `beta` branch.
+
+Once merged into the beta branch, a workflow will build and tag our container images with the `beta` tag instead of `v2`.
+Users will then be able to use those `beta` tagged images for their notebook servers if they wish to get early access to new features and fixes.
+
+We also have a second workflow(`beta-promote`) running on a schedule that handles creating a new pull request to promote the beta branch to master.
+It also runs every two weeks, but on alternating weeks from the `beta-auto-merge` workflow.
+This means that new features and fixes should live for about one week on the beta branch before they are made official in master.
+
+Once we have this new pull request created, someone can manually review it, fix any potential problems, and then finally merge it.
+After this pull request is merged, we have a third workflow(`master-release.yaml`) that will handle creating a Github release for `master`.
+This release can help us communicate what changes have been done to our container images.
 
 ## Other Development Notes
 
