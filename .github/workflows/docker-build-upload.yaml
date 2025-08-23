@@ -86,7 +86,7 @@ jobs:
           tags="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
           
           # adds tags for master
-          if [ ${{ inputs.branch-name }} == 'master' ]; then
+          if [ "${{ inputs.branch-name }}" == 'master' ]; then
             tags="${tags} v2 latest"
           fi
 
