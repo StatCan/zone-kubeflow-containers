@@ -192,3 +192,10 @@ RUN rm -rf /tmp/* /var/tmp/* \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+USER $NB_UID
+
+ENTRYPOINT ["/init"]

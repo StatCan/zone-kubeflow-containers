@@ -10,7 +10,7 @@ USER root
 
 WORKDIR /home/$NB_USER
 EXPOSE 8888
-COPY start-custom.sh start-oms.sh restart-oms.sh /usr/local/bin/
+COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/start-oms.sh && \
     chmod +x /usr/local/bin/start-custom.sh && \
@@ -30,5 +30,5 @@ ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 RUN conda config --remove channels conda-forge --system
 
 USER $NB_USER
-ENTRYPOINT ["tini", "--"]
-CMD ["start-custom.sh"]
+# ENTRYPOINT ["tini", "--"]
+# CMD ["start-custom.sh"]
