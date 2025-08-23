@@ -83,7 +83,11 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-language-pack-fr-fr",
     "jupyterlab-lsp",
     # Other
-    "conda-forge::blas=[build", # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
+
+    # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
+    # previously "blas=", which didn't work
+    "blas=[build",
+
     "protobuf",
     "r-irkernel",
     "unixodbc",
@@ -125,7 +129,6 @@ def package_map(package):
         _package = PACKAGE_MAPPING.get(_package)
     return _package
 
-
 def excluded_package_predicate(package):
     """Return whether a package is excluded from the list (i.e. a package that cannot be tested with standard imports)"""
     return package in EXCLUDED_PACKAGES
@@ -138,7 +141,7 @@ def python_package_predicate(package):
 
 def r_package_predicate(package):
     """Predicate matching R packages"""
-    return not excluded_package_predicate(package) and package.startswith("r-")
+    return package.startswith("r-") and not excluded_package_predicate(package)
 
 
 def _check_import_package(package_helper, command):
@@ -193,13 +196,11 @@ def r_packages(packages):
         lambda package: package_map(package[2:]), filter(r_package_predicate, packages)
     )
 
-
 def test_python_packages(package_helper, python_packages, max_failures=0):
     """Test the import of specified python packages"""
     return _import_packages(
         package_helper, python_packages, check_import_python_package, max_failures
     )
-
 
 @pytest.fixture(scope="function")
 def python_packages(packages):
