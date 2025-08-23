@@ -13,7 +13,7 @@ ARGS=()
 [ ! -z "${BASE_IMAGE}" ] && ARGS+=("--set ${IMAGE_NAME}.args.BASE_IMAGE=${BASE_IMAGE}")
 
 TAG_LIST=()
-if [ ! -z "${TAGS}" ]; then
+if [[ -n "${TAGS}" ]]; then
     TAG_LIST=($TAGS)
     # for each tag given, prefix the tag with the bake value to override the tags from the bake file
     TAG_LIST=( "${TAG_LIST[@]/#/--set ${IMAGE_NAME}.tags=${REPO}/${IMAGE_NAME}:}" )
