@@ -4,6 +4,8 @@
 ARG BASE_IMAGE=mid
 FROM $BASE_IMAGE
 
+USER root
+
 # SAS
 # Install Quarto
 ENV QUARTO_VERSION=1.8.1
