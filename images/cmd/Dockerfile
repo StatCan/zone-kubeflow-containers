@@ -1,13 +1,19 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=mid-jupyterlab
+FROM $BASE_IMAGE
+
 USER root
 
 # Configure container startup
 
-WORKDIR /home/$NB_USER
-EXPOSE 8888
-COPY start-custom.sh start-oms.sh restart-oms.sh /usr/local/bin/
+# WORKDIR /home/$NB_USER
+# EXPOSE 8888
+COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/start-oms.sh && \
-    chmod +x /usr/local/bin/start-custom.sh && \
+    # chmod +x /usr/local/bin/start-custom.sh && \
     chmod +x /usr/local/bin/restart-oms.sh
 
 # Add --user to all pip install calls and point pip to Artifactory repository
@@ -24,5 +30,10 @@ ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 RUN conda config --remove channels conda-forge --system
 
 USER $NB_USER
-ENTRYPOINT ["tini", "--"]
-CMD ["start-custom.sh"]
+# ENTRYPOINT ["tini", "--"]
+# CMD ["start-custom.sh"]
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+EXPOSE 8888
