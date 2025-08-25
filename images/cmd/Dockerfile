@@ -8,8 +8,8 @@ USER root
 
 # Configure container startup
 
-WORKDIR /home/$NB_USER
-EXPOSE 8888
+# WORKDIR /home/$NB_USER
+# EXPOSE 8888
 COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/start-oms.sh && \
@@ -32,3 +32,8 @@ RUN conda config --remove channels conda-forge --system
 USER $NB_USER
 # ENTRYPOINT ["tini", "--"]
 # CMD ["start-custom.sh"]
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+EXPOSE 8888
