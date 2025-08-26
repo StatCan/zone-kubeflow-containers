@@ -89,3 +89,5 @@ COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
+
+USER $NB_USER
