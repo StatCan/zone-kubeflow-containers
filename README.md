@@ -65,7 +65,6 @@ Image | Notes
 [sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our mid image
 [mid-jupyterlab](./images/jupyterlab) | Installs Jupyterlab specific tools
 [mid-sas](./images/sas) | Installs SAS specific tools
-[cmd](./images/cmd) | Configures container startup
 
 ### Zone Images
 
@@ -419,10 +418,10 @@ This was tested on Linux Ubuntu 20.04 virtual machine.
 │
 ├── images                                  # Dockerfile and required resources for stage builds
 │   ├── base                                # Common base of the images
-│   ├── cmd                                 # Common stage for finalizing most images
 │   ├── jupyterlab                          # Jupyterlab specific Dockerfile
 │   ├── mid                                 # Common mid point for all images
-│   └── sas                                 # SAS specific Dockerfile
+│   ├── sas                                 # SAS specific Dockerfile
+|   └── sas_kernel                          # Dockerfile for installation of sas_kernel
 │
 ├── docs                                    # files/images used in documentation (ex. Readme's)
 │
