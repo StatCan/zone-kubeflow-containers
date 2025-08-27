@@ -246,6 +246,9 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
 
+# Add --user to all pip install calls and point pip to Artifactory repository
+cat /tmp/pip.conf >> /etc/pip.conf && rm /tmp/pip.conf
+
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
 # if rprofile doesnt exist
