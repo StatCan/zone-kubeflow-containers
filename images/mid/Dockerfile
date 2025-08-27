@@ -208,6 +208,7 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
 
+
 # Configure container startup
 
 EXPOSE 8888
@@ -224,6 +225,9 @@ COPY pip.conf /tmp/pip.conf
 COPY .Rprofile /tmp/.Rprofile
 
 # Copy over Instructions to Home directory
-COPY connect-to-filer.md /tmp/connect-to-filer.md
+ADD connect-to-filer.md /home/$NB_USER/connect-to-filer.md
+
+# Point conda to Artifactory repository
+RUN conda config --remove channels conda-forge --system
 
 USER $NB_USER
