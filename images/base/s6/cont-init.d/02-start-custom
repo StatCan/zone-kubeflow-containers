@@ -42,8 +42,16 @@ else
   echo "Example notebooks already cloned."
 fi
 
-if [ ! -e /home/$NB_USER/.Rprofile ]; then
-    cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
+if [ -e /tmp/.Rprofile ]; then
+    cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm /tmp/.Rprofile
+fi
+
+if [ -e /tmp/pip.conf ]; then
+    cat /tmp/pip.conf >> /etc/pip.conf && rm /tmp/pip.conf
+fi
+
+if [ -e /tmp/connect-to-filer.md ]; then
+    cat /tmp/connect-to-filer.md >> /home/$NB_USER/connect-to-filer.md && rm /tmp/connect-to-filer.md
 fi
 
 # Configure the shell! If not already configured.
@@ -245,9 +253,7 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
-
-# Add --user to all pip install calls and point pip to Artifactory repository
-cat /tmp/pip.conf >> /etc/pip.conf && rm /tmp/pip.conf
+conda config --remove channels conda-forge --system
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
