@@ -43,7 +43,16 @@ Each directory in the images folder makes up one stage of the build process.
 They each contain the Dockerfile that directs the build, and all related files.
 
 The relationship between the stages and the final product is as shown below.
-![The flowchart showing the stages and their order](./docs/images/image-stages.png)
+```mermaid
+graph TD
+  upstream_nb["(upstream) datascience-notebook"]
+  upstream_nb --> base
+  base --> mid
+  mid --> sas_kernel
+  upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
+  sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
+  sas_kernel --> sas
+```
 
 ### Base Images
 
