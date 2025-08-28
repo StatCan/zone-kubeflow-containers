@@ -46,6 +46,10 @@ if [ ! -e /home/$NB_USER/.Rprofile ]; then
   mv /tmp/.Rprofile /home/$NB_USER/.Rprofile
 fi
 
+if [ ! -e /etc/pip.conf ]; then
+  mv /tmp/pip.conf /etc/pip.conf
+fi
+
 if [ ! -e /home/$NB_USER/connect-to-filer.md ]; then
   mv /tmp/connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 fi

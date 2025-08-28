@@ -220,7 +220,7 @@ USER $NB_USER
 EXPOSE 8888
 
 # Copy over pip config
-COPY pip.conf /etc/pip.conf
+COPY pip.conf /tmp/pip.conf
 
 # Add .Rprofile to /tmp so we can install it in start-custom.sh
 COPY .Rprofile /tmp/.Rprofile
