@@ -208,16 +208,16 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
 
-USER $NB_USER
-
 # Configure container startup
-
-EXPOSE 8888
 
 COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/start-oms.sh && \
     chmod +x /usr/local/bin/restart-oms.sh
+
+USER $NB_USER
+
+EXPOSE 8888
 
 # Copy over pip config
 COPY pip.conf /etc/pip.conf
