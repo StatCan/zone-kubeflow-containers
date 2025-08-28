@@ -43,7 +43,11 @@ else
 fi
 
 if [ ! -e /home/$NB_USER/.Rprofile ]; then
-    cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
+  mv /tmp/.Rprofile /home/$NB_USER/.Rprofile
+fi
+
+if [ ! -e /home/$NB_USER/connect-to-filer.md ]; then
+  mv /tmp/connect-to-filer.md /home/$NB_USER/connect-to-filer.md
 fi
 
 # Configure the shell! If not already configured.
@@ -245,9 +249,6 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
-
-# Add --user to all pip install calls and point pip to Artifactory repository
-cat /tmp/pip.conf >> /etc/pip.conf && rm /tmp/pip.conf
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
