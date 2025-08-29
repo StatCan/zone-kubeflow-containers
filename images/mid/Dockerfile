@@ -220,13 +220,17 @@ USER $NB_USER
 EXPOSE 8888
 
 # Copy over pip config
-COPY pip.conf /tmp/pip.conf
+COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 
 # Add .Rprofile to /tmp so we can install it in start-custom.sh
-COPY .Rprofile /tmp/.Rprofile
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile /tmp/.Rprofile
 
 # Copy over Instructions to Home directory
-COPY connect-to-filer.md /tmp/connect-to-filer.md
+COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md /tmp/connect-to-filer.md
 
 # Point conda to Artifactory repository
 RUN conda config --remove channels conda-forge --system
+
+USER root
+RUN pip install sas_kernel
+USER $NB_USER
