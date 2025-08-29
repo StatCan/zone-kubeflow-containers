@@ -35,7 +35,7 @@ ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
 RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
     tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
     mv /tmp/linux_amd64/blobporter /usr/local/bin/blobporter && \
-    rm -rf /tmp/* && \
+    rm -rf /tmp/blobporter.tar.gz && \
     chmod a+x /usr/local/bin/blobporter
 
 # cd to ROOT and not /usr/local, because the way this was zipped was to include /usr/local
