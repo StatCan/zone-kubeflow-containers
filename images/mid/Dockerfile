@@ -210,6 +210,9 @@ ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transform
 
 # Configure container startup
 
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
 COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/start-oms.sh && \
@@ -230,7 +233,3 @@ COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md /tmp/connect-to-filer.md
 
 # Point conda to Artifactory repository
 RUN conda config --remove channels conda-forge --system
-
-USER root
-RUN pip install sas_kernel
-USER $NB_USER
