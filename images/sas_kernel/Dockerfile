@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=mid
+FROM $BASE_IMAGE
+
 # SAS
 # Install Quarto
 ENV QUARTO_VERSION=1.8.1

@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=mid-jupyterlab
+FROM $BASE_IMAGE
+
 USER root
 
 # Configure container startup

@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
+FROM $BASE_IMAGE
+
 USER root
 
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"

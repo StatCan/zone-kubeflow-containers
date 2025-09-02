@@ -1,3 +1,9 @@
+#
+# NOTE: Use the docker-bake.hcl file to build this image correctly.
+#
+ARG BASE_IMAGE=base
+FROM $BASE_IMAGE
+
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
