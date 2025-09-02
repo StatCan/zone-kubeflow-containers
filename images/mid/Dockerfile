@@ -230,6 +230,3 @@ COPY --chown=${NB_USER}:${NB_GID} .Rprofile /tmp/.Rprofile
 
 # Copy over Instructions to Home directory
 COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md /tmp/connect-to-filer.md
-
-# Point conda to Artifactory repository
-RUN conda config --remove channels conda-forge --system
