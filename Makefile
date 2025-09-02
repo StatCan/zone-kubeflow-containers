@@ -18,12 +18,13 @@ pytorch-CUDA    := 11.8.0
 
 # Misc Directories
 TESTS_DIR := ./tests
-MAKE_HELPERS := ./make_helpers/
+MAKE_HELPERS := ./make_helpers
 PYTHON_VENV := .venv
 
 # Executables
 PYTHON := $(PYTHON_VENV)/bin/python
 POST_BUILD_HOOK := post-build-hook.sh
+BAKE_BUILD_EXEC := bake-build.sh
 
 # Default labels
 DEFAULT_REPO := k8scc01covidacr.azurecr.io
@@ -41,34 +42,13 @@ DEFAULT_NB_PREFIX := /notebook/username/notebookname
 ######    Docker helpers     ######
 ###################################
 
-pull/%: GITHUB_OUTPUT ?= .tmp/github_output.log
-pull/%: DARGS?=
-pull/%: REPO?=$(DEFAULT_REPO)
-pull/%: TAG?=$(DEFAULT_TAG)
-pull/%:
-	# End repo with a single slash and start tag with a single colon, if they exist
-	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') &&\
-	TAG=$$(echo "$(TAG)" | sed 's~^:*~:~' | sed 's~^\s*:*\s*$$~~') &&\
-	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" && \
-	echo "Pulling $$IMAGE_NAME" &&\
-	docker pull $(DARGS) $$IMAGE_NAME &&\
-	echo "image_name=$$IMAGE_NAME" >> $(GITHUB_OUTPUT)
-
-build/%: GITHUB_OUTPUT ?= .tmp/github_output.log
-build/%: DIRECTORY?=
-build/%: DARGS?=
-build/%: REPO?=$(DEFAULT_REPO)
-build/%: TAG?=$(DEFAULT_TAG)
-build/%: ## build the latest image
-	# End repo with exactly one trailing slash, unless it is empty
-	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') && \
-	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" && \
-	DOCKER_BUILDKIT=1 docker build $(DARGS) --rm --force-rm -t $$IMAGE_NAME ./images/$(DIRECTORY) && \
-	echo -n "Built image $$IMAGE_NAME of size: " && \
-	docker images $$IMAGE_NAME --format "{{.Size}}" && \
-	echo "full_image_name=$$IMAGE_NAME" >> $(GITHUB_OUTPUT) && \
-	echo "image_tag=$(TAG)" >> $(GITHUB_OUTPUT) && \
-	echo "image_repo=$${REPO}" >> $(GITHUB_OUTPUT)
+bake/%: export DARGS?=
+bake/%: export BASE_IMAGE?=
+bake/%: export REPO?=$(DEFAULT_REPO)
+bake/%: export TAGS?=
+bake/%: ## build the desired image with docker bake
+	IMAGE_NAME="$(notdir $@)" \
+	bash "$(MAKE_HELPERS)/$(BAKE_BUILD_EXEC)"
 
 post-build/%: export REPO?=$(DEFAULT_REPO)
 post-build/%: export TAG?=$(DEFAULT_TAG)

@@ -59,7 +59,7 @@ jobs:
 
       - name: Pull existing image
         id: pull-existing
-        run: make pull/${{ inputs.image }} REPO=${{ inputs.registry-name }} TAG=${{ inputs.tag }}
+        run: docker pull ${{ inputs.registry-name }}/${{ inputs.image }}:${{ inputs.tag }}
 
       - name: Set Up Python for Test Suite
         uses: actions/setup-python@v4
