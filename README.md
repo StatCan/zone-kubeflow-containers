@@ -63,8 +63,6 @@ Image | Notes
 [base](./images/base) | Base Image pulling from docker-stacks
 [mid](./images/mid) | Installs various tools on top of the base image
 [sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our mid image
-[mid-jupyterlab](./images/jupyterlab) | Installs Jupyterlab specific tools
-[mid-sas](./images/sas) | Installs SAS specific tools
 
 ### Zone Images
 
@@ -72,8 +70,8 @@ These are the final images from our build process and are intended to be used on
 
 Image | Notes | Installations
 --- | --- | ---
-jupyterlab-cpu | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
-sas | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
+[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
+[sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
 
 ## Usage
 
