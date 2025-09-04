@@ -26,24 +26,13 @@ RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
 
-# BlobPorter
-ARG ACCOUNT_NAME=${ACCOUNT_NAME}
-ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
+# Check with /usr/local first since did ADD October2025SAS.tar.gz /usr/local
+# see if this turns out fine
+COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome
 
-RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
-    tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
-    mv /tmp/linux_amd64/blobporter /usr/local/bin/blobporter && \
-    rm -rf /tmp/* && \
-    chmod a+x /usr/local/bin/blobporter
-
-# cd to ROOT and not /usr/local, because the way this was zipped was to include /usr/local
-RUN cd / && \
-    blobporter -f https://zonesasoct2025.blob.core.windows.net/sasblobcontainer/October2025SAS.tar.gz -c sasblobcontainer -n October2025SAS.tar.gz -t blob-file && \
-    tar -xzpf October2025SAS.tar.gz && \
-    rm October2025SAS.tar.gz && \
-    chown -R jovyan:sasstaff /usr/local/SASHome && \
-    ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-    rm /usr/local/bin/blobporter
+# Need to test and see whats actually in here
+#RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
+#    chmod -R 0775 /usr/local/SASHome/studioconfig
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
