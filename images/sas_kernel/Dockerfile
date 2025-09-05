@@ -46,7 +46,8 @@ WORKDIR /home/jovyan
 ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
-RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
+# Temporary comment out, just want to explore what was copied
+#RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
