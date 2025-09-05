@@ -15,7 +15,9 @@ export JUPYTER_RUNTIME_DIR="/tmp/jupyter_runtime"
 cd "${HOME}" || { echo "ERROR: failed to cd to ${HOME}"; exit 1; }
 echo "--------------------starting jupyter--------------------"
 exec 2>&1
-exec /opt/conda/bin/jupyter lab \
+exec \
+  s6-envdir /run/s6-env \
+  /opt/conda/bin/jupyter lab \
   --notebook-dir="${HOME}" \
   --ip=0.0.0.0 \
   --no-browser \
