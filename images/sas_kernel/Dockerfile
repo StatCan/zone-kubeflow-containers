@@ -29,7 +29,7 @@ RUN groupadd -g 1002 sasstaff && \
 # Check with /usr/local first since did ADD October2025SAS.tar.gz /usr/local
 # see if this turns out fine --> copies to /usr/local/SASHome/usr/local/SASHome as expected
 #COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome
-COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /
+COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/SASHome /usr/local/SASHome
 
 # Need to test and see whats actually in here
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
