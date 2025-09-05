@@ -27,12 +27,13 @@ RUN groupadd -g 1002 sasstaff && \
     echo "jovyan:jovyan" | chpasswd
 
 # Check with /usr/local first since did ADD October2025SAS.tar.gz /usr/local
-# see if this turns out fine
-COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome
+# see if this turns out fine --> copies to /usr/local/SASHome/usr/local/SASHome as expected
+#COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome
+COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /
 
 # Need to test and see whats actually in here
-#RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-#    chmod -R 0775 /usr/local/SASHome/studioconfig
+RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
+    chmod -R 0775 /usr/local/SASHome/studioconfig
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
@@ -47,7 +48,7 @@ ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
 # Temporary comment out, just want to explore what was copied
-#RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
+RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
