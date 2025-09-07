@@ -260,6 +260,26 @@ and the image name must be added to the matrix in `./github/workflows/docker-nig
 7. Update the documentation for the new stage.
 This is generally updating `images-stages.png` and `image-stages.drawio` in the `docs/images` folder using draw.io.
 
+### Custom scripts
+
+To manage our custom scripts that we want to execute after a container starts up, we use the [s6-overlay](https://github.com/just-containers/s6-overlay). Kubeflow upstream also uses this tool with their [example notebook servers](https://github.com/kubeflow/kubeflow/blob/master/components/example-notebook-servers/README.md#configure-s6-overlay)
+
+
+Scripts that need to run during the startup of the container can be placed in `/etc/cont-init.d/`, and are executed in ascending alphanumeric order.
+
+Scripts like our [start-custom](./images/mid/s6/cont-init.d/02-start-custom) use the with-contenv helper so that environment variables (passed to container) are available in the script.
+
+Extra services to be monitored by s6-overlay should be placed in their own folder under `/etc/services.d/` containing a script called `run` and optionally a finishing script `finish`.
+
+An example of a long-running service can be found in our [main run script](./images/mid/s6/services.d/jupyter/run) which is used to start JupyterLab itself.
+
+#### Note on setting environment variables in startup scripts
+
+When using both a startup script and a service script, environment variables declared in the startup script (using `export VAR=value` for example) will not be available in the service script.
+
+To circumvent this limitation, if you need to declare new environment variables from a custom script, you can first create a custom environment location, like `/run/s6-env`. Then, you can store your new environment variables in that new location, using for example `echo ${TEST_ENV_VAR} > /run/s6-env/TEST_ENV_VAR`. 
+Then, when executing the long-running service, you can use `s6-envdir /run/s6-env` to point to your custom environment location in the `exec` command.
+
 ### Modifying and Testing CI
 
 If making changes to CI that cannot be done on a branch (eg: changes to issue_comment triggers), you can:
