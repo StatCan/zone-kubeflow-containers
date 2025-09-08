@@ -30,7 +30,7 @@ RUN groupadd -g 1002 sasstaff && \
 # see if this turns out fine --> copies to /usr/local/SASHome/usr/local/SASHome as expected
 #COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome
 # COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/SASHome /usr/local/SASHome # this fails, seems /usr/local/SASHome dne on jose-sas
-COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome
+COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 / /usr/local/SASHome
 
 # Need to test and see whats actually in here
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
