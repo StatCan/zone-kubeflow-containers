@@ -38,12 +38,11 @@ RUN groupadd -g 1002 sasstaff && \
 # below copies to /usr/usr/local/SASHome
 # copies to /usr/SASHome, so SASHome in my image sits at /usr/local/usr/local
 COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local
+# It looks like this because when I downloaded and made the dockerfile I did ADD October2025SAS.tar.gz /usr/local
 
 # Need to test and see whats actually in here
-RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
-#&& \ iso
-# The below fails out, will comment out and investigate on the image
-#RUN chmod -R 0775 /usr/local/SASHome/studioconfig
+RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \ 
+    chmod -R 0775 /usr/local/SASHome/studioconfig
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
@@ -58,7 +57,7 @@ ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
 # Temporary comment out, just want to explore what was copied
-#RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
+RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
