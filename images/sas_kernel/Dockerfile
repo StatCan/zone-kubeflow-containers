@@ -36,7 +36,8 @@ RUN groupadd -g 1002 sasstaff && \
 # COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 / /usr # Copies to /usr/usr/local/usr/local/SASHome
 
 # below copies to /usr/usr/local/SASHome
-COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr
+# copies to /usr/SASHome, so SASHome in my image sits at /usr/local/usr/local
+COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local
 
 # Need to test and see whats actually in here
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
