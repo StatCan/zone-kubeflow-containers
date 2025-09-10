@@ -214,7 +214,11 @@ ENV PATH="/opt/oracle/instantclient_23_5:/opt/mssql-tools18/bin:${PATH}"
 ARG GIT_ORACLE_SNIPPET=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-containers/-/snippets/515/raw/main/tnsnames.ora
 
 COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIENT_WALLET
-COPY dbConnection/sqlnet.ora /opt/oracle/instantclient_23_5/network/admin/sqlnet.ora
+# COPY dbConnection/sqlnet.ora /opt/oracle/instantclient_23_5/network/admin/sqlnet.ora
+COPY dbConnection/*.ora /opt/oracle/instantclient_23_5/network/admin/
+# give users permissions to edit the alias file
+RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
+    && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
 
 # Retrieving Alias file for oracle client
 # RUN wget -q ${GIT_ORACLE_SNIPPET} -O ${TNS_ADMIN}/tnsnames.ora \
