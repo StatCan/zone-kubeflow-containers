@@ -217,10 +217,10 @@ COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIEN
 COPY dbConnection/sqlnet.ora /opt/oracle/instantclient_23_5/network/admin/sqlnet.ora
 
 # Retrieving Alias file for oracle client
-RUN wget -q ${GIT_ORACLE_SNIPPET} -O ${TNS_ADMIN}/tnsnames.ora \
-# give users permissions to edit the alias file
-    && chmod a+w /opt/oracle/instantclient_23_5/network/admin \
-    && chown ${NB_UID}:${NB_GID} /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
+# RUN wget -q ${GIT_ORACLE_SNIPPET} -O ${TNS_ADMIN}/tnsnames.ora \
+# # give users permissions to edit the alias file
+#     && chmod a+w /opt/oracle/instantclient_23_5/network/admin \
+#     && chown ${NB_UID}:${NB_GID} /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
 
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
