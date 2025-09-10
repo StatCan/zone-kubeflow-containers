@@ -8,6 +8,20 @@ USER root
 
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
+# we copy the contents of $HOME_TMP to $HOME on startup
+# this is to work around the fact that a PVC will be mounted to $HOME
+# but we still want to have some default files in $HOME
+# see `s6/cont-init.d/01-copy-tmp-home`
+ENV HOME_TMP=/tmp_home/$NB_USER
+
+# s6-overlay only gives 5 seconds by default, which is too small for slow PVC storage backends
+# when running `/etc/cont-inid.d/01-copy-tmp-home` (note, this is in milliseconds)
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=300000
+
+# s6-overlay does not fail by default if the `/etc/cont-init.d/` or `/etc/services.d/` scripts fail
+# this is not the desired behavior, so we set it to fail
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+
 # Define all versioned URLs in one place
 ARG KUBECTL_VERSION=v1.29.10
 ARG KUBECTL_URL=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
@@ -22,6 +36,13 @@ ARG GIT_CRED_MANAGER_URL=https://github.com/git-ecosystem/git-credential-manager
 ARG GIT_CRED_MANAGER_SHA=03c7b174a6f90e1ae860980ba5fda4490f04e5b9aaa802e2d469e72ec5dae6a4
 ARG S6_VERSION=v3.2.1.0
 ARG S6_ARCH="x86_64"
+
+# create temp home
+RUN mkdir -pv ${HOME_TMP} \
+    # in the interest of backwards compatibility we have the 'users' group owns the home directory
+    # we also set the SGID bit so that new files and directories are created with the 'users' group
+ && chmod 2775 ${HOME_TMP} \
+ && chown -R ${NB_USER}:${USERS_GID} ${HOME_TMP}
 
 COPY clean-layer.sh /usr/bin/clean-layer.sh
 
@@ -173,17 +194,21 @@ RUN \
     && fix-permissions /home/$NB_USER
 
 # Oracle configuration
-COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIENT_WALLET
-COPY dbConnection/*.ora /opt/oracle/instantclient_23_5/network/admin/
-# give users permissions to edit the alias file
-RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
-    && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
-
-# Oracle environment variables
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
 ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
 ENV TNS_ADMIN="/opt/oracle/instantclient_23_5/network/admin"
 ENV PATH="/opt/oracle/instantclient_23_5:/opt/mssql-tools18/bin:${PATH}"
+
+ARG GIT_ORACLE_SNIPPET=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-containers/-/snippets/515/raw/main/tnsnames.ora
+
+COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIENT_WALLET
+COPY dbConnection/sqlnet.ora /opt/oracle/instantclient_23_5/network/admin/sqlnet.ora
+
+# Retrieving Alias file for oracle client
+RUN wget -q ${GIT_ORACLE_SNIPPET} -O ${TNS_ADMIN}/tnsnames.ora \
+# give users permissions to edit the alias file
+    && chmod a+w /opt/oracle/instantclient_23_5/network/admin \
+    && chown ${NB_UID}:${NB_GID} /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
 
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
@@ -192,6 +217,9 @@ RUN rm -rf /tmp/* /var/tmp/* \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
 USER $NB_UID
 

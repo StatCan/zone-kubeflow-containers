@@ -167,9 +167,6 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-ENV DEFAULT_JUPYTER_URL=/lab
-ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-jupyter-notebooks
-
 # install rstudio-server
 ARG RSTUDIO_VERSION=2024.12.0-467
 ARG SHA256=1493188cdabcc1047db27d1bd0e46947e39562cbd831158c7812f88d80e742b3
@@ -204,14 +201,19 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
-# If using the docker bit in other Dockerfiles, this must get written over in a later layer
-ENV DEFAULT_JUPYTER_URL="/rstudio"
-ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
-
 # Configure container startup
 
 # s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+# Copy over pip config
+COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
+
+# Add .Rprofile to /tmp so we can install it in start-custom.sh
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile ${HOME}/.Rprofile
+
+# Copy over Instructions to Home directory
+COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md ${HOME}/connect-to-filer.md
 
 COPY start-oms.sh restart-oms.sh /usr/local/bin/
 
@@ -220,13 +222,17 @@ RUN chmod +x /usr/local/bin/start-oms.sh && \
 
 USER $NB_USER
 
+# Create and set the gpg settings during first boot
+RUN mkdir -p ${HOME}/.gnupg \
+    &&  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "${HOME}/.gnupg/gpg-agent.conf" \
+    && chmod 700 "${HOME}/.gnupg"
+
+# s6 - 01-copy-tmp-home
+# NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
+#       this is a workaround because a PVC will be mounted at $HOME
+#       and the contents of $HOME will be hidden
+RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
+    # give group same access as user (needed for OpenShift)
+ && chmod -R g=u "${HOME_TMP}"
+
 EXPOSE 8888
-
-# Copy over pip config
-COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
-
-# Add .Rprofile to /tmp so we can install it in start-custom.sh
-COPY --chown=${NB_USER}:${NB_GID} .Rprofile /tmp/.Rprofile
-
-# Copy over Instructions to Home directory
-COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md /tmp/connect-to-filer.md
