@@ -25,22 +25,12 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
 RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
-
-# Check with /usr/local first since did ADD October2025SAS.tar.gz /usr/local
-
-#COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/ /usr/local/SASHome # see if this turns out fine --> copies to /usr/local/SASHome/usr/local/SASHome as expected
-# so under /usr/local in jose-sas there exists SASHome? and is placed at /usr/local/SASHome -> usr/local/SASHome
-
-# COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/SASHome /usr/local/SASHome # this fails, seems /usr/local/SASHome dne on jose-sas
-
-# COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 / /usr # Copies to /usr/usr/local/usr/local/SASHome
-
-# below copies to /usr/usr/local/SASHome
-# copies to /usr/SASHome, so SASHome in my image sits at /usr/local/usr/local
-COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local
+    
 # It looks like this because when I downloaded and made the dockerfile I did ADD October2025SAS.tar.gz /usr/local
+# Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
+COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local
 
-# Need to test and see whats actually in here
+
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \ 
     chmod -R 0775 /usr/local/SASHome/studioconfig
 
@@ -56,7 +46,6 @@ WORKDIR /home/jovyan
 ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
-# Temporary comment out, just want to explore what was copied
 RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
