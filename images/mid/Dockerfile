@@ -249,11 +249,8 @@ RUN mkdir -p ${HOME}/.gnupg \
 
 # add rm wrapper
 # https://jirab.statcan.ca/browse/ZPS-40
-RUN mkdir -p ${HOME}/.local/bin/ \
-    && git clone https://gitlab.k8s.cloud.statcan.ca/zone/build-scripts/snippets/415.git ${HOME}/.local/bin/rm-git \
-    && mv ${HOME}/.local/bin/rm-git/rm ${HOME}/.local/bin/rm \
-    && rm -rf ${HOME}/.local/bin/rm-git \
-    && chmod +x ${HOME}/.local/bin/rm
+COPY --chown=${NB_USER}:${NB_GID} rm ${HOME}/.local/bin/rm
+RUN chmod +x ${HOME}/.local/bin/rm
 
 # s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
