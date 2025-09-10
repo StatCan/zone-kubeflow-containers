@@ -99,9 +99,6 @@ RUN mamba install --quiet \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
-# Add helpers for shell initialization
-COPY shell_helpers.sh /tmp/shell_helpers.sh
-
 # Combined tool installations with cleanup
 RUN \
     # S6 Overlay
@@ -150,6 +147,21 @@ RUN \
     && echo "${GIT_CRED_MANAGER_SHA} ./gcm.deb" | sha256sum -c - \
     && dpkg -i ./gcm.deb \
     && rm ./gcm.deb
+
+# Add helpers for shell initialization
+COPY shell_helpers.sh /tmp/shell_helpers.sh
+
+# Configure the shell
+RUN sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh \
+    && conda init bash \
+    && conda init zsh \
+    && cat /tmp/shell_helpers.sh >> ${HOME}/.bashrc \
+    && cat /tmp/shell_helpers.sh >> ${HOME}/.zshrc \
+    && touch ${HOME}/.zsh-installed \
+    && touch ${HOME}/.hushlogin
+
+ENV VISUAL="/usr/bin/nano"
+ENV EDITOR=${VISUAL}
 
 # add script for kerberos keytab creation
 COPY ktutil-keytab.sh /usr/local/bin/ktutil-keytab

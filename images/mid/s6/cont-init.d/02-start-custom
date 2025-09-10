@@ -6,67 +6,6 @@ echo "--------------------Starting up--------------------"
 S6_ENV="/run/s6-env"
 [ -d "${S6_ENV}" ] || mkdir -p "${S6_ENV}"
 
-# Step up Git Credential Manager
-# only if it wasn't already setup
-if grep -q "export GPG_TTY" ~/.bashrc; then
-  echo "Git Credential Manager already setup"
-else
-  echo "Setting up Git Credential Manager"
-
-  git config --global credential.credentialStore gpg
-  git config --global credential.helper manager
-  echo "export GPG_TTY=\$(tty)" >> ~/.bashrc
-fi
-
-# Configure the shell! If not already configured.
-if [ ! -f /home/$NB_USER/.zsh-installed ]; then
-    if [ -f /tmp/oh-my-zsh-install.sh ]; then
-      sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh
-    fi
-
-    if conda --help > /dev/null 2>&1; then
-      conda init bash
-      conda init zsh
-    fi
-    cat /tmp/shell_helpers.sh >> /home/$NB_USER/.bashrc
-    cat /tmp/shell_helpers.sh >> /home/$NB_USER/.zshrc
-    touch /home/$NB_USER/.zsh-installed
-    touch /home/$NB_USER/.hushlogin
-fi
-
-# add rm wrapper:
-# https://jirab.statcan.ca/browse/ZPS-40
-if [ ! -f /home/$NB_USER/.local/bin/rm ]; then
-  echo "adding rm wrapper"
-  
-  mkdir -p /home/$NB_USER/.local/bin/
-  git clone https://gitlab.k8s.cloud.statcan.ca/zone/build-scripts/snippets/415.git /home/$NB_USER/.local/bin/rm-git
-  mv /home/$NB_USER/.local/bin/rm-git/rm /home/$NB_USER/.local/bin/rm
-  rm -rf /home/$NB_USER/.local/bin/rm-git
-  chmod +x /home/$NB_USER/.local/bin/rm
-else
-  echo "rm wrapper already exists"
-fi
-
-export VISUAL="/usr/bin/nano"
-echo ${VISUAL} > ${S6_ENV}/VISUAL
-
-export EDITOR="$VISUAL"
-echo ${EDITOR} > ${S6_ENV}/EDITOR
-
-echo "shell has been configured"
-
-# create .profile
-cat <<EOF > $HOME/.profile
-if [ -n "$BASH_VERSION" ]; then
-    if [ -f "$HOME/.bashrc" ]; then
-        . "$HOME/.bashrc"
-    fi
-fi
-EOF
-
-echo ".profile has been created"
-
 # Configure KFP multi-user
 if [ -n "${NB_NAMESPACE}" ]; then
 mkdir -p $HOME/.config/kfp

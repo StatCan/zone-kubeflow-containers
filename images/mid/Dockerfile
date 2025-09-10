@@ -212,6 +212,9 @@ COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 # Add .Rprofile to /tmp so we can install it in start-custom.sh
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile ${HOME}/.Rprofile
 
+# create .profile
+COPY --chown=${NB_USER}:${NB_GID} .profile ${HOME}/.profile
+
 # Copy over Instructions to Home directory
 COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md ${HOME}/connect-to-filer.md
 
@@ -222,10 +225,23 @@ RUN chmod +x /usr/local/bin/start-oms.sh && \
 
 USER $NB_USER
 
+# Step up Git Credential Manager
+RUN git config --global credential.credentialStore gpg \
+  && git config --global credential.helper manager \
+  && echo "export GPG_TTY=\$(tty)" >> ${HOME}/.bashrc
+
 # Create and set the gpg settings during first boot
 RUN mkdir -p ${HOME}/.gnupg \
     &&  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "${HOME}/.gnupg/gpg-agent.conf" \
     && chmod 700 "${HOME}/.gnupg"
+
+# add rm wrapper
+# https://jirab.statcan.ca/browse/ZPS-40
+RUN mkdir -p ${HOME}/.local/bin/ \
+    && git clone https://gitlab.k8s.cloud.statcan.ca/zone/build-scripts/snippets/415.git ${HOME}/.local/bin/rm-git \
+    && mv ${HOME}/.local/bin/rm-git/rm ${HOME}/.local/bin/rm \
+    && rm -rf ${HOME}/.local/bin/rm-git \
+    && chmod +x ${HOME}/.local/bin/rm
 
 # s6 - 01-copy-tmp-home
 # NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
