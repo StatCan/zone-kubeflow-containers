@@ -22,7 +22,6 @@ ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
-ENV CS_TEMP_HOME=/etc/share/code-server
 ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
 ENV SERVICE_URL=https://extensions.coder.com/api
 
@@ -35,7 +34,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
-    && mkdir -p $CS_TEMP_HOME/Machine \
+    && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
     # Manage extensions
     code-server --install-extension ms-python.python@2025.4.0 && \
@@ -48,19 +47,18 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
     code-server --install-extension cpptools-linux.vsix && \
-    mv $CS_DEFAULT_HOME/* $CS_TEMP_HOME \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && fix-permissions $CS_TEMP_HOME
+    && fix-permissions $CS_DEFAULT_HOME
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
-COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json
+COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
 # Fix for VSCode extensions and CORS
 # Languagepacks.json needs to exist for code-server to recognize the languagepack
-COPY languagepacks.json $CS_TEMP_HOME/
+COPY languagepacks.json $CS_DEFAULT_HOME/
 
 # Sets the default workspace for vscode
-COPY coder.json $CS_TEMP_HOME/
+COPY coder.json $CS_DEFAULT_HOME/
 
 # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
 # need to add mamba install pkg-config so R can find freetype related packages
@@ -203,9 +201,6 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
 # Configure container startup
 
-# s6 - copy scripts
-COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
-
 # Copy over pip config
 COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 
@@ -214,6 +209,9 @@ COPY --chown=${NB_USER}:${NB_GID} .Rprofile ${HOME}/.Rprofile
 
 # create .profile
 COPY --chown=${NB_USER}:${NB_GID} .profile ${HOME}/.profile
+
+# create .condarc
+COPY --chown=${NB_USER}:${NB_GID} .condarc ${HOME}/.condarc
 
 # Copy over Instructions to Home directory
 COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md ${HOME}/connect-to-filer.md
@@ -224,6 +222,20 @@ RUN chmod +x /usr/local/bin/start-oms.sh && \
     chmod +x /usr/local/bin/restart-oms.sh
 
 USER $NB_USER
+
+
+# Create default user directories
+RUN mkdir -p ${HOME}/workspace \
+    && mkdir -p ${HOME}/workspace/repositories \
+    && mkdir -p ${HOME}/workspace/data \
+    && mkdir -p ${HOME}/workspace/.vscode \
+    && mkdir -p ${HOME}/.local/share/code-server/User
+
+# Set Python interpreter path for VSCode
+COPY --chown=${NB_USER}:${NB_GID} vscode_settings.json ${HOME}/workspace/.vscode/settings.json
+
+# Python default user settings for VSCode
+COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME}/.local/share/code-server/User/settings.json
 
 # Step up Git Credential Manager
 RUN git config --global credential.credentialStore gpg \
@@ -242,6 +254,9 @@ RUN mkdir -p ${HOME}/.local/bin/ \
     && mv ${HOME}/.local/bin/rm-git/rm ${HOME}/.local/bin/rm \
     && rm -rf ${HOME}/.local/bin/rm-git \
     && chmod +x ${HOME}/.local/bin/rm
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
 # s6 - 01-copy-tmp-home
 # NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
