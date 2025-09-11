@@ -20,6 +20,8 @@ ARG ARGO_CLI_CHECKSUM_URL=https://github.com/argoproj/argo-workflows/releases/do
 ARG GIT_CRED_MANAGER_VERSION=2.5.1
 ARG GIT_CRED_MANAGER_URL=https://github.com/git-ecosystem/git-credential-manager/releases/download/v${GIT_CRED_MANAGER_VERSION}/gcm-linux_amd64.${GIT_CRED_MANAGER_VERSION}.deb
 ARG GIT_CRED_MANAGER_SHA=03c7b174a6f90e1ae860980ba5fda4490f04e5b9aaa802e2d469e72ec5dae6a4
+ARG S6_VERSION=v3.2.1.0
+ARG S6_ARCH="x86_64"
 
 COPY clean-layer.sh /usr/bin/clean-layer.sh
 
@@ -81,6 +83,21 @@ COPY shell_helpers.sh /tmp/shell_helpers.sh
 
 # Combined tool installations with cleanup
 RUN \
+    # S6 Overlay
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz" -o /tmp/s6-overlay-noarch.tar.xz \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz.sha256" -o /tmp/s6-overlay-noarch.tar.xz.sha256 \
+    && echo "$(cat /tmp/s6-overlay-noarch.tar.xz.sha256 | awk '{ print $1; }')  /tmp/s6-overlay-noarch.tar.xz" | sha256sum -c - \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" -o /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.xz.sha256" -o /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 \
+    && echo "$(cat /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 | awk '{ print $1; }')  /tmp/s6-overlay-${S6_ARCH}.tar.xz" | sha256sum -c - \
+    && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+    && rm /tmp/s6-overlay-noarch.tar.xz  \
+        /tmp/s6-overlay-noarch.tar.xz.sha256 \
+        /tmp/s6-overlay-${S6_ARCH}.tar.xz \
+        /tmp/s6-overlay-${S6_ARCH}.tar.xz.sha256 \
+    && chmod 0775 /run \
+    && \
     # kubectl
     curl -LO "${KUBECTL_URL}" \
     && curl -LO "${KUBECTL_URL}.sha256" \
@@ -175,3 +192,7 @@ RUN rm -rf /tmp/* /var/tmp/* \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+USER $NB_UID
+
+ENTRYPOINT ["/init"]

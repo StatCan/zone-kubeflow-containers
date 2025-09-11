@@ -4,6 +4,8 @@
 ARG BASE_IMAGE=mid
 FROM $BASE_IMAGE
 
+USER root
+
 # SAS
 # Install Quarto
 ENV QUARTO_VERSION=1.8.1
@@ -29,7 +31,6 @@ RUN groupadd -g 1002 sasstaff && \
 # It looks like this because when I downloaded and made the dockerfile I did ADD October2025SAS.tar.gz /usr/local
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
 COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local
-
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \ 
     chown -R jovyan:sasstaff /usr/local/SASHome
@@ -76,3 +77,5 @@ COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
+
+USER $NB_USER
