@@ -32,8 +32,9 @@ RUN groupadd -g 1002 sasstaff && \
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
 COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local
 
-RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \ 
-    chown -R jovyan:sasstaff /usr/local/SASHome
+#something here is huge
+#RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \ 
+RUN chown -R jovyan:sasstaff /usr/local/SASHome
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
