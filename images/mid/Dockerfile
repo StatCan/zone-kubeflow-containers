@@ -113,8 +113,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         '@jupyterlab/translation-extension' \
         '@jupyterlab/server-proxy' \
         'nbdime-jupyterlab' \
-    && jupyter labextension disable @jupyterlab/docmanager-extension:download
-    && jupyter labextension disable @jupyterlab/filebrowser-extension:download
+    && jupyter labextension disable @jupyterlab/docmanager-extension:download \
+    && jupyter labextension disable @jupyterlab/filebrowser-extension:download \
     && jupyter lab build \
     && jupyter lab clean \
     && clean-layer.sh \
