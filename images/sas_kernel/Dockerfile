@@ -75,9 +75,6 @@ RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.maj
     && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
     && rm /tmp/sascfg.py
 
-# Must be set in deepest image
-ENV DEFAULT_JUPYTER_URL=/lab 
-
 # SAS GConfid
 
 COPY G-CONFID107003ELNX6494M7/ /usr/local/SASHome/gensys/G-CONFID107003ELNX6494M7/
