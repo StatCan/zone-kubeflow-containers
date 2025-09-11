@@ -29,4 +29,6 @@ RUN cd ${RESOURCES_PATH} && \
    cd ./aocc-compiler-${AOCC_VERSION} && \
    /bin/bash ./install.sh && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
+
+USER $NB_USER
    
