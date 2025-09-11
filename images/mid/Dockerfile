@@ -55,15 +55,22 @@ ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.c
 COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
 # Fix for VSCode extensions and CORS
 # Languagepacks.json needs to exist for code-server to recognize the languagepack
-COPY languagepacks.json $CS_DEFAULT_HOME/
-
 # Sets the default workspace for vscode
-COPY coder.json $CS_DEFAULT_HOME/
+COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 
+# Install Python dependencies and tools
+# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
+    'pillow' \
+    'pyyaml' \
+    'joblib==1.2.0' \
+    's3fs' \ 
+    'fire' \
+    'mkl' \
+    'graphviz' \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
@@ -95,6 +102,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sparklyr' \
     'r-tidyverse' \
     && pip install --no-cache-dir \
+        'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
         'jupyter-rsession-proxy==2.2.0' \
         'pyspark[ml]==3.5.5' \
@@ -204,32 +212,27 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 # Copy over pip config
 COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 
-# Add .Rprofile to /tmp so we can install it in start-custom.sh
-COPY --chown=${NB_USER}:${NB_GID} .Rprofile ${HOME}/.Rprofile
+#Copy over various files
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
 
-# create .profile
-COPY --chown=${NB_USER}:${NB_GID} .profile ${HOME}/.profile
-
-# create .condarc
-COPY --chown=${NB_USER}:${NB_GID} .condarc ${HOME}/.condarc
-
-# Copy over Instructions to Home directory
-COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md ${HOME}/connect-to-filer.md
-
-COPY start-oms.sh restart-oms.sh /usr/local/bin/
-
-RUN chmod +x /usr/local/bin/start-oms.sh && \
-    chmod +x /usr/local/bin/restart-oms.sh
+COPY --chmod=755 start-oms.sh restart-oms.sh /usr/local/bin/
 
 USER $NB_USER
 
-
-# Create default user directories
+# Setup default user env
 RUN mkdir -p ${HOME}/workspace \
     && mkdir -p ${HOME}/workspace/repositories \
     && mkdir -p ${HOME}/workspace/data \
     && mkdir -p ${HOME}/workspace/.vscode \
-    && mkdir -p ${HOME}/.local/share/code-server/User
+    && mkdir -p ${HOME}/.local/share/code-server/User \
+    # Step up Git Credential Manager
+    && git config --global credential.credentialStore gpg \
+    && git config --global credential.helper manager \
+    && echo "export GPG_TTY=\$(tty)" >> ${HOME}/.bashrc \
+    # Create and set the gpg settings during first boot
+    && mkdir -p ${HOME}/.gnupg \
+    && echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "${HOME}/.gnupg/gpg-agent.conf" \
+    && chmod 700 "${HOME}/.gnupg"
 
 # Set Python interpreter path for VSCode
 COPY --chown=${NB_USER}:${NB_GID} vscode_settings.json ${HOME}/workspace/.vscode/settings.json
@@ -237,20 +240,9 @@ COPY --chown=${NB_USER}:${NB_GID} vscode_settings.json ${HOME}/workspace/.vscode
 # Python default user settings for VSCode
 COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME}/.local/share/code-server/User/settings.json
 
-# Step up Git Credential Manager
-RUN git config --global credential.credentialStore gpg \
-  && git config --global credential.helper manager \
-  && echo "export GPG_TTY=\$(tty)" >> ${HOME}/.bashrc
-
-# Create and set the gpg settings during first boot
-RUN mkdir -p ${HOME}/.gnupg \
-    &&  echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "${HOME}/.gnupg/gpg-agent.conf" \
-    && chmod 700 "${HOME}/.gnupg"
-
 # add rm wrapper
 # https://jirab.statcan.ca/browse/ZPS-40
-COPY --chown=${NB_USER}:${NB_GID} rm ${HOME}/.local/bin/rm
-RUN chmod +x ${HOME}/.local/bin/rm
+COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME}/.local/bin/rm
 
 # s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc

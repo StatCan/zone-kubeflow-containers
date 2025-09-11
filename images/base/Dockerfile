@@ -44,8 +44,6 @@ RUN mkdir -pv ${HOME_TMP} \
  && chmod 2775 ${HOME_TMP} \
  && chown -R ${NB_USER}:${USERS_GID} ${HOME_TMP}
 
-COPY clean-layer.sh /usr/bin/clean-layer.sh
-
 # System updates and installations
 RUN apt-get update --yes \
     && apt-get install --yes --no-install-recommends \
@@ -76,28 +74,14 @@ RUN apt-get update --yes \
          # Use headless Java to save space
         openjdk-8-jre-headless \
     && apt-get upgrade --yes libwebp7 \
-    && rm -rf /var/lib/apt/lists/* \
-    && chmod +x /usr/bin/clean-layer.sh
+    && rm -rf /var/lib/apt/lists/*
 
-COPY suspend-server.sh /usr/local/bin
-COPY adjust-server-resources.py /usr/local/bin
+# adds utility scripts
+# add script for kerberos keytab creation
+COPY --chmod=755 suspend-server.sh adjust-server-resources.py ktutil-keytab.sh /usr/local/bin/
 
-# Install Python dependencies and tools
-# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
-RUN mamba install --quiet \
-      'pillow' \
-      'pyyaml' \
-      'joblib==1.2.0' \
-      's3fs' \ 
-      'fire' \
-      'mkl' \
-      'graphviz' \
-    && pip install --no-cache-dir 'kubeflow-training' \
-    && clean-layer.sh \
-    && chmod +x /usr/local/bin/suspend-server.sh \
-    && chmod +x /usr/local/bin/adjust-server-resources.py \
-    && fix-permissions $CONDA_DIR \
-    && fix-permissions /home/$NB_USER
+# add clean-layer script
+COPY --chmod=755 clean-layer.sh /usr/bin/clean-layer.sh
 
 # Combined tool installations with cleanup
 RUN \
@@ -163,10 +147,6 @@ RUN sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh \
 ENV VISUAL="/usr/bin/nano"
 ENV EDITOR=${VISUAL}
 
-# add script for kerberos keytab creation
-COPY ktutil-keytab.sh /usr/local/bin/ktutil-keytab
-RUN chmod +x /usr/local/bin/ktutil-keytab
-
 # ODBC drivers and Oracle client in one layer
 RUN \
     # Microsoft ODBC drivers, add the signature to trust the Microsoft repo
@@ -211,16 +191,13 @@ ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
 ENV TNS_ADMIN="/opt/oracle/instantclient_23_5/network/admin"
 ENV PATH="/opt/oracle/instantclient_23_5:/opt/mssql-tools18/bin:${PATH}"
 
-ARG GIT_ORACLE_SNIPPET=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-containers/-/snippets/515/raw/main/tnsnames.ora
-
-COPY dbConnection/LINUX_CLIENT_WALLET /opt/oracle/instantclient_23_5/LINUX_CLIENT_WALLET
-# COPY dbConnection/sqlnet.ora /opt/oracle/instantclient_23_5/network/admin/sqlnet.ora
-COPY dbConnection/*.ora /opt/oracle/instantclient_23_5/network/admin/
+COPY dbConnection/ /opt/oracle/instantclient_23_5/
 # give users permissions to edit the alias file
 RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
     && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
 
 # Retrieving Alias file for oracle client
+# ARG GIT_ORACLE_SNIPPET=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-containers/-/snippets/515/raw/main/tnsnames.ora
 # RUN wget -q ${GIT_ORACLE_SNIPPET} -O ${TNS_ADMIN}/tnsnames.ora \
 # # give users permissions to edit the alias file
 #     && chmod a+w /opt/oracle/instantclient_23_5/network/admin \
