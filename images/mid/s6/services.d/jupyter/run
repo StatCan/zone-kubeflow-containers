@@ -1,0 +1,30 @@
+#!/command/with-contenv bash
+
+# many tools default to using the home directory for runtime data.
+# as we mount a PVC to the home directory, these files might have the wrong permissions.
+# to avoid this, we set the runtime directory to a path that is NOT a persistent volume.
+export XDG_RUNTIME_DIR="/tmp/runtime-${NB_USER}"
+mkdir -p "${XDG_RUNTIME_DIR}"
+chmod 700 "${XDG_RUNTIME_DIR}"
+
+# the jupyter runtime directory must be a path that is NOT a persistent volume
+# as volumes often cause permission issues https://github.com/jupyter/notebook/issues/5058
+# note, jupyter ignores XDG_RUNTIME_DIR: https://github.com/jupyter/jupyter_core/pull/143
+export JUPYTER_RUNTIME_DIR="/tmp/jupyter_runtime"
+
+cd "${HOME}" || { echo "ERROR: failed to cd to ${HOME}"; exit 1; }
+echo "--------------------starting jupyter--------------------"
+exec 2>&1
+exec \
+  s6-envdir /run/s6-env \
+  /opt/conda/bin/jupyter lab \
+  --notebook-dir="${HOME}" \
+  --ip=0.0.0.0 \
+  --no-browser \
+  --port=8888 \
+  --ServerApp.token="" \
+  --ServerApp.password="" \
+  --ServerApp.allow_origin="*" \
+  --ServerApp.authenticate_prometheus=False \
+  --ServerApp.base_url="${NB_PREFIX}" \
+  --ServerApp.default_url=${DEFAULT_JUPYTER_URL:-/tree}

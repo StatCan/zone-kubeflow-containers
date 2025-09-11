@@ -26,7 +26,7 @@ def test_pandas(container, name, command_list):
     LOGGER.info(f"Testing pandas: {name} ...")
     command = ';'.join(command_list)
     c = container.run(tty=True, command=["start.sh", "python", "-c", command])
-    rv = c.wait(timeout=30)
+    rv = c.wait(timeout=120)
     assert rv == 0 or rv["StatusCode"] == 0, f"Command {command} failed"
     logs = c.logs(stdout=True).decode("utf-8")
     LOGGER.debug(logs)

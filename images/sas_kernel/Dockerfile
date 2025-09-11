@@ -4,6 +4,8 @@
 ARG BASE_IMAGE=mid
 FROM $BASE_IMAGE
 
+USER root
+
 # SAS
 # Install Quarto
 ENV QUARTO_VERSION=1.8.1
@@ -33,7 +35,7 @@ ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
 RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
     tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
     mv /tmp/linux_amd64/blobporter /usr/local/bin/blobporter && \
-    rm -rf /tmp/* && \
+    rm -rf /tmp/blobporter.tar.gz && \
     chmod a+x /usr/local/bin/blobporter
 
 # cd to ROOT and not /usr/local, because the way this was zipped was to include /usr/local
@@ -87,3 +89,5 @@ COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
+
+USER $NB_USER

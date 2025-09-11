@@ -43,7 +43,16 @@ Each directory in the images folder makes up one stage of the build process.
 They each contain the Dockerfile that directs the build, and all related files.
 
 The relationship between the stages and the final product is as shown below.
-![The flowchart showing the stages and their order](./docs/images/image-stages.png)
+```mermaid
+graph TD
+  upstream_nb["(upstream) datascience-notebook"]
+  upstream_nb --> base
+  base --> mid
+  mid --> sas_kernel
+  upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
+  sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
+  sas_kernel --> sas
+```
 
 ### Base Images
 
@@ -54,9 +63,6 @@ Image | Notes
 [base](./images/base) | Base Image pulling from docker-stacks
 [mid](./images/mid) | Installs various tools on top of the base image
 [sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our mid image
-[mid-jupyterlab](./images/jupyterlab) | Installs Jupyterlab specific tools
-[mid-sas](./images/sas) | Installs SAS specific tools
-[cmd](./images/cmd) | Configures container startup
 
 ### Zone Images
 
@@ -64,8 +70,8 @@ These are the final images from our build process and are intended to be used on
 
 Image | Notes | Installations
 --- | --- | ---
-jupyterlab-cpu | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
-sas | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
+[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
+[sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
 
 ## Usage
 
@@ -254,6 +260,26 @@ and the image name must be added to the matrix in `./github/workflows/docker-nig
 7. Update the documentation for the new stage.
 This is generally updating `images-stages.png` and `image-stages.drawio` in the `docs/images` folder using draw.io.
 
+### Custom scripts
+
+To manage our custom scripts that we want to execute after a container starts up, we use the [s6-overlay](https://github.com/just-containers/s6-overlay). Kubeflow upstream also uses this tool with their [example notebook servers](https://github.com/kubeflow/kubeflow/blob/master/components/example-notebook-servers/README.md#configure-s6-overlay)
+
+
+Scripts that need to run during the startup of the container can be placed in `/etc/cont-init.d/`, and are executed in ascending alphanumeric order.
+
+Scripts like our [start-custom](./images/mid/s6/cont-init.d/02-start-custom) use the with-contenv helper so that environment variables (passed to container) are available in the script.
+
+Extra services to be monitored by s6-overlay should be placed in their own folder under `/etc/services.d/` containing a script called `run` and optionally a finishing script `finish`.
+
+An example of a long-running service can be found in our [main run script](./images/mid/s6/services.d/jupyter/run) which is used to start JupyterLab itself.
+
+#### Note on setting environment variables in startup scripts
+
+When using both a startup script and a service script, environment variables declared in the startup script (using `export VAR=value` for example) will not be available in the service script.
+
+To circumvent this limitation, if you need to declare new environment variables from a custom script, you can first create a custom environment location, like `/run/s6-env`. Then, you can store your new environment variables in that new location, using for example `echo ${TEST_ENV_VAR} > /run/s6-env/TEST_ENV_VAR`. 
+Then, when executing the long-running service, you can use `s6-envdir /run/s6-env` to point to your custom environment location in the `exec` command.
+
 ### Modifying and Testing CI
 
 If making changes to CI that cannot be done on a branch (eg: changes to issue_comment triggers), you can:
@@ -410,10 +436,10 @@ This was tested on Linux Ubuntu 20.04 virtual machine.
 │
 ├── images                                  # Dockerfile and required resources for stage builds
 │   ├── base                                # Common base of the images
-│   ├── cmd                                 # Common stage for finalizing most images
 │   ├── jupyterlab                          # Jupyterlab specific Dockerfile
 │   ├── mid                                 # Common mid point for all images
-│   └── sas                                 # SAS specific Dockerfile
+│   ├── sas                                 # SAS specific Dockerfile
+|   └── sas_kernel                          # Dockerfile for installation of sas_kernel
 │
 ├── docs                                    # files/images used in documentation (ex. Readme's)
 │
