@@ -207,3 +207,26 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 # If using the docker bit in other Dockerfiles, this must get written over in a later layer
 ENV DEFAULT_JUPYTER_URL="/rstudio"
 ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
+
+# Configure container startup
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+COPY start-oms.sh restart-oms.sh /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/start-oms.sh && \
+    chmod +x /usr/local/bin/restart-oms.sh
+
+USER $NB_USER
+
+EXPOSE 8888
+
+# Copy over pip config
+COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
+
+# Add .Rprofile to /tmp so we can install it in start-custom.sh
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile /tmp/.Rprofile
+
+# Copy over Instructions to Home directory
+COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md /tmp/connect-to-filer.md

@@ -22,34 +22,18 @@ target "sas-kernel" {
     tags = ["sas-kernel"]
 }
 
-target "mid-jupyterlab" {
+target "jupyterlab-cpu" {
     args = {
         BASE_IMAGE="sas-kernel"
     }
     context = "./images/jupyterlab"
-    tags = ["mid-jupyterlab"]
-}
-
-target "jupyterlab-cpu" {
-    args = {
-        BASE_IMAGE="mid-jupyterlab"
-    }
-    context = "./images/cmd"
     tags = ["jupyterlab-cpu"]
-}
-
-target "mid-sas" {
-    args = {
-        BASE_IMAGE="sas-kernel"
-    }
-    context = "./images/sas"
-    tags = ["mid-sas"]
 }
 
 target "sas" {
     args = {
-        BASE_IMAGE="mid-sas"
+        BASE_IMAGE="sas-kernel"
     }
-    context = "./images/cmd"
+    context = "./images/sas"
     tags = ["sas"]
 }
