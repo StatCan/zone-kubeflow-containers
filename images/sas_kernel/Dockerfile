@@ -27,25 +27,15 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
 RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
+    
+# It looks like this because when I downloaded and made the dockerfile I did ADD October2025SAS.tar.gz /usr/local
+# Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
+# COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local/
+# Try chowning in the copy 
+#COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local/SASHome /usr/local/SASHome
+COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasinstallation:v1 /usr/local/SASHome /usr/local/SASHome
 
-# BlobPorter
-ARG ACCOUNT_NAME=${ACCOUNT_NAME}
-ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
-
-RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
-    tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
-    mv /tmp/linux_amd64/blobporter /usr/local/bin/blobporter && \
-    rm -rf /tmp/blobporter.tar.gz && \
-    chmod a+x /usr/local/bin/blobporter
-
-# cd to ROOT and not /usr/local, because the way this was zipped was to include /usr/local
-RUN cd / && \
-    blobporter -f https://zonesasoct2025.blob.core.windows.net/sasblobcontainer/October2025SAS.tar.gz -c sasblobcontainer -n October2025SAS.tar.gz -t blob-file && \
-    tar -xzpf October2025SAS.tar.gz && \
-    rm October2025SAS.tar.gz && \
-    chown -R jovyan:sasstaff /usr/local/SASHome && \
-    ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-    rm /usr/local/bin/blobporter
+RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
 # MinIO Client install
 COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
@@ -60,6 +50,7 @@ ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
 RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
+RUN ls -lah /usr/localSASHome/SASFoundation/9.4/utilities/bin
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
