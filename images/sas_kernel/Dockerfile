@@ -32,7 +32,7 @@ RUN groupadd -g 1002 sasstaff && \
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
 # COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local/
 # Try chowning in the copy 
-COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local/SASHome
+COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local/SASHome /usr/local/SASHome
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
