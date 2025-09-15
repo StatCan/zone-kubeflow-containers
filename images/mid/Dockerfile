@@ -47,6 +47,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
     code-server --install-extension cpptools-linux.vsix \
+    && rm cpptools-linux.vsix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && fix-permissions $CS_DEFAULT_HOME
