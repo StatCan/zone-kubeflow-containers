@@ -27,12 +27,8 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
 RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
-    
-# It looks like this because when I downloaded and made the dockerfile I did ADD October2025SAS.tar.gz /usr/local
+
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
-# COPY --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local /usr/local/
-# Try chowning in the copy 
-#COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/jose-sas:v1 /usr/local/usr/local/SASHome /usr/local/SASHome
 COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasinstallation:v1 /usr/local/SASHome /usr/local/SASHome
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
@@ -49,9 +45,8 @@ WORKDIR /home/jovyan
 ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
-# Thhis doesnt work lol
+# setuid.sh is not working as intended, seemingly cannot find the file so we do this instead.
 #RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
-#RUN ls -lah /usr/local/SASHome/SASFoundation/9.4/utilities/bin
 RUN chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
     chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
     chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm && \
