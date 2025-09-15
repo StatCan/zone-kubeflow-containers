@@ -196,13 +196,6 @@ COPY dbConnection/ /opt/oracle/instantclient_23_5/
 RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
     && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
 
-# Retrieving Alias file for oracle client
-# ARG GIT_ORACLE_SNIPPET=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-containers/-/snippets/515/raw/main/tnsnames.ora
-# RUN wget -q ${GIT_ORACLE_SNIPPET} -O ${TNS_ADMIN}/tnsnames.ora \
-# # give users permissions to edit the alias file
-#     && chmod a+w /opt/oracle/instantclient_23_5/network/admin \
-#     && chown ${NB_UID}:${NB_GID} /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
-
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
     && find / -depth -name '*.pyc' -exec rm -rf '{}' + \
