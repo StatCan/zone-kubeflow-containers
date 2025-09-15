@@ -6,16 +6,16 @@ NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
 cat <<EOF
  _____ _            _____                
 |_   _| |__   ___  |__  /___  _ __   ___ 
-  | | | '_ \ / _ \   / // _ \| '_ \ / _ \
+  | | | '_ \ / _ \   / // _ \| '_ \ / _ \ 
   | | | | | |  __/  / /| (_) | | | |  __/
-  |_| |_| |_|\___| /____\___/|_| |_|\___|                                          
+  |_| |_| |_|\___| /____\___/|_| |_|\___|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Filer Access
 =====
-For access to filers, we make use of the minio client `mc`.
-Please refer to the `connect-to-filer.md` file on detailed instructions.
+For access to filers, we make use of the minio client "mc".
+Please refer to the "connect-to-filer.md" file on detailed instructions.
 
 Conda
 =====
