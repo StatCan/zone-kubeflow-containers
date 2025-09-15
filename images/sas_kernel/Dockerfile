@@ -49,8 +49,15 @@ WORKDIR /home/jovyan
 ENV PATH=$PATH:/usr/local/SASHome/SASFoundation/9.4/bin
 ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
-RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
-RUN ls -lah /usr/local/SASHome/SASFoundation/9.4/utilities/bin
+# Thhis doesnt work lol
+#RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
+#RUN ls -lah /usr/local/SASHome/SASFoundation/9.4/utilities/bin
+RUN chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
+    chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
+    chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm && \
+    chmod 4755 root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
+    chmod 4755 root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
+    chmod 4755 root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
