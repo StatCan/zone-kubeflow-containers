@@ -78,19 +78,24 @@ if [ -n "${KF_LANG}" ]; then
         echo ${LANG} > ${S6_ENV}/LANG
 
         lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
-        mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
-        ( echo    '{'
-          echo     '   // Langue'
-          echo     '   // @jupyterlab/translation-extension:plugin'
-          echo     '   // Paramètres de langue.'
-          echo  -e '   // ****************************************\n'
-          echo     '   // Langue locale'
-          echo     '   // Définit la langue d'\''affichage de l'\''interface. Exemples: '\''es_CO'\'', '\''fr'\''.'
-          echo     '   "locale": "'${LANG}'"'
-          echo     '}'
-        ) > $lang_file
+        if [ ! -e ${lang_file} ]; then
+          mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
+          ( echo    '{'
+            echo     '   // Langue'
+            echo     '   // @jupyterlab/translation-extension:plugin'
+            echo     '   // Paramètres de langue.'
+            echo  -e '   // ****************************************\n'
+            echo     '   // Langue locale'
+            echo     '   // Définit la langue d'\''affichage de l'\''interface. Exemples: '\''es_CO'\'', '\''fr'\''.'
+            echo     '   "locale": "'${LANG}'"'
+            echo     '}'
+          ) > $lang_file
+        fi
+
         vscode_language="${CS_DEFAULT_HOME}/User/argv.json"
-        echo "{\"locale\":\"fr\"}" >> $vscode_language
+        if [ ! -e ${vscode_language} ]; then
+          echo "{\"locale\":\"fr\"}" >> $vscode_language
+        fi
     fi
 fi
 
