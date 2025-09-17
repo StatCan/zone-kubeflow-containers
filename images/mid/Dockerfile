@@ -22,7 +22,6 @@ ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
-ENV CS_TEMP_HOME=/etc/share/code-server
 ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
 ENV SERVICE_URL=https://extensions.coder.com/api
 
@@ -35,7 +34,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
-    && mkdir -p $CS_TEMP_HOME/Machine \
+    && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
     # Manage extensions
     code-server --install-extension ms-python.python@2025.4.0 && \
@@ -47,25 +46,32 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
-    code-server --install-extension cpptools-linux.vsix && \
-    mv $CS_DEFAULT_HOME/* $CS_TEMP_HOME \
+    code-server --install-extension cpptools-linux.vsix \
+    && rm cpptools-linux.vsix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && fix-permissions $CS_TEMP_HOME
+    && fix-permissions $CS_DEFAULT_HOME
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.das-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
-COPY vscode-overrides.json $CS_TEMP_HOME/Machine/settings.json
+COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
 # Fix for VSCode extensions and CORS
 # Languagepacks.json needs to exist for code-server to recognize the languagepack
-COPY languagepacks.json $CS_TEMP_HOME/
-
 # Sets the default workspace for vscode
-COPY coder.json $CS_TEMP_HOME/
+COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 
+# Install Python dependencies and tools
+# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
+    'pillow' \
+    'pyyaml' \
+    'joblib==1.2.0' \
+    's3fs' \ 
+    'fire' \
+    'mkl' \
+    'graphviz' \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
@@ -97,6 +103,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sparklyr' \
     'r-tidyverse' \
     && pip install --no-cache-dir \
+        'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
         'jupyter-rsession-proxy==2.2.0' \
         'pyspark[ml]==3.5.5' \
@@ -167,9 +174,6 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-ENV DEFAULT_JUPYTER_URL=/lab
-ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-jupyter-notebooks
-
 # install rstudio-server
 ARG RSTUDIO_VERSION=2024.12.0-467
 ARG SHA256=1493188cdabcc1047db27d1bd0e46947e39562cbd831158c7812f88d80e742b3
@@ -204,29 +208,52 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
-# If using the docker bit in other Dockerfiles, this must get written over in a later layer
-ENV DEFAULT_JUPYTER_URL="/rstudio"
-ENV GIT_EXAMPLE_NOTEBOOKS=https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-r-notebooks.git
-
 # Configure container startup
-
-# s6 - copy scripts
-COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
-
-COPY start-oms.sh restart-oms.sh /usr/local/bin/
-
-RUN chmod +x /usr/local/bin/start-oms.sh && \
-    chmod +x /usr/local/bin/restart-oms.sh
-
-USER $NB_USER
-
-EXPOSE 8888
 
 # Copy over pip config
 COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 
-# Add .Rprofile to /tmp so we can install it in start-custom.sh
-COPY --chown=${NB_USER}:${NB_GID} .Rprofile /tmp/.Rprofile
+#Copy over various files
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
 
-# Copy over Instructions to Home directory
-COPY --chown=${NB_USER}:${NB_GID} connect-to-filer.md /tmp/connect-to-filer.md
+COPY --chmod=755 start-oms.sh restart-oms.sh /usr/local/bin/
+
+USER $NB_USER
+
+# Setup default user env
+RUN mkdir -p ${HOME}/workspace \
+    && mkdir -p ${HOME}/workspace/repositories \
+    && mkdir -p ${HOME}/workspace/data \
+    && mkdir -p ${HOME}/workspace/.vscode \
+    && mkdir -p ${HOME}/.local/share/code-server/User \
+    # Step up Git Credential Manager
+    && git config --global credential.credentialStore gpg \
+    && git config --global credential.helper manager \
+    && echo "export GPG_TTY=\$(tty)" >> ${HOME}/.bashrc \
+    # Create and set the gpg settings during first boot
+    && mkdir -p ${HOME}/.gnupg \
+    && echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "${HOME}/.gnupg/gpg-agent.conf" \
+    && chmod 700 "${HOME}/.gnupg"
+
+# Set Python interpreter path for VSCode
+COPY --chown=${NB_USER}:${NB_GID} vscode_settings.json ${HOME}/workspace/.vscode/settings.json
+
+# Python default user settings for VSCode
+COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME}/.local/share/code-server/User/settings.json
+
+# add rm wrapper
+# https://jirab.statcan.ca/browse/ZPS-40
+COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME}/.local/bin/rm
+
+# s6 - copy scripts
+COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
+
+# s6 - 01-copy-tmp-home
+# NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
+#       this is a workaround because a PVC will be mounted at $HOME
+#       and the contents of $HOME will be hidden
+RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
+    # give group same access as user (needed for OpenShift)
+ && chmod -R g=u "${HOME_TMP}"
+
+EXPOSE 8888
