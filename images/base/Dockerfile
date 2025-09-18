@@ -71,7 +71,29 @@ RUN apt-get update --yes \
         libtiff-dev \
         libfreetype-dev \
         libfreetype6 \
-         # Use headless Java to save space
+        # Some common system dependencies
+        libcairo2-dev \
+        libpango1.0-dev \
+        libgdk-pixbuf2.0-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libpq-dev \
+        zlib1g-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        # libv8-dev resovles as an alias for libnode-dev
+        libv8-dev \
+        libgdal-dev \
+        libgeos-dev \
+        libproj-dev \
+        libnetcdf-dev \
+        libtbb-dev \
+        libnlopt-dev \
+        cmake \
+        pkg-config \
+        # Use headless Java to save space
         openjdk-8-jre-headless \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
