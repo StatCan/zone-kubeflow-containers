@@ -83,8 +83,6 @@ RUN apt-get update --yes \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
-        # libv8-dev resovles as an alias for libnode-dev
-        libv8-dev \
         libgdal-dev \
         libgeos-dev \
         libproj-dev \
