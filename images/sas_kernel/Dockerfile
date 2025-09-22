@@ -71,6 +71,7 @@ RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.maj
 # SAS GConfid
 
 COPY G-CONFID107003ELNX6494M7/ /usr/local/SASHome/gensys/G-CONFID107003ELNX6494M7/
+COPY BANFF_2.08.002/ /usr/local/SASHome/gensys/BANFF_2.08.002/
 COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 
 # Remove libpdfbox-java due to CVE-2019-0228. See https://github.com/StatCan/aaw-kubeflow-containers/issues/249#issuecomment-834808115 for details.
