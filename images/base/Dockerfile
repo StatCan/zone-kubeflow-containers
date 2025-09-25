@@ -83,14 +83,6 @@ RUN apt-get update --yes \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
-        libgdal-dev \
-        libgeos-dev \
-        libproj-dev \
-        libnetcdf-dev \
-        libtbb-dev \
-        libnlopt-dev \
-        cmake \
-        pkg-config \
         # Use headless Java to save space
         openjdk-8-jre-headless \
     && apt-get upgrade --yes libwebp7 \
