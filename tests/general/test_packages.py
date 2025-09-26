@@ -99,7 +99,6 @@ EXCLUDED_PACKAGES = [
     "cudatoolkit",
     "cudnn",
     "mamba",
-    "v8",
     # Python
     "graphviz",
     "mkl",
