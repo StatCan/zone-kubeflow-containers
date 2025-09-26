@@ -133,14 +133,15 @@ RUN \
     && rm ./gcm.deb
 
 # Add helpers for shell initialization
-COPY shell_helpers.sh /tmp/shell_helpers.sh
+# TODO: removing this for now as it was causing issues when opening terminal in vscode. Debug and fix where needed.
+# COPY shell_helpers.sh /tmp/shell_helpers.sh
 
 # Configure the shell
 RUN sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh \
     && conda init bash \
     && conda init zsh \
-    && cat /tmp/shell_helpers.sh >> ${HOME}/.bashrc \
-    && cat /tmp/shell_helpers.sh >> ${HOME}/.zshrc \
+    # && cat /tmp/shell_helpers.sh >> ${HOME}/.bashrc \
+    # && cat /tmp/shell_helpers.sh >> ${HOME}/.zshrc \
     && touch ${HOME}/.zsh-installed \
     && touch ${HOME}/.hushlogin
 
