@@ -47,13 +47,12 @@ ENV PATH=$PATH:/usr/local/SASHome/SASPrivateJavaRuntimeEnvironment/9.4/jre/bin
 
 # setuid.sh is not working as intended, seemingly cannot find the file so we do this instead.
 #RUN /usr/local/SASHome/SASFoundation/9.4/utilities/bin/setuid.sh
-# I did this on the image already, not sure if must do again, TEST
-#RUN chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
-#    chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
-#    chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm && \
-#    chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
-#    chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
-#    chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm
+RUN chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
+    chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
+    chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm && \
+    chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
+    chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
+    chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
