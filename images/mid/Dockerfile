@@ -189,8 +189,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y /tmp/rstudio.deb \
     && rm /tmp/rstudio.deb \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ~/config/rstudio/rstudio-prefs.json
+    && rm -rf /var/lib/apt/lists/*
 
 # Harden rstudio-server
 RUN mkdir -p /etc/rstudio \
@@ -204,6 +203,8 @@ RUN mkdir -p /etc/rstudio \
     && echo "session-default-new-project-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf \
     # https://github.com/rstudio/rstudio/issues/14060
     && echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf 
+
+RUN echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ${HOME}/.config/rstudio/rstudio-prefs.json
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
