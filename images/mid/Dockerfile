@@ -189,7 +189,8 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y /tmp/rstudio.deb \
     && rm /tmp/rstudio.deb \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ~/config/rstudio/rstudio-prefs.json
 
 # Harden rstudio-server
 RUN mkdir -p /etc/rstudio \
