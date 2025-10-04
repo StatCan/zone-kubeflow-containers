@@ -1,0 +1,472 @@
+#!/bin/bash
+
+echo "--------------------Starting up--------------------"
+if [ -d /var/run/secrets/kubernetes.io/serviceaccount ]; then
+  while ! curl -s -f http://127.0.0.1:15020/healthz/ready; do sleep 1; done
+fi
+
+echo "Checking if we want to sleep infinitely"
+if [[ -z "${INFINITY_SLEEP}" ]]; then
+  echo "Not sleeping"
+else
+  echo "--------------------zzzzzz--------------------"
+  sleep infinity
+fi
+
+# Set up Git Credential Manager
+# only if it wasn't already setup
+if grep -q "export GPG_TTY" ~/.bashrc; then
+  echo "Git Credential Manager already setup"
+else
+  echo "Setting up Git Credential Manager"
+  # Create pass wrapper for consistent GPG environment
+  mkdir -p /home/$NB_USER/.local/bin
+  cat << 'EOF' > /home/$NB_USER/.local/bin/pass-wrapper
+#!/bin/bash
+export GPG_TTY=$(tty)
+export PINENTRY_USER_DATA="USE_CURSES=1"
+gpgconf --launch gpg-agent
+/usr/bin/pass "$@"
+EOF
+  chmod +x /home/$NB_USER/.local/bin/pass-wrapper
+  
+  git config --global credential.credentialStore gpg
+  git config --global credential.helper "/home/$NB_USER/.local/bin/pass-wrapper"
+  echo "export GPG_TTY=\$(tty)" >> ~/.bashrc
+  echo "export PINENTRY_USER_DATA='USE_CURSES=1'" >> ~/.bashrc
+  echo "export GPG_TTY=\$(tty)" >> ~/.zshrc
+  echo "export PINENTRY_USER_DATA='USE_CURSES=1'" >> ~/.zshrc
+  # Add to R environment for RStudio compatibility
+  echo "GPG_TTY=\$(tty)" >> /opt/conda/lib/R/etc/Renviron
+  echo "PINENTRY_USER_DATA='USE_CURSES=1'" >> /opt/conda/lib/R/etc/Renviron
+fi
+
+# Clone example notebooks (with retries because it sometimes initially fails)
+if [[ ! -d  ~/aaw-contrib-jupyter-notebooks ]]; then
+  echo "Cloning examples notebooks"
+
+  RETRIES_NO=5
+  RETRY_DELAY=3
+  for i in $(seq 1 $RETRIES_NO); do
+    test -z "$GIT_EXAMPLE_NOTEBOOKS" || git clone "$GIT_EXAMPLE_NOTEBOOKS" && break
+    echo "Failed to clone the example notebooks. Attempt $i of $RETRIES_NO"
+    #if it ran all the retries, exit
+    [[ $i -eq $RETRIES_NO ]] && echo "Failed to clone example notebooks after $RETRIES_NO retries"
+    sleep ${RETRY_DELAY}
+  done
+else
+  echo "Example notebooks already cloned."
+fi
+
+if [ ! -e /home/$NB_USER/.Rprofile ]; then
+    cat /tmp/.Rprofile >> /home/$NB_USER/.Rprofile && rm -rf /tmp/.Rprofile
+fi
+
+# Configure the shell! If not already configured.
+if [ ! -f /home/$NB_USER/.zsh-installed ]; then
+    if [ -f /tmp/oh-my-zsh-install.sh ]; then
+      sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh
+    fi
+
+    if conda --help > /dev/null 2>&1; then
+      conda init bash
+      conda init zsh
+    fi
+    cat /tmp/shell_helpers.sh >> /home/$NB_USER/.bashrc
+    cat /tmp/shell_helpers.sh >> /home/$NB_USER/.zshrc
+    touch /home/$NB_USER/.zsh-installed
+    touch /home/$NB_USER/.hushlogin
+fi
+
+# add rm wrapper:
+# https://jirab.statcan.ca/browse/ZPS-40
+if [ ! -f /home/$NB_USER/.local/bin/rm ]; then
+  echo "adding rm wrapper"
+  
+  mkdir -p /home/$NB_USER/.local/bin/
+  git clone https://gitlab.k8s.cloud.statcan.ca/zone/build-scripts/snippets/415.git /home/$NB_USER/.local/bin/rm-git
+  mv /home/$NB_USER/.local/bin/rm-git/rm /home/$NB_USER/.local/bin/rm
+  rm -rf /home/$NB_USER/.local/bin/rm-git
+  chmod +x /home/$NB_USER/.local/bin/rm
+else
+  echo "rm wrapper already exists"
+fi
+
+export VISUAL="/usr/bin/nano"
+export EDITOR="$VISUAL"
+
+echo "shell has been configured"
+
+# create .profile
+cat <<EOF > $HOME/.profile
+if [ -n "$BASH_VERSION" ]; then
+    if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+    fi
+fi
+EOF
+
+echo ".profile has been created"
+
+# Configure the language
+if [ -n "${KF_LANG}" ]; then
+    if [ "${KF_LANG}" = "en" ]; then
+        export LANG="en_US.utf8"
+    else
+        export LANG="fr_CA.utf8"
+        #  User's browser lang is set to French, open jupyterlab and vs_code in French (fr_FR)
+        if [ "${DEFAULT_JUPYTER_URL}" != "/rstudio" ]; then
+          export LANG="fr_FR"
+          lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
+          mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
+          ( echo    '{'
+            echo     '   // Langue'
+            echo     '   // @jupyterlab/translation-extension:plugin'
+            echo     '   // Paramètres de langue.'
+            echo  -e '   // ****************************************\n'
+            echo     '   // Langue locale'
+            echo     '   // Définit la langue d'\''affichage de l'\''interface. Exemples: '\''es_CO'\'', '\''fr'\''.'
+            echo     '   "locale": "'${LANG}'"'
+            echo     '}'
+          ) > $lang_file
+          vscode_language="${CS_DEFAULT_HOME}/User/argv.json"
+          echo "{\"locale\":\"fr\"}" >> $vscode_language
+        fi
+    fi
+fi
+
+echo "language has been configured"
+
+# Configure KFP multi-user
+if [ -n "${NB_NAMESPACE}" ]; then
+mkdir -p $HOME/.config/kfp
+cat <<EOF > $HOME/.config/kfp/context.json
+{"namespace": "${NB_NAMESPACE}"}
+EOF
+fi
+
+echo "KFP multi-user has been configured"
+
+# Introduced by RStudio 1.4
+# See https://github.com/jupyterhub/jupyter-rsession-proxy/issues/95
+# And https://github.com/blairdrummond/jupyter-rsession-proxy/blob/master/jupyter_rsession_proxy/__init__.py
+export RSERVER_WWW_ROOT_PATH=$NB_PREFIX/rstudio
+
+# Remove a Jupyterlab 2.x config setting that breaks Jupyterlab 3.x
+NOTEBOOK_CONFIG="$HOME/.jupyter/jupyter_notebook_config.json"
+NOTEBOOK_CONFIG_TMP="$HOME/.jupyter/jupyter_notebook_config.json.tmp"
+
+if [ -f "$NOTEBOOK_CONFIG" ]; then
+  jq 'del(.NotebookApp.server_extensions)' "$NOTEBOOK_CONFIG" > "$NOTEBOOK_CONFIG_TMP" \
+      && mv -f "$NOTEBOOK_CONFIG_TMP" "$NOTEBOOK_CONFIG"
+fi
+
+echo "broken configuration settings removed"
+
+export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
+export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+
+# Have NB_PREFIX and NB_NAMESPACE available in R and Rstudio
+echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
+echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
+# Have the NLS_LANG setting available in R and Rstudio
+echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
+
+# Revert forced virtualenv, was causing issues with users
+#export PIP_REQUIRE_VIRTUALENV=true
+#echo "Checking if Python venv exists"
+#if [[ -d "base-python-venv" ]]; then
+#  echo "Base python venv exists, not going to create again"
+#else
+#  echo "Creating python venv"
+#  python3 -m venv $HOME/base-python-venv
+#  echo "adding include-system-site-packages"
+#fi
+
+echo "Checking for .condarc file in hom directory"
+if [[ -f "$HOME/.condarc" ]]; then
+  echo ".condarc file exists, not going to do anything"
+else
+  echo "Creating basic .condarc file"
+  printf 'envs_dirs:\n  - $HOME/.conda/envs' > $HOME/.condarc
+fi
+
+printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
+
+# Copy default config and extensions on first start up
+if [ ! -d "$CS_DEFAULT_HOME/Machine" ]; then
+  echo "Creating code-server default settings and extentions"
+  mkdir -p "$CS_DEFAULT_HOME"
+  cp -r "$CS_TEMP_HOME/." "$CS_DEFAULT_HOME"
+fi
+
+# Create default user directories
+WORKSPACE_DIR="$HOME/workspace"
+REPO_DIR="$WORKSPACE_DIR/repositories"
+DATA_DIR="$WORKSPACE_DIR/data"
+VSCODE_DIR="$WORKSPACE_DIR/.vscode"
+VSCODE_SETTINGS="$VSCODE_DIR/settings.json"
+PYTHON_PATH="/opt/conda/bin/python"
+VSCODE_USER_DIR="$HOME/.local/share/code-server/User"
+
+echo "Ensuring workspace directories exist..."
+[ -d "$WORKSPACE_DIR" ] || mkdir -p "$WORKSPACE_DIR"
+[ -d "$REPO_DIR" ] || mkdir -p "$REPO_DIR"
+[ -d "$DATA_DIR" ] || mkdir -p "$DATA_DIR"
+[ -d "$VSCODE_DIR" ] || mkdir -p "$VSCODE_DIR"
+[ -d "$VSCODE_USER_DIR" ] || mkdir -p "$VSCODE_USER_DIR"
+
+# Set Python interpreter path for VSCode if not already set
+if [ ! -f "$VSCODE_SETTINGS" ]; then
+  echo "Python default settings for VSCode..."
+  echo "{\"python.defaultInterpreterPath\": \"$PYTHON_PATH\", \"python.languageServer\": \"Jedi\"}" > "$VSCODE_SETTINGS"
+fi
+
+if [ ! -f "$VSCODE_USER_DIR/settings.json" ]; then
+  echo "Python default user settings for VSCode..."
+  echo "{\"python.languageServer\": \"Jedi\"}" > "$VSCODE_USER_DIR/settings.json"
+fi
+
+# Retrieving Alias file for oracle client
+# Runs on every startup because this output location is not persisted storage
+# Implemented with a retry because it sometimes fails for some reason
+echo "Retrieving Oracle tnsnames file"
+GIT_ORACLE_SNIPPET="https://gitlab.k8s.cloud.statcan.ca/business-transformation/aaw/aaw-contrib-containers/snippets/515.git"
+ORACLE_ADMIN_PATH="/opt/oracle/instantclient_23_5/network/admin"
+RETRIES_NO=5
+RETRY_DELAY=3
+for i in $(seq 1 $RETRIES_NO); do
+  test -z "$GIT_ORACLE_SNIPPET" || git clone "$GIT_ORACLE_SNIPPET" "${ORACLE_ADMIN_PATH}/515" \
+    && mv "${ORACLE_ADMIN_PATH}/515/tnsnames.ora" "${ORACLE_ADMIN_PATH}" \
+    && rm -rf "${ORACLE_ADMIN_PATH}/515" \
+    && break
+  echo "Failed to clone the tnsnames.ora file. Attempt $i of $RETRIES_NO"
+  #if it ran all the retries, exit
+  [[ $i -eq $RETRIES_NO ]] && echo "Failed to clone the tnsnames.ora after $RETRIES_NO retries"
+  sleep ${RETRY_DELAY}
+done
+
+# Add sasstudio default
+if [[ -z "${SASSTUDIO_TEMP_HOME}" ]]; then
+  echo "No sas studio default settings created"
+else
+  echo "Creating sas studio default settings"
+  mkdir -p "$HOME/.sasstudio"
+  cp -r "$SASSTUDIO_TEMP_HOME/." "$HOME/.sasstudio"
+fi
+
+# Retrieve service account details
+serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
+serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
+conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/
+conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
+conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
+conda config --remove channels 'defaults'
+
+pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+
+# if rprofile doesnt exist
+if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
+  echo "Creating rprofile"
+  cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
+options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
+local({
+  r <- list("cran-remote" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/rpug-cran/")
+  options(repos = r)
+})
+EOF
+fi
+
+# Fix parent directory permissions to prevent setgid inheritance
+chmod 755 /home/$NB_USER
+
+# Create and set the GPG settings
+mkdir -p "/home/$NB_USER/.gnupg"
+chmod 700 "/home/$NB_USER/.gnupg"
+echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \npinentry-program /usr/bin/pinentry-curses" > "/home/$NB_USER/.gnupg/gpg-agent.conf"
+
+# Always ensure proper GPG permissions on every startup
+chmod 700 "/home/$NB_USER/.gnupg"
+find "/home/$NB_USER/.gnupg" -type f -exec chmod 600 {} \; 2>/dev/null || true
+find "/home/$NB_USER/.gnupg" -type d -exec chmod 700 {} \; 2>/dev/null || true
+
+# Remove any stale lock files that might prevent proper operation
+find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
+echo "GPG directory permissions secured."
+
+# Create a wrapper script for GPG that ensures proper environment
+cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-wrapper
+#!/bin/bash
+# Ensure GPG_TTY is set for GUI applications
+if [ -z "$GPG_TTY" ]; then
+  export GPG_TTY=$(tty)
+fi
+# Set PINENTRY_USER_DATA for consistent behavior
+export PINENTRY_USER_DATA="USE_CURSES=1"
+# Launch the actual GPG command
+/usr/bin/gpg "$@"
+EOF
+chmod +x /home/$NB_USER/.local/bin/gpg-wrapper
+
+# Configure Git to use our GPG wrapper
+git config --global gpg.program "/home/$NB_USER/.local/bin/gpg-wrapper"
+
+# Create a comprehensive setup script for GPG and pass
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-and-pass
+#!/bin/bash
+echo "Setting up GPG and pass..."
+# Generate GPG key if it doesn't exist
+if ! gpg --list-secret-keys | grep -q "test@example.com"; then
+  echo "Generating GPG key..."
+  gpg --batch --generate-key <<INNER_EOF
+Key-Type: RSA
+Key-Length: 2048
+Subkey-Type: RSA
+Subkey-Length: 2048
+Name-Real: Test User
+Name-Email: test@example.com
+Expire-Date: 0
+Passphrase: test123
+%commit
+%echo done
+INNER_EOF
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate GPG key"
+    exit 1
+  fi
+else
+  echo "GPG key already exists."
+fi
+# Initialize pass if not already initialized
+if [ ! -d "/home/$NB_USER/.password-store" ]; then
+  echo "Initializing password store..."
+  pass init test@example.com
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to initialize password store"
+    exit 1
+  fi
+else
+  echo "Password store already initialized."
+fi
+# Generate a test password if it doesn't exist
+if ! pass ls test-secret >/dev/null 2>&1; then
+  echo "Generating test password..."
+  pass generate test-secret 20
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate test password"
+    exit 1
+  fi
+else
+  echo "Test password already exists."
+fi
+# Create passphrase file if it doesn't exist
+if [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  echo "Creating passphrase file..."
+  echo "test123" > ~/.gnupg/passphrase.txt
+  chmod 600 ~/.gnupg/passphrase.txt
+else
+  echo "Passphrase file already exists."
+fi
+# Get keygrip and preload passphrase
+KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+if [ -n "$KEYGRIP" ]; then
+  /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < ~/.gnupg/passphrase.txt
+  echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+else
+  echo "Warning: No secret key found to preload passphrase"
+fi
+# Restart GPG agent
+gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+echo "Setup complete. Test with: pass show test-secret"
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-and-pass
+
+# Create a user-friendly setup script for manual passphrase entry
+cat << 'EOF' > /home/$NB_USER/.local/bin/setup-gpg-passphrase
+#!/bin/bash
+echo "Setting up GPG passphrase preloading..."
+echo "This will store your GPG passphrase in a file for automatic unlocking."
+echo "Only use this if you understand the security implications."
+read -p "Enter your GPG passphrase: " -s PASSPHRASE
+echo
+echo "$PASSPHRASE" > ~/.gnupg/passphrase.txt
+chmod 600 ~/.gnupg/passphrase.txt
+# Get keygrip and preload passphrase
+KEYGRIP=$(gpg --list-secret-keys --with-keygrip --keyid-format LONG 2>/dev/null | grep "Keygrip =" | head -1 | awk '{print $3}')
+if [ -n "$KEYGRIP" ]; then
+  /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP" < ~/.gnupg/passphrase.txt
+  echo "GPG passphrase preloaded for key with keygrip: $KEYGRIP"
+else
+  echo "Warning: No secret key found to preload passphrase"
+fi
+# Restart GPG agent
+gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+echo "Passphrase file created at ~/.gnupg/passphrase.txt"
+echo "Setup complete. Test with: pass show test-secret"
+EOF
+chmod +x /home/$NB_USER/.local/bin/setup-gpg-passphrase
+
+# Launch GPG agent first
+gpgconf --launch gpg-agent
+
+# Check if we need to run the setup automatically
+# Run if either the GPG key doesn't exist, the password store doesn't exist, or the passphrase file doesn't exist
+if ! gpg --list-secret-keys | grep -q "test@example.com" || [ ! -d "/home/$NB_USER/.password-store" ] || [ ! -f "/home/$NB_USER/.gnupg/passphrase.txt" ]; then
+  echo "Running initial GPG and pass setup..."
+  /home/$NB_USER/.local/bin/setup-gpg-and-pass
+  if [ $? -eq 0 ]; then
+    touch "/home/$NB_USER/.gnupg/.setup_complete"
+  else
+    echo "Warning: Initial GPG setup failed. You can run '/home/$NB_USER/.local/bin/setup-gpg-and-pass' manually."
+  fi
+fi
+
+# Remove any stale lock files again after setup
+find "/home/$NB_USER/.gnupg" -name ".#lk*" -delete 2>/dev/null || true
+
+# Create a diagnostic tool for GPG/pass issues
+cat << 'EOF' > /home/$NB_USER/.local/bin/gpg-diagnose
+#!/bin/bash
+echo "=== GPG/Pass Diagnostics ==="
+echo "GPG Agent Status:"
+gpgconf --list-dirs agent-socket
+echo ""
+echo "GPG Configuration:"
+cat ~/.gnupg/gpg-agent.conf
+echo ""
+echo "GPG Keys:"
+gpg --list-secret-keys --keyid-format LONG
+echo ""
+echo "Pass Status:"
+pass ls
+echo ""
+echo "Environment Variables:"
+echo "GPG_TTY: $GPG_TTY"
+echo "PINENTRY_USER_DATA: $PINENTRY_USER_DATA"
+echo ""
+echo "File Permissions:"
+ls -la ~/.gnupg/
+echo ""
+echo "=== End Diagnostics ==="
+EOF
+chmod +x /home/$NB_USER/.local/bin/gpg-diagnose
+
+# Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
+ulimit -c 0 
+
+echo "--------------------starting jupyter--------------------"
+
+/opt/conda/bin/jupyter server --notebook-dir=/home/${NB_USER} \
+                 --ip=0.0.0.0 \
+                 --no-browser \
+                 --port=8888 \
+                 --ServerApp.token='' \
+                 --ServerApp.password='' \
+                 --ServerApp.allow_origin='*' \
+                 --ServerApp.authenticate_prometheus=False \
+                 --ServerApp.base_url=${NB_PREFIX} \
+                 --ServerApp.default_url=${DEFAULT_JUPYTER_URL:-/tree}
+
+echo "--------------------shutting down, persisting VS_CODE settings--------------------"
