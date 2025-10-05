@@ -204,7 +204,8 @@ RUN mkdir -p /etc/rstudio \
     # https://github.com/rstudio/rstudio/issues/14060
     && echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf 
 
-RUN echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ${HOME}/.config/rstudio/rstudio-prefs.json
+RUN mkdir -p ${HOME}/.config/rstudio \
+    && echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ${HOME}/.config/rstudio/rstudio-prefs.json
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
