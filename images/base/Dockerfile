@@ -191,6 +191,10 @@ RUN \
     && unzip -q -oj instantclient-odbc-linux.x64-23.5.0.24.07.zip -d /opt/oracle/instantclient_23_5 \
     && /opt/oracle/instantclient_23_5/odbc_update_ini.sh / /opt/oracle/instantclient_23_5 \
     && \
+    # Oracle SQL*Plus package
+    curl -O https://download.oracle.com/otn_software/linux/instantclient/2390000/instantclient-sqlplus-linux.x64-23.9.0.25.07.zip \
+    && unzip -q -oj instantclient-sqlplus-linux.x64-23.9.0.25.07.zip -d /opt/oracle/instantclient_23_5 \
+    && \
     # Cleanup
     rm -f *.zip \
     && apt-get clean \
