@@ -90,6 +90,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'jupyterlab-lsp' \
     'jupyter-lsp' \
     'r-arrow' \
+    'r-base=4.5.1' \
     'r-aws.s3' \
     'r-catools' \
     'r-e1071' \
@@ -181,7 +182,6 @@ RUN apt-get update \
     && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
     && add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" \
-    && apt install -y --no-install-recommends r-base r-base-core r-recommended r-base-dev \
     && apt-get update && apt-get -y dist-upgrade \
     && curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/jammy/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb" > /tmp/rstudio.deb \
     && echo "${SHA256} /tmp/rstudio.deb" | sha256sum -c - \
