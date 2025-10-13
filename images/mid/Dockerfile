@@ -177,11 +177,9 @@ COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.j
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.09.1-401
 ARG SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
-# R and RStudio installation with cleanup
+
 RUN apt-get update \
     && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
-    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
-    && add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" \
     && apt-get update && apt-get -y dist-upgrade \
     && curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/jammy/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb" > /tmp/rstudio.deb \
     && echo "${SHA256} /tmp/rstudio.deb" | sha256sum -c - \
