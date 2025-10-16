@@ -66,27 +66,6 @@ options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'ima
 local({
   r <- list("cran-remote" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/rpug-cran/")
   options(repos = r)
-  cran_remote <- getOption("repos")[["cran-remote"]]
-  key <- regmatches(
-    cran_remote,
-    regexpr(
-      "(?<=^https://svc-das:)[a-z0-9]{1, }(?=\\@)",
-      cran_remote,
-      ignore.case = TRUE,
-      perl = TRUE
-    )
-  )
-
-  options(
-    repos = c(
-      ppm = sprintf(
-        "https://svc-das:%s@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-%s-remote",
-        key,
-        as.character(getRversion()[1, 1:2])
-      ),
-      getOption("repos")
-    )
-  )
 })
 EOF
 fi
