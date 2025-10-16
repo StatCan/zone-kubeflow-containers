@@ -75,7 +75,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -108,7 +107,6 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyter-rsession-proxy==2.2.0' \
         'pyspark[ml]==3.5.5' \
     && jupyter server extension enable --py jupyter_server_proxy \
-    && jupyter nbextension enable codefolding/main --sys-prefix \
     && jupyter labextension enable \
         '@jupyterlab/translation-extension' \
         '@jupyterlab/server-proxy' \
