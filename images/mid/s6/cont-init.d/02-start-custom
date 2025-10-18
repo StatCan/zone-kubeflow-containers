@@ -58,6 +58,13 @@ conda config --remove channels conda-forge --system
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
+# set up pixi mirror to artifactory repository
+mkdir -p /etc/pixi
+echo "[mirrors]
+\"https://conda.anaconda.org/conda-forge\" = [
+    \"https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/\"
+]" >> /etc/pixi/config.toml
+
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
   echo "Creating rprofile"
