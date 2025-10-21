@@ -58,11 +58,15 @@ conda config --remove channels conda-forge --system
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
-mkdir -p /home/${NB_USER}/.config/pixi \
-&& echo "[mirrors]
-\"https://conda.anaconda.org/conda-forge\" = [
-    \"https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/\"
-]" >> /home/${NB_USER}/.config/pixi/config.toml
+if [ ! -d "/home/${NB_USER}/.config/pixi" ]; then
+  echo "Creating pixi config"
+  cat > /home/${NB_USER}/.config/pixi<< EOF
+"[mirrors]
+"https://conda.anaconda.org/conda-forge" = [
+    "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"
+]"
+EOF
+fi
 
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
