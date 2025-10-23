@@ -61,10 +61,7 @@ pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken
 if [ ! -d "/home/${NB_USER}/.config/pixi" ]; then
   echo "Creating pixi config"
   cat > /home/${NB_USER}/.config/pixi<< EOF
-"[mirrors]
-"https://conda.anaconda.org/conda-forge" = [
-    "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"
-]"
+default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
 fi
 
