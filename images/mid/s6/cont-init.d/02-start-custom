@@ -70,16 +70,13 @@ if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
   echo "Creating rprofile"
   cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
-library(glue)
-
-key <- stringr::str_split_i(stringr::str_split_i(getOption("repos")[[1]], ":", 3), "@", 1)
 
 local(
   options(
     repos = list(
-      "ppm" = glue("https://svc-das:{key}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.4-remote"),
-      "runiverse" = glue("https://svc-das:{key}@artifactory.cloud.statcan.ca/artifactory/cran-runiverse-remote/bin/linux/noble/4.5/"),
-      "cran-remote" = glue("https://svc-das:{key}@artifactory.cloud.statcan.ca/artifactory/rpug-cran/")
+      "ppm" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.4-remote",
+      "runiverse" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/cran-runiverse-remote/bin/linux/noble/4.5/",
+      "cran-remote" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/rpug-cran/"
     )
   )
 )
