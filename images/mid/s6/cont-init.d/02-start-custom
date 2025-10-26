@@ -58,26 +58,12 @@ conda config --remove channels conda-forge --system
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
-if [ ! -d "/home/${NB_USER}/.config/pixi/config.toml" ]; then
-  echo "Creating pixi config"
-  cat > /home/${NB_USER}/.config/pixi/config.toml << EOF
-default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
-EOF
-fi
-
+# create pixi config to change default channel
 if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
   echo "Creating pixi config"
   cat > /home/${NB_USER}/.pixi/config.toml << EOF
 default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
-fi
-
-if [ ! -d "/${PIXI_HOME}/config.toml" ]; then
-  echo "Creating pixi config"
-  cat > /${PIXI_HOME}/config.toml << EOF
-default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
-EOF
-fi
 
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
