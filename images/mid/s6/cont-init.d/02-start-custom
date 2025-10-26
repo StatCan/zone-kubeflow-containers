@@ -59,9 +59,9 @@ conda config --remove channels conda-forge --system
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
 	/etc/pixi/config.toml
-if [ ! -d "/etc/pixi/config.toml" ]; then
+if [ ! -d "/home/${NB_USER}/.config/pixi/config.toml" ]; then
   echo "Creating pixi config"
-  cat > /etc/pixi/config.toml << EOF
+  cat > /home/${NB_USER}/.config/pixi/config.toml << EOF
 default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
 fi
