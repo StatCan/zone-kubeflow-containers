@@ -64,6 +64,7 @@ if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
   cat > /home/${NB_USER}/.pixi/config.toml << EOF
 default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
+fi
 
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
