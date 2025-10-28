@@ -211,13 +211,12 @@ RUN mkdir -p ${HOME}/.config/rstudio \
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
-# currently unused
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 
 # install pixi package manager and enable autocomplete
 
 RUN wget -qO- https://pixi.sh/install.sh | sh \
-    && echo "eval \"$(pixi completion --shell bash)\"" >> ~/.bashsrc 
+    && echo "eval \"$(pixi completion --shell bash)\"" >> ~/.bashrc 
 
 # Configure container startup
 
