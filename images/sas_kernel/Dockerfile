@@ -29,7 +29,7 @@ RUN groupadd -g 1002 sasstaff && \
     echo "jovyan:jovyan" | chpasswd
 
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
-COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:v1 /usr/local/SASHome /usr/local/SASHome
+COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:override-tcr /usr/local/SASHome /usr/local/SASHome
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
