@@ -216,7 +216,7 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 # install pixi package manager and enable autocomplete
 
 RUN wget -qO- https://pixi.sh/install.sh | sh \
-    && echo "eval \"$(pixi completion --shell bash)\"" >> ~/.bashrc 
+    && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
 # Configure container startup
 
