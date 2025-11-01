@@ -58,15 +58,28 @@ conda config --remove channels conda-forge --system
 
 pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
+# create pixi config to change default channel
+if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
+  echo "Creating pixi config"
+  cat > /home/${NB_USER}/.pixi/config.toml << EOF
+default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
+EOF
+fi
+
 # if rprofile doesnt exist
 if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
   echo "Creating rprofile"
   cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
-local({
-  r <- list("cran-remote" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/rpug-cran/")
-  options(repos = r)
-})
+
+local(
+  options(
+    repos = list(
+      "ppm" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.4-remote",
+      "cran-remote" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/rpug-cran/"
+    )
+  )
+)
 EOF
 fi
 

@@ -7,6 +7,7 @@ FROM $BASE_IMAGE
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
+# also installs r-studio and pixi
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
 # this version of Jupyterlab and/or are not OL-compliant so they have been removed until new compatible versions are available:
@@ -210,6 +211,11 @@ RUN mkdir -p ${HOME}/.config/rstudio \
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
+
+# install pixi package manager and enable autocomplete
+
+RUN wget -qO- https://pixi.sh/install.sh | sh \
+    && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
 # Configure container startup
 
