@@ -75,7 +75,7 @@ options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'ima
 local(
   options(
     repos = list(
-      "ppm" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.4-remote",
+      "ppm" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.5-remote",
       "cran-remote" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/rpug-cran/"
     )
   )
