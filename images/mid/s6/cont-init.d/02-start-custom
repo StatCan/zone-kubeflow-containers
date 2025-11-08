@@ -64,6 +64,16 @@ local(
 EOF
 fi
 
+# grab the remote endpoint with regex using the following format: remote-cran = "___"
+export ENDPOINT=$(sed -n 's/.*"cran-remote"[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' /opt/conda/lib/R/etc/Rprofile.site)
+
+# check that endpoint is reachable
+RESPONSE=$(curl -L -s -o /dev/null --head -w "%{response_code}" "$ENDPOINT")
+if [ $RESPONSE != "200" ]; then
+    echo "Bad R remote endpoint. Exiting."
+    exit 1
+fi
+
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
     if [ "${KF_LANG}" = "en" ]; then
