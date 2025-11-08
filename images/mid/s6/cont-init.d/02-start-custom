@@ -74,7 +74,7 @@ fi
 export ENDPOINT=$(sed -n 's/.*"cran-remote"[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' /opt/conda/lib/R/etc/Rprofile.site)
 
 # check that endpoint is reachable
-RESPONSE=$(curl -s -o /dev/null --head -w "%{response_code}" "$ENDPOINT")
+RESPONSE=$(curl -L -s -o /dev/null --head -w "%{response_code}" "$ENDPOINT")
 if [ $RESPONSE != "200" ]; then
     echo "Bad R remote endpoint. Exiting."
     exit 1
