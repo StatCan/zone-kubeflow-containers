@@ -222,9 +222,9 @@ RUN wget -qO- https://pixi.sh/install.sh | sh \
 
 RUN curl -fsSL https://ollama.com/install.sh | sh \
     # ollama server must be up to pull images, but it's blocking, so start it in the background
-    && nohup ollama serve > /tmp/ollama.log 2>&1 & \
+    && (nohup ollama serve > /tmp/ollama.log 2>&1 &) \
     # wait for ollama server to start
-    sleep 10 \
+    && sleep 10 \
     && ollama pull llama3.1:8b \
     && pkill ollama
 
