@@ -226,7 +226,8 @@ RUN curl -fsSL https://ollama.com/install.sh | sh \
     # wait for ollama server to start
     && sleep 10 \
     && ollama pull llama3.1:8b \
-    && pkill ollama
+    && pkill ollama \
+    && chmod +r "${HOME}/.ollama/id_ed25519"
 
 # Configure container startup
 
