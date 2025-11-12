@@ -7,6 +7,7 @@ FROM $BASE_IMAGE
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
+# also installs r-studio and pixi
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
 # this version of Jupyterlab and/or are not OL-compliant so they have been removed until new compatible versions are available:
@@ -42,7 +43,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
-    code-server --install-extension dvirtz.parquet-viewer@2.9.0 && \
+    code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
@@ -177,12 +178,11 @@ COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.j
 # install rstudio-server
 ARG RSTUDIO_VERSION=2024.12.0-467
 ARG SHA256=1493188cdabcc1047db27d1bd0e46947e39562cbd831158c7812f88d80e742b3
-# R and RStudio installation with cleanup
+# RStudio installation with cleanup
 RUN apt-get update \
     && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
     && add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" \
-    && apt install -y --no-install-recommends r-base r-base-core r-recommended r-base-dev \
     && apt-get update && apt-get -y dist-upgrade \
     && curl --silent -L  --fail "https://s3.amazonaws.com/rstudio-ide-build/server/jammy/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb" > /tmp/rstudio.deb \
     && echo "${SHA256} /tmp/rstudio.deb" | sha256sum -c - \
@@ -204,9 +204,18 @@ RUN mkdir -p /etc/rstudio \
     # https://github.com/rstudio/rstudio/issues/14060
     && echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf 
 
+# Disables .RData settings
+RUN mkdir -p ${HOME}/.config/rstudio \
+    && echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ${HOME}/.config/rstudio/rstudio-prefs.json
+
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
+
+# install pixi package manager and enable autocomplete
+
+RUN wget -qO- https://pixi.sh/install.sh | sh \
+    && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
 # Configure container startup
 

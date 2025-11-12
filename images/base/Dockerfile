@@ -71,7 +71,19 @@ RUN apt-get update --yes \
         libtiff-dev \
         libfreetype-dev \
         libfreetype6 \
-         # Use headless Java to save space
+        # Some common system dependencies
+        libcairo2-dev \
+        libpango1.0-dev \
+        libgdk-pixbuf2.0-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libpq-dev \
+        zlib1g-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        # Use headless Java to save space
         openjdk-8-jre-headless \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
@@ -189,13 +201,17 @@ RUN \
 # Oracle configuration
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
 ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
-ENV TNS_ADMIN="/opt/oracle/instantclient_23_5/network/admin"
-ENV PATH="/opt/oracle/instantclient_23_5:/opt/mssql-tools18/bin:${PATH}"
+ENV TNS_ADMIN="${LD_LIBRARY_PATH}/network/admin"
+ENV PATH="${LD_LIBRARY_PATH}:/opt/mssql-tools18/bin:${PATH}"
 
-COPY dbConnection/ /opt/oracle/instantclient_23_5/
+# Dockerfile GIST: https://gist.github.com/mathis-marcotte/13a32c27ba9a7252864cb644a5029f06
+# gets the linux client wallet and the tnsnames.ora file for Oracle DB connections
+COPY --from=k8scc01covidacr.azurecr.io/oracletns:latest /azcopy/dbConnection/ ${LD_LIBRARY_PATH}/
+COPY dbConnection/sqlnet.ora ${TNS_ADMIN}/sqlnet.ora
+
 # give users permissions to edit the alias file
-RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
-    && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
+RUN chmod a+w ${TNS_ADMIN} \
+    && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
