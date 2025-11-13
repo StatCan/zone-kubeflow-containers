@@ -205,9 +205,15 @@ ENV TNS_ADMIN="/opt/oracle/instantclient_23_5/network/admin"
 ENV PATH="/opt/oracle/instantclient_23_5:/opt/mssql-tools18/bin:${PATH}"
 
 COPY dbConnection/ /opt/oracle/instantclient_23_5/
+
 # give users permissions to edit the alias file
 RUN chmod a+w /opt/oracle/instantclient_23_5/network/admin \
     && chown $NB_UID:$NB_GID /opt/oracle/instantclient_23_5/network/admin/tnsnames.ora
+
+# increase stack size for Oracle connection error ORA-24550 signo=11
+# RUN echo "*        soft  stack  65536" >> /etc/security/limits.conf
+# RUN echo "* soft stack 65536" >> /etc/security/limits.conf
+RUN echo "ulimit -s -S 65536" >> ${HOME}/.bashrc
 
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
