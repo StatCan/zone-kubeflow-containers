@@ -44,7 +44,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
-    code-server --install-extension continue.continue --force && \
+    code-server --install-extension continue.continue@1.1.24 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
