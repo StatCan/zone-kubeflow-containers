@@ -7,6 +7,7 @@ FROM $BASE_IMAGE
 USER root
 
 # installs vscode server, python & conda packages and jupyter lab extensions.
+# also installs r-studio and pixi
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
 # this version of Jupyterlab and/or are not OL-compliant so they have been removed until new compatible versions are available:
@@ -91,7 +92,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'jupyter-lsp' \
     'r-arrow' \
     'r-aws.s3' \
-    'r-base=4.5.1' \
+    'r-base=4.4.1' \
     'r-catools' \
     'r-e1071' \
     'r-hdf5r' \
@@ -175,8 +176,8 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
 # install rstudio-server
-ARG RSTUDIO_VERSION=2025.09.1-401
-ARG SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
+ARG RSTUDIO_VERSION=2024.12.0-467
+ARG SHA256=1493188cdabcc1047db27d1bd0e46947e39562cbd831158c7812f88d80e742b3
 # RStudio installation with cleanup
 RUN apt-get update \
     && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
@@ -210,6 +211,11 @@ RUN mkdir -p ${HOME}/.config/rstudio \
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
+
+# install pixi package manager and enable autocomplete
+
+RUN wget -qO- https://pixi.sh/install.sh | sh \
+    && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
 # Configure container startup
 
