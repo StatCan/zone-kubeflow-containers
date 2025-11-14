@@ -213,10 +213,8 @@ COPY dbConnection/sqlnet.ora ${TNS_ADMIN}/sqlnet.ora
 RUN chmod a+w ${TNS_ADMIN} \
     && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
-# increase stack size for Oracle connection error ORA-24550 signo=11
-# RUN echo "*        soft  stack  65536" >> /etc/security/limits.conf
-# RUN echo "* soft stack 65536" >> /etc/security/limits.conf
-RUN echo "ulimit -s -S 65536" >> ${HOME}/.bashrc
+# increase stack soft limit to fix Oracle connection error ORA-24550 signo=11
+RUN echo "ulimit -sS 10240" >> ${HOME}/.bashrc
 
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
