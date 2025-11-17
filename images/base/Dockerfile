@@ -214,6 +214,7 @@ RUN chmod a+w ${TNS_ADMIN} \
     && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
 # increase stack soft limit to fix Oracle connection error ORA-24550 signo=11
+# value taken from https://docs.oracle.com/en/database/oracle/oracle-database/26/ladbi/checking-resource-limits-for-oracle-software-installation-users.html
 RUN echo "ulimit -sS 10240" >> ${HOME}/.bashrc
 
 # Final cleanup
