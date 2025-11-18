@@ -218,10 +218,6 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 RUN wget -qO- https://pixi.sh/install.sh | sh \
     && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
-# install ollama
-
-RUN curl -fsSL https://ollama.com/install.sh | sh
-
 # Configure container startup
 
 # Copy over pip config
