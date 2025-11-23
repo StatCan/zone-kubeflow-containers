@@ -87,8 +87,8 @@ timestamp="$(date +"%Y-%m-%dT%H:%M:%SZ" -d "+"${hours}" hour")"
 
 set -e
 
-kubectl annotate notebook  "${notebook}" -n "${namespace}" notebooks.kubeflow.org/last_activity_check_timestamp="'"${timestamp}"'" --overwrite
-kubectl annotate notebook "${notebook}" -n "${namespace}" notebooks.kubeflow.org/last-activity="'"${timestamp}"'" --overwrite
+kubectl annotate notebook "${notebook}" -n "${namespace}" notebooks.kubeflow.org/last_activity_check_timestamp="${timestamp}" --overwrite
+kubectl annotate notebook "${notebook}" -n "${namespace}" notebooks.kubeflow.org/last-activity="${timestamp}" --overwrite
 
 echo "Script completed successfully"
 EOF
