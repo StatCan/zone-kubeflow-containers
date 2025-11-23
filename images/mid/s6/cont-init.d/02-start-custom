@@ -92,7 +92,7 @@ kubectl annotate notebook "${notebook}" -n "${namespace}" notebooks.kubeflow.org
 
 echo "Script completed successfully"
 EOF
-fi
+
 chmod u+x /usr/local/bin/keep-alive
 
 # Configure the language
