@@ -64,6 +64,37 @@ local(
 EOF
 fi
 
+# create keep-alive script to prevent notebooks from being culled
+cat > /usr/local/bin/keep-alive << EOF
+#! /usr/bin/env bash
+
+if [[ -n $1 ]]; then
+    hours=$1
+else
+    echo -n "Enter number of hours to keep notebook alive: "
+    read hours
+fi
+
+if [[ $hours -lt 0 ]]; then
+    echo "Hours cannot be negative."
+    exit 1
+fi
+
+notebook="$(basename "${NB_PREFIX}")"
+namespace="${NB_NAMESPACE}"
+
+timestamp="$(date +"%Y-%m-%dT%H:%M:%SZ" -d "+"${hours}" hour")"
+
+set -e
+
+kubectl annotate notebook  "${notebook}" -n "${namespace}" notebooks.kubeflow.org/last_activity_check_timestamp="'"${timestamp}"'" --overwrite
+kubectl annotate notebook "${notebook}" -n "${namespace}" notebooks.kubeflow.org/last-activity="'"${timestamp}"'" --overwrite
+
+echo "Script completed successfully"
+EOF
+fi
+chmod u+x /usr/local/bin/keep-alive
+
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
     if [ "${KF_LANG}" = "en" ]; then
