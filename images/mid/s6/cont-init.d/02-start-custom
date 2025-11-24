@@ -96,6 +96,3 @@ if [ -n "${KF_LANG}" ]; then
 fi
 
 echo "language has been configured"
-
-# Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
-ulimit -c 0 
