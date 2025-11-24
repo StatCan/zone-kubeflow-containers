@@ -213,10 +213,6 @@ COPY dbConnection/sqlnet.ora ${TNS_ADMIN}/sqlnet.ora
 RUN chmod a+w ${TNS_ADMIN} \
     && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
-# increase stack soft limit to fix Oracle connection error ORA-24550 signo=11
-# value taken from https://docs.oracle.com/en/database/oracle/oracle-database/26/ladbi/checking-resource-limits-for-oracle-software-installation-users.html
-RUN echo "ulimit -Ss 10240" >> ${HOME}/.bashrc
-
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
     && find / -depth -name '*.pyc' -exec rm -rf '{}' + \
