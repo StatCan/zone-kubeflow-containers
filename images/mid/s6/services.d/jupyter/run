@@ -1,5 +1,9 @@
 #!/command/with-contenv bash
 
+# increase stack soft limit to fix Oracle connection error ORA-24550 signo=11
+# value taken from https://docs.oracle.com/en/database/oracle/oracle-database/26/ladbi/checking-resource-limits-for-oracle-software-installation-users.html
+ulimit -Ss 10240
+
 # Prevent core dump file creation by setting it to 0. Else can fill up user volumes without them knowing
 ulimit -c 0 
 
