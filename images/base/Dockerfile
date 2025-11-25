@@ -90,7 +90,7 @@ RUN apt-get update --yes \
 
 # adds utility scripts
 # add script for kerberos keytab creation
-COPY --chmod=755 suspend-server.sh adjust-server-resources.py ktutil-keytab /usr/local/bin/
+COPY --chmod=755 suspend-server.sh keep-alive.sh adjust-server-resources.py ktutil-keytab /usr/local/bin/
 
 # add clean-layer script
 COPY --chmod=755 clean-layer.sh /usr/bin/clean-layer.sh
