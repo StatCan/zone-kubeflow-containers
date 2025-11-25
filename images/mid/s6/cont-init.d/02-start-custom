@@ -75,6 +75,11 @@ else
     read hours
 fi
 
+if ! [[ $hours =~ ^[0-9]+$ ]]; then
+    echo "Hours must be an integer."
+    exit 1
+fi
+
 if [[ $hours -lt 0 ]]; then
     echo "Hours cannot be negative."
     exit 1
