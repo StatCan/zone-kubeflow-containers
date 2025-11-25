@@ -269,6 +269,23 @@ COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME}/.local/bin/rm
 # s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
+# Continue.dev config
+RUN mkdir -p ${HOME}/.continue \
+    && cat << 'EOF' > ${HOME}/.continue/config.yaml
+name: Local Config
+version: 1.0.0
+schema: v1
+models:
+  - name: qwen3:0.6b
+    provider: ollama
+    model: qwen3:0.6b
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+EOF
+
 # s6 - 01-copy-tmp-home
 # NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
 #       this is a workaround because a PVC will be mounted at $HOME
