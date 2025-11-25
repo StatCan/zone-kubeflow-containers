@@ -65,7 +65,7 @@ EOF
 fi
 
 # create keep-alive script to prevent notebooks from being culled
-cat > /usr/local/bin/keep-alive << EOF
+cat > /home/${NB_USER}/.local/bin/keep-alive << EOF
 #! /usr/bin/env bash
 
 if [[ -n $1 ]]; then
