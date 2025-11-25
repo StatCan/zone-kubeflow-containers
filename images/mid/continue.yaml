@@ -1,0 +1,12 @@
+name: Local Config
+version: 1.0.0
+schema: v1
+models:
+  - name: qwen3:0.6b
+    provider: ollama
+    model: qwen3:0.6b
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
