@@ -223,7 +223,7 @@ COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 #Copy over various files
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
 
-COPY --chmod=755 start-oms.sh restart-oms.sh /usr/local/bin/
+COPY --chmod=755 start-oms.sh restart-oms.sh keep-alive.sh /usr/local/bin/
 
 USER $NB_USER
 
