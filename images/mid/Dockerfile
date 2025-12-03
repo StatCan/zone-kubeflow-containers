@@ -223,7 +223,7 @@ RUN curl -fsSL https://ollama.com/install.sh | sh \
     && (nohup ollama serve > /tmp/ollama.log 2>&1 &) \
     # wait for ollama server to start
     && sleep 10 \
-    && ollama pull qwen3:0.6b \
+    && ollama pull qwen2.5-coder:3b \
     && pkill ollama \
     && chmod +r "${HOME}/.ollama/id_ed25519"
 
