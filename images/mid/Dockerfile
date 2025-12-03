@@ -18,10 +18,10 @@ USER root
     # jupyterlab-spreadsheet
 
 # Install vscode
-ARG VSCODE_VERSION=4.106.3
+ARG VSCODE_VERSION=4.106.4
 ARG VSCODE_SHA=ef3b303c1595bb171670b1ddfda504ac59a9c192fd8e73e9b79a91cc8d42fd90
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
-
+https://github.com/coder/code-server/releases/download/v4.106.3/code-server_4.106.3_amd64.deb
 ENV CS_DISABLE_FILE_DOWNLOADS=1
 ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
 ENV SERVICE_URL=https://extensions.coder.com/api
