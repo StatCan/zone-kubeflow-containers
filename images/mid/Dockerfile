@@ -18,7 +18,7 @@ USER root
     # jupyterlab-spreadsheet
 
 # Install vscode
-ARG VSCODE_VERSION=4.99.4
+ARG VSCODE_VERSION=4.106.3
 ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
@@ -41,6 +41,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
+    # May need to update the language pack
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
