@@ -226,10 +226,12 @@ COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.m
 COPY --chmod=755 keep-alive.sh start-oms.sh restart-oms.sh /usr/local/bin/
 
 # SSL Certs
-COPY certs/ /usr/local/share/ca-certificates
+COPY certs/ /opt/conda/ssl/certs
 RUN echo >> /opt/conda/ssl/cacert.pem && \
-    cd /usr/local/share/ca-certificates/ && \
+    cd /opt/conda/ssl/certs/ && \
     for file in *.crt; do (echo "# ${file}"; cat "${file}"; echo) >> /opt/conda/ssl/cacert.pem; done
+
+ENV REQUESTS_CA_BUNDLE=/opt/conda/ssl/cacert.pem
 
 USER $NB_USER
 

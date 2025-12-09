@@ -2,7 +2,7 @@
 
 # Script used to generate the .crt files for the given host
 HOST=stc-ndm-new-qa-wc2.statcan.gc.ca
-#HOST=stc-ndm-prod-wc.statcan.gc.ca
+# HOST=stc-ndm-prod-wc.statcan.gc.ca
 
 openssl s_client -showcerts -connect "${HOST}":443 < /dev/null |
    awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/{ if(/BEGIN CERTIFICATE/){a++}; out="cert"a".pem"; print >out}'
