@@ -6,7 +6,16 @@ umask 0002
 
 # the home directory is usually a PVC
 # we need to copy the contents of $HOME_TMP that we populated during the build
-# NOTE: --update=none prevents overwriting existing files
-# NOTE: -T ensures that the CONTENTS of $HOME_TMP are copied, and not the directory itself
-echo "INFO: Copying contents of '$HOME_TMP' to '$HOME'..."
-cp --update=none -r -T "$HOME_TMP" "$HOME"
+
+# comparing space to avoid errors with running out of space on start up
+availableHomeSpace=$(df --output=avail $HOME | tail -n 1)
+tmpHomeSpace=$(du -s $HOME_TMP | awk '{print $1}')
+
+echo "INFO: Available HOME space: '$availableHomeSpace'"
+echo "INFO: HOME_TMP space: '$tmpHomeSpace'"
+if [[ "$availableHomeSpace" -gt "$tmpHomeSpace" ]]; then
+    # NOTE: --update=none prevents overwriting existing files
+    # NOTE: -T ensures that the CONTENTS of $HOME_TMP are copied, and not the directory itself
+    echo "INFO: Copying contents of '$HOME_TMP' to '$HOME'..."
+    cp --update=none -r -T "$HOME_TMP" "$HOME"
+fi

@@ -76,7 +76,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nodejs' \
     'pkg-config' \
     'jupyterlab' \
-    'jupyter_contrib_nbextensions' \ 
     'dash' \
     'plotly' \
     'ipywidgets' \
@@ -109,7 +108,6 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyter-rsession-proxy==2.2.0' \
         'pyspark[ml]==3.5.5' \
     && jupyter server extension enable --py jupyter_server_proxy \
-    && jupyter nbextension enable codefolding/main --sys-prefix \
     && jupyter labextension enable \
         '@jupyterlab/translation-extension' \
         '@jupyterlab/server-proxy' \
@@ -225,7 +223,7 @@ COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 #Copy over various files
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
 
-COPY --chmod=755 start-oms.sh restart-oms.sh /usr/local/bin/
+COPY --chmod=755 keep-alive.sh start-oms.sh restart-oms.sh /usr/local/bin/
 
 USER $NB_USER
 
