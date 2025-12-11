@@ -95,6 +95,23 @@ install-python-dev-venv:
 	$(PYTHON) -m pip install -Ur requirements-dev.txt
 	$(PYTHON) -m pip list
 
+test: check-test-prereqs ## Run all unit and integration tests locally
+	@echo "Running all local tests..."
+	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) -v
+
+test-fast: check-test-prereqs ## Run fast tests only (skip slow and integration tests)
+	@echo "Running fast tests only..."
+	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) -m "not slow and not integration" -v
+
+test-smoke: check-test-prereqs ## Run smoke tests only (critical path tests)
+	@echo "Running smoke tests only..."
+	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) -m "smoke" -v
+
+test-coverage: check-test-prereqs ## Run tests with coverage report
+	@echo "Running tests with coverage..."
+	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) --cov=tests --cov-report=html --cov-report=term -v
+	@echo "Coverage report generated in htmlcov/index.html"
+
 test/%: REPO?=$(DEFAULT_REPO)
 test/%: TAG?=$(DEFAULT_TAG)
 test/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
