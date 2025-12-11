@@ -139,33 +139,51 @@ _test-all: ## Internal target: test all images
 	@echo ""; \
 	echo "=============================================================================="; \
 	echo "Testing all available images..."; \
+	echo "Total images to test: $$(echo $(FINAL_IMAGES) | wc -w)"; \
 	echo "=============================================================================="; \
 	success=true; \
+	passed=0; \
+	failed=0; \
 	for img in $(FINAL_IMAGES); do \
 		echo ""; \
-		echo "Building image: $$img"; \
+		echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+		echo "Processing: $$img"; \
+		echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+		echo ""; \
+		echo "[1/2] Building image: $$img..."; \
 		if ! make bake/$$img > /dev/null 2>&1; then \
 			echo "❌ Failed to build $$img"; \
+			failed=$$((failed + 1)); \
 			success=false; \
 			continue; \
 		fi; \
-		echo "✓ Built $$img"; \
+		echo "✓ Image built successfully"; \
 		echo ""; \
-		echo "Testing image: $$img"; \
+		echo "[2/2] Running tests for: $$img..."; \
+		echo "(Note: First run may take time while pulling image from registry)"; \
 		if make test/$$img; then \
-			echo "✓ All tests passed for $$img"; \
+			echo ""; \
+			echo "✓ All tests PASSED for $$img"; \
+			passed=$$((passed + 1)); \
 		else \
-			echo "❌ Tests failed for $$img"; \
+			echo ""; \
+			echo "❌ Tests FAILED for $$img"; \
+			failed=$$((failed + 1)); \
 			success=false; \
 		fi; \
 	done; \
 	echo ""; \
 	echo "=============================================================================="; \
+	echo "TEST SUMMARY"; \
+	echo "=============================================================================="; \
+	echo "✓ Passed: $$passed"; \
+	echo "❌ Failed: $$failed"; \
+	echo "=============================================================================="; \
 	if [ "$$success" = true ]; then \
 		echo "✓ All images built and tested successfully!"; \
 		exit 0; \
 	else \
-		echo "❌ Some images failed. See above for details."; \
+		echo "❌ Some images failed. Review details above."; \
 		exit 1; \
 	fi
 
