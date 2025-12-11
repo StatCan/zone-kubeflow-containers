@@ -71,7 +71,7 @@ help: ## Show all available commands
 	echo "  make install-python-dev-venv      Setup development Python environment"; \
 	echo ""; \
 	echo "AVAILABLE IMAGES:"; \
-	@for img in $(FINAL_IMAGES); do echo "  • $$img"; done; \
+	for img in $(FINAL_IMAGES); do echo "  • $$img"; done; \
 	echo ""; \
 	echo "EXAMPLES:"; \
 	echo "  make bake/jupyterlab-cpu && make test/jupyterlab-cpu"; \
@@ -136,7 +136,7 @@ test: ## Test all images interactively (with image selection prompts)
 	@echo ""; \
 	echo "Select which image to test:"; \
 	echo ""; \
-	@for i in $$(seq 1 $$(echo $(FINAL_IMAGES) | wc -w)); do \
+	for i in $$(seq 1 $$(echo $(FINAL_IMAGES) | wc -w)); do \
 		img=$$(echo $(FINAL_IMAGES) | cut -d' ' -f$$i); \
 		echo "  $$i) $$img"; \
 	done; \
