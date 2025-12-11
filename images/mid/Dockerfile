@@ -39,10 +39,10 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && \
     # Manage extensions
     code-server --install-extension ms-python.python@2025.16.0 && \
-    code-server --install-extension ms-python.debugpy@2025.4.0 && \
-    code-server --install-extension REditorSupport.r@2.8.4 && \
+    code-server --install-extension ms-python.debugpy@2025.16.0 && \
+    code-server --install-extension REditorSupport.r@2.8.6 && \
     # May need to update the language pack
-    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
+    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.107.2025121009 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
