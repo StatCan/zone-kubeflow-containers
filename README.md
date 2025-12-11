@@ -1,34 +1,310 @@
-# Zone-kubeflow-containers
+# Zone Kubeflow Containers
 
-Container images to be used with [The Zone](https://zone.statcan.ca).
-User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
+Custom Docker images for Jupyter-based data science notebooks on [The Zone](https://zone.statcan.ca).
+
+> 🎯 **What is this?** This repository builds specialized Docker container images for Statistics Canada's "Zone" platform. These containers provide ready-to-use Jupyter environments with pre-installed data science tools, programming languages (Python, R, Julia), and specialized kernels (SAS). They're designed to make it easy for data scientists to get started with minimal setup.
+
+---
 
 ## Table of Contents
-<!-- toc -->
-- [Introduction](#introduction)
-- [List of maintained images in this github repository](#list-of-maintained-images-in-this-github-repository)
-- [Usage](#usage)
-  - [Building and Tagging Docker Images](#building-and-tagging-docker-images)
-  - [Pulling and Pushing Docker Images](#pulling-and-pushing-docker-images)
-  - [Testing Images](#testing-images)
-    - [Running and Connecting to Images Locally/Interactively](#running-and-connecting-to-images-locallyinteractively)
-    - [Automated Testing](#automated-testing)
-- [General Development Workflow](#general-development-workflow)
-  - [Overview of Images](#overview-of-images)
-  - [Running A Zone Container Locally](#running-a-zone-container-locally)
-  - [Testing locally](#testing-locally)
-  - [Testing On-Platform](#testing-on-platform)
-  - [Adding new software](#adding-new-software)
-  - [Adding new Images](#adding-new-images)
-  - [Modifying and Testing CI](#modifying-and-testing-ci)
-- [Beta Process](#beta-process)
-- [Other Development Notes](#other-development-notes)
-  - [Github CI](#github-ci)
-  - [The `v2` and `latest` tags for the master branch](#the-v2-and-latest-tags-for-the-master-branch)
-  - [Set User File Permissions](#set-user-file-permissions)
-  - [Troubleshooting](#troubleshooting)
-- [Structure](#structure)
-<!-- tocstop -->
+
+- [Quick Start](#quick-start)
+- [What's Included](#whats-included)
+- [Project Structure](#project-structure)
+- [Development Guide](#development-guide)
+- [Testing](#testing)
+- [Advanced Topics](#advanced-topics)
+- [Resources](#resources)
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Docker Desktop or Docker Engine installed
+- Python 3.10+ (for development)
+- Git
+
+### Setup (5 minutes)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/StatCan/zone-kubeflow-containers.git
+cd zone-kubeflow-containers
+
+# 2. Create development environment
+make install-python-dev-venv
+
+# 3. Build an image
+make bake/base          # Start with the base image
+
+# 4. Run it locally
+make dev/base           # Opens http://localhost:8888 automatically
+```
+
+That's it! You now have a running Jupyter environment.
+
+---
+
+## What's Included
+
+### 📦 Available Images
+
+| Image | Purpose | Tools |
+|-------|---------|-------|
+| **jupyterlab-cpu** | Main data science environment | JupyterLab, Python, R, Julia, SAS Kernel, VS Code |
+| **sas** | SAS-focused environment | Everything in jupyterlab-cpu + SAS Studio |
+| **base** | Foundation layer | Python, Conda, Jupyter, basic tools |
+| **mid** | Extended tools | VS Code, additional languages, custom kernels |
+
+### 🔧 Technical Stack
+
+- **Base**: [Jupyter Docker Stacks](https://github.com/jupyter/docker-stacks) (datascience-notebook)
+- **Container Runtime**: Docker with BuildX for multi-platform builds
+- **Languages**: Python 3, R, Julia
+- **Kernels**: Python, R, SAS
+- **IDEs**: JupyterLab, VS Code
+- **Testing**: pytest with comprehensive integration tests
+
+---
+
+## Project Structure
+
+```
+zone-kubeflow-containers/
+├── images/                    # Docker image definitions
+│   ├── base/                 # Base image (foundation)
+│   ├── mid/                  # Mid-tier image (extended tools)
+│   ├── sas_kernel/           # SAS kernel integration
+│   ├── jupyterlab/           # Final JupyterLab image
+│   └── sas/                  # SAS Studio image
+├── tests/                     # Automated test suite
+│   ├── general/              # Tests for all images
+│   └── jupyterlab-cpu/       # JupyterLab-specific tests
+├── docker-bake.hcl           # Docker Bake configuration
+├── Makefile                  # Build & test commands
+└── requirements-dev.txt      # Python development dependencies
+```
+
+Each `images/*/` directory contains:
+- `Dockerfile` — Build instructions
+- Related configuration files (conda, pip configs, etc.)
+
+---
+
+## Development Guide
+
+### Building Images
+
+Images are built layer-by-layer, with each layer building on the previous:
+
+```
+upstream datascience-notebook
+    ↓
+  base       (adds conda packages, tools)
+    ↓
+  mid        (adds VS Code, kernel tools)
+    ↓
+  sas_kernel (adds SAS kernel)
+    ↓
+  jupyterlab-cpu  (final JupyterLab image)
+  sas             (final SAS Studio image)
+```
+
+Build commands:
+
+```bash
+# Build a specific image
+make bake/jupyterlab-cpu
+
+# Build all images
+make bake/base && make bake/mid && make bake/jupyterlab-cpu
+
+# Build with custom base image
+make bake/base BASE_IMAGE=quay.io/jupyter/datascience-notebook:2025-08-15
+
+# Build for specific registry
+make bake/base REPO=myregistry.azurecr.io
+```
+
+### Running Images Locally
+
+```bash
+# Interactive development (opens browser automatically)
+make dev/jupyterlab-cpu
+
+# Manual docker run
+docker run -p 8888:8888 k8scc01covidacr.azurecr.io/jupyterlab-cpu:latest
+
+# With custom notebook prefix
+docker run -p 8888:8888 -e NB_PREFIX=/my-prefix k8scc01covidacr.azurecr.io/jupyterlab-cpu:latest
+```
+
+### Modifying Images
+
+1. **Edit the Dockerfile** in `images/<image-name>/`
+2. **Rebuild**: `make bake/<image-name>`
+3. **Test**: `make test/<image-name>`
+4. **Commit** and push
+
+Example: Adding a Python package
+
+```dockerfile
+# In images/mid/Dockerfile
+RUN conda install -c conda-forge \
+    my-new-package
+```
+
+---
+
+## Testing
+
+### Quick Start
+
+```bash
+# Run all tests
+make test
+
+# Run only fast tests (skip slow integration tests)
+make test-fast
+
+# Run critical smoke tests
+make test-smoke
+
+# Generate coverage report
+make test-coverage
+```
+
+### Test Types
+
+| Test Type | Purpose | Markers |
+|-----------|---------|---------|
+| **Smoke** | Critical functionality (server startup, basic health) | `@pytest.mark.smoke` |
+| **Integration** | Full container execution (kernel tests, package imports) | `@pytest.mark.integration` |
+| **Slow** | Long-running tests (notebook execution, complex operations) | `@pytest.mark.slow` |
+
+### What Gets Tested
+
+- ✅ Container starts within 60 seconds
+- ✅ Jupyter server responds to HTTP requests
+- ✅ Environment variables correctly configured
+- ✅ Python/R kernels can execute code
+- ✅ Required packages can be imported
+- ✅ System tools available (git, conda, pip, etc.)
+- ✅ File I/O and permissions work
+- ✅ No critical errors in startup logs
+
+For detailed testing information, see [tests/README.md](./tests/README.md).
+
+---
+
+## Advanced Topics
+
+### Adding New Software
+
+Be selective—images are already 14-16GB. Consider:
+
+1. **Is it used by many data scientists?** → Add to this repo
+2. **Is it specialized/niche?** → Consider [aaw-contrib-containers](https://github.com/StatCan/aaw-contrib-containers)
+
+**Process:**
+1. Edit the appropriate Dockerfile in `images/`
+2. Build and test: `make bake/<image> && make test/<image>`
+3. Submit PR for review
+
+### Creating New Images
+
+1. Create directory: `mkdir images/my-image`
+2. Create Dockerfile: `images/my-image/Dockerfile`
+3. Add to `docker-bake.hcl` with proper parent image reference
+4. Add GitHub Actions job to `.github/workflows/docker.yaml`
+5. Create image-specific tests: `mkdir tests/my-image`
+
+### Azure Container Registry (ACR)
+
+```bash
+# Login to ACR (required for push/pull)
+az acr login -n k8scc01covidacr
+
+# Pull existing image
+docker pull k8scc01covidacr.azurecr.io/jupyterlab-cpu:latest
+
+# Push image (after build)
+make push/jupyterlab-cpu REPO=k8scc01covidacr.azurecr.io
+```
+
+### CI/CD Pipeline
+
+GitHub Actions automatically:
+- Builds images on push to `master` or `beta` branches
+- Runs full test suite against each image
+- Scans for security vulnerabilities (Trivy)
+- Pushes to Azure Container Registry
+
+Triggered on:
+- Push to `master` or `beta`
+- Pull requests with changes to `images/`, `tests/`, or workflow files
+
+View workflow status: [Actions tab](https://github.com/StatCan/zone-kubeflow-containers/actions)
+
+### Troubleshooting
+
+**Port 8888 already in use:**
+```bash
+# Windows
+netstat -ano | findstr :8888
+
+# macOS/Linux
+lsof -i :8888
+```
+
+**Image won't start:**
+```bash
+# Check Docker is running
+docker ps
+
+# View container logs
+docker logs <container-id>
+
+# Rebuild from scratch
+make bake/jupyterlab-cpu
+```
+
+**Tests failing locally but not in CI:**
+```bash
+# Ensure dev environment is fresh
+rm -rf .venv
+make install-python-dev-venv
+
+# Rebuild image
+make bake/jupyterlab-cpu
+
+# Run tests with verbose output
+make test-v IMAGE_NAME=jupyterlab-cpu
+```
+
+---
+
+## Resources
+
+### Documentation
+- 📖 [Zone User Documentation](https://zone.pages.cloud.statcan.ca/docs/en/)
+- 📦 [Jupyter Docker Stacks](https://github.com/jupyter/docker-stacks)
+- 🐳 [Docker Documentation](https://docs.docker.com/)
+- 🔨 [Docker Bake Guide](https://docs.docker.com/build/bake/)
+
+### Related Projects
+- [aaw-contrib-containers](https://github.com/StatCan/aaw-contrib-containers) — Community-contributed images
+- [The Zone](https://zone.statcan.ca) — Deployment platform
+
+### Contributing
+We welcome contributions! Please:
+1. Create a feature branch
+2. Make changes and test locally (`make test/my-image`)
+3. Submit a pull request
+4. Wait for CI/CD pipeline to pass
+
+---
 
 ## Introduction
 
