@@ -38,7 +38,27 @@ def image_name():
     image_name = os.getenv(IMAGE_NAME_ENV_VAR)
     LOGGER.debug(f"Found image_name {image_name} in env variable {IMAGE_NAME_ENV_VAR}")
     if image_name is None or len(image_name) == 0:
-        raise ValueError(f"Image name not found in environment variable {IMAGE_NAME_ENV_VAR}.  Did you forget to set it?")
+        error_message = (
+            f"\n{'='*80}\n"
+            f"ERROR: Image name not found in environment variable {IMAGE_NAME_ENV_VAR}\n"
+            f"{'='*80}\n\n"
+            f"To run tests, you need to:\n"
+            f"  1. Build an image first:\n"
+            f"     make bake/base\n"
+            f"     make bake/jupyterlab-cpu\n"
+            f"     make bake/sas\n\n"
+            f"  2. Run tests for that image:\n"
+            f"     make test/base\n"
+            f"     make test/jupyterlab-cpu\n"
+            f"     make test/sas\n\n"
+            f"  3. Or test all images at once:\n"
+            f"     make test\n\n"
+            f"Quick help:\n"
+            f"  make help-test          - Show detailed test help\n"
+            f"  make test-list          - List available images\n"
+            f"{'='*80}\n"
+        )
+        raise ValueError(error_message)
     return image_name
 
 

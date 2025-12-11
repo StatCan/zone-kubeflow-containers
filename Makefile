@@ -73,6 +73,11 @@ push/%:
 ###################################
 ######     Image Testing     ######
 ###################################
+
+# Available images to test
+AVAILABLE_IMAGES := $(notdir $(wildcard images/*/))
+FINAL_IMAGES := base mid sas-kernel jupyterlab-cpu sas
+
 check-python-venv:
 	@if $(PYTHON) --version> /dev/null 2>&1; then \
 		echo "Found dev python venv via $(PYTHON)"; \
@@ -90,32 +95,127 @@ check-port-available:
 
 check-test-prereqs: check-python-venv check-port-available
 
+help-test: ## Show available test commands and images
+	@echo "=============================================================================="; \
+	echo "Test Command Help"; \
+	echo "=============================================================================="; \
+	echo ""; \
+	echo "Quick Start:"; \
+	echo "  make bake/base                    - Build base image"; \
+	echo "  make test/base                    - Test the base image"; \
+	echo ""; \
+	echo "Available Test Commands:"; \
+	echo "  make test/<image>                 - Test specific image (requires image to be built)"; \
+	echo "  make test-list                    - List all available images"; \
+	echo ""; \
+	echo "Test Variants:"; \
+	echo "  make test-smoke/<image>           - Run critical tests only"; \
+	echo "  make test-fast/<image>            - Skip slow and integration tests"; \
+	echo "  make test-coverage/<image>        - Run with coverage report"; \
+	echo ""; \
+	echo "Available Images:"; \
+	@for img in $(FINAL_IMAGES); do echo "  - $$img"; done; \
+	echo ""; \
+	echo "Examples:"; \
+	echo "  make bake/jupyterlab-cpu && make test/jupyterlab-cpu"; \
+	echo "  make bake/sas && make test/sas"; \
+	echo ""
+
+test-list: ## List all available images
+	@echo "Available images for testing:"; \
+	@for img in $(FINAL_IMAGES); do echo "  • $$img"; done
+
+test: ## Run all tests for all available images (builds and tests each)
+	@echo "=============================================================================="; \
+	echo "Testing all available images..."; \
+	echo "=============================================================================="; \
+	@success=true; \
+	for img in $(FINAL_IMAGES); do \
+		echo ""; \
+		echo "Building image: $$img"; \
+		if ! make bake/$$img > /dev/null 2>&1; then \
+			echo "❌ Failed to build $$img"; \
+			success=false; \
+			continue; \
+		fi; \
+		echo "✓ Built $$img"; \
+		echo ""; \
+		echo "Testing image: $$img"; \
+		if make test/$$img; then \
+			echo "✓ All tests passed for $$img"; \
+		else \
+			echo "❌ Tests failed for $$img"; \
+			success=false; \
+		fi; \
+	done; \
+	echo ""; \
+	echo "=============================================================================="; \
+	if [ "$$success" = true ]; then \
+		echo "✓ All images built and tested successfully!"; \
+		exit 0; \
+	else \
+		echo "❌ Some images failed. See above for details."; \
+		exit 1; \
+	fi
+
 install-python-dev-venv:
 	python3 -m venv $(PYTHON_VENV)
 	$(PYTHON) -m pip install -Ur requirements-dev.txt
 	$(PYTHON) -m pip list
 
-test: check-test-prereqs ## Run all unit and integration tests locally
-	@echo "Running all local tests..."
-	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) -v
+test-smoke/%: REPO?=$(DEFAULT_REPO)
+test-smoke/%: TAG?=$(DEFAULT_TAG)
+test-smoke/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
+test-smoke/%: check-test-prereqs ## Run smoke tests for a specific image
+	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
+	TESTS="$(TESTS_DIR)/general";\
+	SPECIFIC_TEST_DIR="$(TESTS_DIR)/$(notdir $@)";\
+	if [ ! -d "$${SPECIFIC_TEST_DIR}" ]; then\
+		echo "No specific tests found for $${SPECIFIC_TEST_DIR}.  Running only general tests";\
+	else\
+		TESTS="$${TESTS} $${SPECIFIC_TEST_DIR}";\
+		echo "Found specific tests folder";\
+	fi;\
+	echo "Running smoke tests on folders '$${TESTS}'";\
+	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest -m "smoke" $${TESTS} -v
 
-test-fast: check-test-prereqs ## Run fast tests only (skip slow and integration tests)
-	@echo "Running fast tests only..."
-	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) -m "not slow and not integration" -v
+test-fast/%: REPO?=$(DEFAULT_REPO)
+test-fast/%: TAG?=$(DEFAULT_TAG)
+test-fast/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
+test-fast/%: check-test-prereqs ## Run fast tests (skip slow/integration) for a specific image
+	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
+	TESTS="$(TESTS_DIR)/general";\
+	SPECIFIC_TEST_DIR="$(TESTS_DIR)/$(notdir $@)";\
+	if [ ! -d "$${SPECIFIC_TEST_DIR}" ]; then\
+		echo "No specific tests found for $${SPECIFIC_TEST_DIR}.  Running only general tests";\
+	else\
+		TESTS="$${TESTS} $${SPECIFIC_TEST_DIR}";\
+		echo "Found specific tests folder";\
+	fi;\
+	echo "Running fast tests on folders '$${TESTS}'";\
+	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest -m "not slow and not integration" $${TESTS} -v
 
-test-smoke: check-test-prereqs ## Run smoke tests only (critical path tests)
-	@echo "Running smoke tests only..."
-	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) -m "smoke" -v
-
-test-coverage: check-test-prereqs ## Run tests with coverage report
-	@echo "Running tests with coverage..."
-	IMAGE_NAME="" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest $(TESTS_DIR) --cov=tests --cov-report=html --cov-report=term -v
-	@echo "Coverage report generated in htmlcov/index.html"
+test-coverage/%: REPO?=$(DEFAULT_REPO)
+test-coverage/%: TAG?=$(DEFAULT_TAG)
+test-coverage/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
+test-coverage/%: check-test-prereqs ## Run tests with coverage for a specific image
+	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
+	TESTS="$(TESTS_DIR)/general";\
+	SPECIFIC_TEST_DIR="$(TESTS_DIR)/$(notdir $@)";\
+	if [ ! -d "$${SPECIFIC_TEST_DIR}" ]; then\
+		echo "No specific tests found for $${SPECIFIC_TEST_DIR}.  Running only general tests";\
+	else\
+		TESTS="$${TESTS} $${SPECIFIC_TEST_DIR}";\
+		echo "Found specific tests folder";\
+	fi;\
+	echo "Running tests with coverage on folders '$${TESTS}'";\
+	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest --cov=tests --cov-report=html --cov-report=term $${TESTS} -v; \
+	echo "Coverage report generated in htmlcov/index.html"
 
 test/%: REPO?=$(DEFAULT_REPO)
 test/%: TAG?=$(DEFAULT_TAG)
 test/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
-test/%: check-test-prereqs # Run all generic and image-specific tests against an image
+test/%: check-test-prereqs ## Run all tests for a specific image
 	# End repo with exactly one trailing slash, unless it is empty
 	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
 	TESTS="$(TESTS_DIR)/general";\
