@@ -38,6 +38,47 @@ BRANCH_NAME := $(shell ./make_helpers/get_branch_name.sh)
 DEFAULT_PORT := 8888
 DEFAULT_NB_PREFIX := /notebook/username/notebookname
 
+# Available images to test
+AVAILABLE_IMAGES := $(notdir $(wildcard images/*/))
+FINAL_IMAGES := base mid sas-kernel jupyterlab-cpu sas
+
+# Autocomplete support
+.PHONY: help _list-images bake test test-smoke test-fast test-coverage dev push post-build
+.PHONY: install-python-dev-venv check-python-venv check-port-available check-test-prereqs
+
+###################################
+######    Default Help Menu   ######
+###################################
+
+help: ## Show all available commands
+	@echo "================================================================================"; \
+	echo "Zone Kubeflow Containers - Available Commands"; \
+	echo "================================================================================"; \
+	echo ""; \
+	echo "BUILDING:"; \
+	echo "  make bake/<image>                 Build a specific image"; \
+	echo "  make push/<image>                 Push image to registry"; \
+	echo ""; \
+	echo "TESTING:"; \
+	echo "  make test                         Test all images (with prompts)"; \
+	echo "  make test/<image>                 Test specific image"; \
+	echo "  make test-smoke/<image>           Run critical tests only"; \
+	echo "  make test-fast/<image>            Skip slow/integration tests"; \
+	echo "  make test-coverage/<image>        Run with coverage report"; \
+	echo ""; \
+	echo "DEVELOPMENT:"; \
+	echo "  make dev/<image>                  Launch container interactively"; \
+	echo "  make install-python-dev-venv      Setup development Python environment"; \
+	echo ""; \
+	echo "AVAILABLE IMAGES:"; \
+	@for img in $(FINAL_IMAGES); do echo "  • $$img"; done; \
+	echo ""; \
+	echo "EXAMPLES:"; \
+	echo "  make bake/jupyterlab-cpu && make test/jupyterlab-cpu"; \
+	echo "  make test-smoke/base"; \
+	echo "  make dev/mid"; \
+	echo ""
+
 ###################################
 ######    Docker helpers     ######
 ###################################
@@ -74,10 +115,6 @@ push/%:
 ######     Image Testing     ######
 ###################################
 
-# Available images to test
-AVAILABLE_IMAGES := $(notdir $(wildcard images/*/))
-FINAL_IMAGES := base mid sas-kernel jupyterlab-cpu sas
-
 check-python-venv:
 	@if $(PYTHON) --version> /dev/null 2>&1; then \
 		echo "Found dev python venv via $(PYTHON)"; \
@@ -95,38 +132,31 @@ check-port-available:
 
 check-test-prereqs: check-python-venv check-port-available
 
-help-test: ## Show available test commands and images
-	@echo "=============================================================================="; \
-	echo "Test Command Help"; \
+test: ## Test all images interactively (with image selection prompts)
+	@echo ""; \
+	echo "Select which image to test:"; \
+	echo ""; \
+	@for i in $$(seq 1 $$(echo $(FINAL_IMAGES) | wc -w)); do \
+		img=$$(echo $(FINAL_IMAGES) | cut -d' ' -f$$i); \
+		echo "  $$i) $$img"; \
+	done; \
+	echo "  *) All images"; \
+	echo ""; \
+	read -p "Enter choice [1-$$(echo $(FINAL_IMAGES) | wc -w),*]: " choice; \
+	if [ "$$choice" = "*" ]; then \
+		make _test-all; \
+	else \
+		img=$$(echo $(FINAL_IMAGES) | cut -d' ' -f$$choice); \
+		if [ -z "$$img" ]; then \
+			echo "Invalid choice"; \
+			exit 1; \
+		fi; \
+		make test/$$img; \
+	fi
+
+_test-all: ## Internal target: test all images
+	@echo ""; \
 	echo "=============================================================================="; \
-	echo ""; \
-	echo "Quick Start:"; \
-	echo "  make bake/base                    - Build base image"; \
-	echo "  make test/base                    - Test the base image"; \
-	echo ""; \
-	echo "Available Test Commands:"; \
-	echo "  make test/<image>                 - Test specific image (requires image to be built)"; \
-	echo "  make test-list                    - List all available images"; \
-	echo ""; \
-	echo "Test Variants:"; \
-	echo "  make test-smoke/<image>           - Run critical tests only"; \
-	echo "  make test-fast/<image>            - Skip slow and integration tests"; \
-	echo "  make test-coverage/<image>        - Run with coverage report"; \
-	echo ""; \
-	echo "Available Images:"; \
-	@for img in $(FINAL_IMAGES); do echo "  - $$img"; done; \
-	echo ""; \
-	echo "Examples:"; \
-	echo "  make bake/jupyterlab-cpu && make test/jupyterlab-cpu"; \
-	echo "  make bake/sas && make test/sas"; \
-	echo ""
-
-test-list: ## List all available images
-	@echo "Available images for testing:"; \
-	@for img in $(FINAL_IMAGES); do echo "  • $$img"; done
-
-test: ## Run all tests for all available images (builds and tests each)
-	@echo "=============================================================================="; \
 	echo "Testing all available images..."; \
 	echo "=============================================================================="; \
 	success=true; \
