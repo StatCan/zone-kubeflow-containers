@@ -115,6 +115,30 @@ class TrackedContainer(object):
         return image.attrs['Config']['Cmd']
 
 
+@pytest.fixture(scope='function', autouse=True)
+def cleanup_containers(docker_client):
+    """Autouse fixture to ensure all containers are cleaned up after each test.
+    
+    This fixture runs automatically for every test and ensures that any containers
+    created during testing are properly removed, even if the test fails. This prevents
+    port conflicts and resource leaks.
+    """
+    yield
+    # Cleanup after test
+    try:
+        containers = docker_client.containers.list(all=True)
+        for container in containers:
+            # Only remove containers that appear to be test containers (running or exited recently)
+            if container.status in ['exited', 'running']:
+                try:
+                    LOGGER.debug(f"Cleaning up container {container.short_id}")
+                    container.remove(force=True)
+                except docker.errors.APIError as e:
+                    LOGGER.warning(f"Failed to remove container {container.short_id}: {e}")
+    except Exception as e:
+        LOGGER.error(f"Error during container cleanup: {e}")
+
+
 @pytest.fixture(scope='function')
 def container(docker_client, image_name, nb_prefix):
     """Notebook container with initial configuration appropriate for testing
