@@ -38,7 +38,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
     # Manage extensions
-    code-server --install-extension ms-python.python@2025.4.0 && \
+    code-server --install-extension ms-python.python@2025.16.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     # May need to update the language pack
