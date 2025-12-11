@@ -60,11 +60,10 @@ help: ## Show all available commands
 	echo "  make push/<image>                 Push image to registry"; \
 	echo ""; \
 	echo "TESTING:"; \
-	echo "  make test                         Test all images (automated with report)"; \
-	echo "  make test/<image>                 Test specific image"; \
-	echo "  make test-smoke/<image>           Run critical tests only"; \
+	echo "  make test                         Quick smoke tests for all images"; \
+	echo "  make test/<image>                 Full test suite for specific image"; \
 	echo "  make test-fast/<image>            Skip slow/integration tests"; \
-	echo "  make test-coverage/<image>        Run with coverage report"; \
+	echo "  make test-smoke/<image>           Critical tests only (fast)"; \
 	echo ""; \
 	echo "DEVELOPMENT:"; \
 	echo "  make dev/<image>                  Launch container interactively"; \
@@ -135,10 +134,10 @@ check-test-prereqs: check-python-venv check-port-available
 test: ## Test all images automatically and show summary report
 	make _test-all
 
-_test-all: ## Internal target: test all images
+_test-all: ## Internal target: test all images with smoke tests (fast validation)
 	@echo ""; \
 	echo "=============================================================================="; \
-	echo "Testing all available images..."; \
+	echo "Testing all available images (smoke tests - critical tests only)..."; \
 	echo "Total images to test: $$(echo $(FINAL_IMAGES) | wc -w)"; \
 	echo "=============================================================================="; \
 	success=true; \
@@ -159,31 +158,36 @@ _test-all: ## Internal target: test all images
 		fi; \
 		echo "✓ Image built successfully"; \
 		echo ""; \
-		echo "[2/2] Running tests for: $$img..."; \
-		echo "(Note: First run may take time while pulling image from registry)"; \
-		if make test/$$img; then \
+		echo "[2/2] Running smoke tests for: $$img..."; \
+		echo "(Running critical tests only - full suite available via 'make test-fast/<image>')"; \
+		if make test-smoke/$$img; then \
 			echo ""; \
-			echo "✓ All tests PASSED for $$img"; \
+			echo "✓ Smoke tests PASSED for $$img"; \
 			passed=$$((passed + 1)); \
 		else \
 			echo ""; \
-			echo "❌ Tests FAILED for $$img"; \
+			echo "❌ Smoke tests FAILED for $$img"; \
 			failed=$$((failed + 1)); \
 			success=false; \
 		fi; \
 	done; \
 	echo ""; \
 	echo "=============================================================================="; \
-	echo "TEST SUMMARY"; \
+	echo "TEST SUMMARY (Smoke Tests)"; \
 	echo "=============================================================================="; \
 	echo "✓ Passed: $$passed"; \
 	echo "❌ Failed: $$failed"; \
 	echo "=============================================================================="; \
+	echo ""; \
+	echo "For more thorough testing use:"; \
+	echo "  make test-fast/<image>       - Skip slow/integration tests"; \
+	echo "  make test/<image>            - Run full test suite"; \
+	echo ""; \
 	if [ "$$success" = true ]; then \
-		echo "✓ All images built and tested successfully!"; \
+		echo "✓ All images passed smoke tests!"; \
 		exit 0; \
 	else \
-		echo "❌ Some images failed. Review details above."; \
+		echo "❌ Some images failed smoke tests. Review details above."; \
 		exit 1; \
 	fi
 
