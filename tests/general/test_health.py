@@ -233,7 +233,7 @@ def test_port_8888_open(container):
     
     # Check if port 8888 is listening
     check_port_cmd = "netstat -tuln | grep 8888 || ss -tuln | grep 8888"
-    result = container.container.exec_run(check_port_cmd, shell=True)
+    result = container.container.exec_run(["bash", "-c", check_port_cmd])
     
     assert result.exit_code == 0, (
         f"Port 8888 does not appear to be listening\n"

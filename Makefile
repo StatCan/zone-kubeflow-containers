@@ -129,7 +129,7 @@ test: ## Run all tests for all available images (builds and tests each)
 	@echo "=============================================================================="; \
 	echo "Testing all available images..."; \
 	echo "=============================================================================="; \
-	@success=true; \
+	success=true; \
 	for img in $(FINAL_IMAGES); do \
 		echo ""; \
 		echo "Building image: $$img"; \
