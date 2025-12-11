@@ -60,7 +60,7 @@ help: ## Show all available commands
 	echo "  make push/<image>                 Push image to registry"; \
 	echo ""; \
 	echo "TESTING:"; \
-	echo "  make test                         Test all images (with prompts)"; \
+	echo "  make test                         Test all images (automated with report)"; \
 	echo "  make test/<image>                 Test specific image"; \
 	echo "  make test-smoke/<image>           Run critical tests only"; \
 	echo "  make test-fast/<image>            Skip slow/integration tests"; \
@@ -132,27 +132,8 @@ check-port-available:
 
 check-test-prereqs: check-python-venv check-port-available
 
-test: ## Test all images interactively (with image selection prompts)
-	@echo ""; \
-	echo "Select which image to test:"; \
-	echo ""; \
-	for i in $$(seq 1 $$(echo $(FINAL_IMAGES) | wc -w)); do \
-		img=$$(echo $(FINAL_IMAGES) | cut -d' ' -f$$i); \
-		echo "  $$i) $$img"; \
-	done; \
-	echo "  *) All images"; \
-	echo ""; \
-	read -p "Enter choice [1-$$(echo $(FINAL_IMAGES) | wc -w),*]: " choice; \
-	if [ "$$choice" = "*" ]; then \
-		make _test-all; \
-	else \
-		img=$$(echo $(FINAL_IMAGES) | cut -d' ' -f$$choice); \
-		if [ -z "$$img" ]; then \
-			echo "Invalid choice"; \
-			exit 1; \
-		fi; \
-		make test/$$img; \
-	fi
+test: ## Test all images automatically and show summary report
+	make _test-all
 
 _test-all: ## Internal target: test all images
 	@echo ""; \
