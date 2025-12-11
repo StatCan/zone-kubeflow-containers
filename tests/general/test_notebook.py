@@ -42,5 +42,15 @@ def test_server_alive(container, http_client, url="http://localhost:8888"):
     for i, (text, assertion) in enumerate(zip(assertion_expected_texts, assertions)):
         LOGGER.debug(f"{i}: '{text}' in resp.text = {assertion}")
 
-    assert any(assertions), "Image does not appear to start to JupyterLab page.  " \
-                            "Try starting yourself and browsing to it to see what is happening"
+    # Provide detailed error message if all assertions fail
+    error_message = (
+        f"Server at {url} did not return a recognizable interface.\n"
+        f"HTTP Status: {resp.status_code}\n"
+        f"Expected one of the following in response:\n"
+    )
+    for i, text in enumerate(assertion_expected_texts):
+        error_message += f"  {i+1}. '{text}'\n"
+    error_message += f"\nActual response (first 500 chars):\n{resp.text[:500]}\n"
+    error_message += "Try accessing the server manually to diagnose the issue."
+
+    assert any(assertions), error_message
