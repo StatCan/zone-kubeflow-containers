@@ -22,7 +22,6 @@ import pytest
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.smoke
 @pytest.mark.integration
 def test_server_startup_time(container, http_client, url="http://localhost:8888"):
     """Test that the Jupyter server starts within a reasonable timeframe."""
