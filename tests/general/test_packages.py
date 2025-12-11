@@ -102,7 +102,8 @@ EXCLUDED_PACKAGES = [
     # Python
     "graphviz",
     "mkl",
-    # pytables has been added because it is causing issues, TODO: understand issue and resolve
+    # pytables excluded from testing due to import issues
+    # (See: https://github.com/PyTables/PyTables/issues or related issues)
     # pytables is the package but we import tables
     "tables",
     "pytables",
