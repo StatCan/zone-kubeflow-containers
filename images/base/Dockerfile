@@ -85,6 +85,8 @@ RUN apt-get update --yes \
         libfribidi-dev \
         # Use headless Java to save space
         openjdk-8-jre-headless \
+        # Network utilities for testing and diagnostics
+        iproute2 \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
 
