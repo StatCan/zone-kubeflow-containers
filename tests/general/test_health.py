@@ -223,17 +223,40 @@ def test_container_logs_no_critical_errors(container):
 
 
 @pytest.mark.integration
-def test_port_8888_open(container):
+def test_port_8888_open(container, http_client, url="http://localhost:8888"):
     """Test that port 8888 is open and listening inside the container."""
     LOGGER.info("Testing that port 8888 is listening...")
-    
+
+    nb_prefix = container.kwargs['environment']['NB_PREFIX']
+    url_with_prefix = f"{url}{nb_prefix}/"
+
     container.run()
-    time.sleep(5)
-    
+
+    # Wait for the server to be responsive via HTTP first (like other tests do)
+    # This ensures the server is fully initialized before checking the port
+    max_wait = 30  # seconds
+    start_time = time.time()
+    server_ready = False
+
+    while time.time() - start_time < max_wait and not server_ready:
+        try:
+            resp = http_client.get(url_with_prefix, timeout=5)
+            if resp.status_code == 200:
+                server_ready = True
+                break
+        except Exception:
+            time.sleep(1)  # Wait a bit before retrying
+
+    if not server_ready:
+        raise AssertionError(f"Server did not become responsive within {max_wait} seconds")
+
+    # Additional small delay to ensure port is fully listening
+    time.sleep(2)
+
     # Check if port 8888 is listening
     check_port_cmd = "netstat -tuln | grep 8888 || ss -tuln | grep 8888"
     result = container.container.exec_run(["bash", "-c", check_port_cmd])
-    
+
     assert result.exit_code == 0, (
         f"Port 8888 does not appear to be listening\n"
         f"Command output: {result.output.decode('utf-8')}"
