@@ -9,3 +9,8 @@ __pycache__
 node_modules
 package-lock.json
 package.json
+
+# Test coverage and output
+htmlcov/
+.coverage
+.pytest_cache/
