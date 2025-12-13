@@ -267,19 +267,25 @@ import sys
 # Test core Jupyter packages
 try:
     import jupyter
-    print(f"Jupyter: {jupyter.__version__}")
+    # Some installations may not have __version__ attribute
+    jupyter_version = getattr(jupyter, '__version__', 'unknown')
+    print(f"Jupyter: {jupyter_version}")
 except ImportError:
     print("Jupyter not available")
 
 try:
     import notebook
-    print(f"Notebook: {notebook.__version__}")
+    # Some installations may not have __version__ attribute
+    notebook_version = getattr(notebook, '__version__', 'unknown')
+    print(f"Notebook: {notebook_version}")
 except ImportError:
     print("Notebook not available")
 
 try:
     import jupyterlab
-    print(f"JupyterLab: {jupyterlab.__version__}")
+    # Some installations may not have __version__ attribute
+    jupyterlab_version = getattr(jupyterlab, '__version__', 'unknown')
+    print(f"JupyterLab: {jupyterlab_version}")
 except ImportError:
     print("JupyterLab not available")
 
