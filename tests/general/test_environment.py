@@ -19,6 +19,8 @@ import os
 
 import pytest
 
+from .wait_utils import wait_for_http_response
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -48,26 +50,36 @@ def test_nb_prefix_env_variable_set(container):
 def test_nb_prefix_in_url(container, http_client, url="http://localhost:8888"):
     """Test that NB_PREFIX is correctly applied to request URLs."""
     LOGGER.info("Testing NB_PREFIX in URL...")
-    
+
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
     url_with_prefix = f"{url}{nb_prefix}/"
-    
+
     container.run()
-    
-    try:
-        resp = http_client.get(url_with_prefix, timeout=10)
-    except Exception as e:
+
+    # Wait for server to respond to HTTP requests with exponential backoff
+    success = wait_for_http_response(
+        http_client=http_client,
+        url=url_with_prefix,
+        expected_status=200,
+        timeout=30,
+        initial_delay=0.5,
+        max_delay=3.0
+    )
+
+    if not success:
         raise AssertionError(
-            f"Failed to access URL with NB_PREFIX: {url_with_prefix}\n"
-            f"Error: {e}"
+            f"Failed to access URL with NB_PREFIX: {url_with_prefix} within 30 seconds"
         )
-    
+
+    # Make final verification request
+    resp = http_client.get(url_with_prefix, timeout=10)
+
     assert resp.status_code == 200, (
         f"URL with NB_PREFIX returned {resp.status_code}\n"
         f"URL: {url_with_prefix}\n"
         f"NB_PREFIX: {nb_prefix}"
     )
-    
+
     LOGGER.info(f"NB_PREFIX URL accessible: {url_with_prefix}")
 
 
@@ -75,28 +87,38 @@ def test_nb_prefix_in_url(container, http_client, url="http://localhost:8888"):
 def test_nb_prefix_empty_string(container, http_client, url="http://localhost:8888"):
     """Test that empty NB_PREFIX works correctly."""
     LOGGER.info("Testing empty NB_PREFIX...")
-    
+
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
-    
+
     # If NB_PREFIX is empty, URL should be clean without trailing slashes
     if nb_prefix == "":
         url_to_test = f"{url}/"
-        
+
         container.run()
-        
-        try:
-            resp = http_client.get(url_to_test, timeout=10)
-        except Exception as e:
+
+        # Wait for server to respond to HTTP requests with exponential backoff
+        success = wait_for_http_response(
+            http_client=http_client,
+            url=url_to_test,
+            expected_status=200,
+            timeout=30,
+            initial_delay=0.5,
+            max_delay=3.0
+        )
+
+        if not success:
             raise AssertionError(
-                f"Failed to access root URL with empty NB_PREFIX: {url_to_test}\n"
-                f"Error: {e}"
+                f"Failed to access root URL with empty NB_PREFIX: {url_to_test} within 30 seconds"
             )
-        
+
+        # Make final verification request
+        resp = http_client.get(url_to_test, timeout=10)
+
         assert resp.status_code == 200, (
             f"Root URL with empty NB_PREFIX returned {resp.status_code}\n"
             f"URL: {url_to_test}"
         )
-        
+
         LOGGER.info("Empty NB_PREFIX handled correctly")
     else:
         LOGGER.info(f"Skipping empty NB_PREFIX test (NB_PREFIX='{nb_prefix}')")

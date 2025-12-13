@@ -2,6 +2,8 @@
 # Distributed under the terms of the Modified BSD License.
 import logging
 
+from .wait_utils import wait_for_http_response
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -14,6 +16,20 @@ def test_server_alive(container, http_client, url="http://localhost:8888"):
     LOGGER.info("Running test_server_alive")
     LOGGER.info("launching the container")
     container.run()
+
+    # Wait for server to respond to HTTP requests with exponential backoff
+    success = wait_for_http_response(
+        http_client=http_client,
+        url=url,
+        expected_status=200,
+        timeout=60,
+        initial_delay=0.5,
+        max_delay=3.0
+    )
+
+    if not success:
+        raise AssertionError(f"Failed to connect to server at {url} within 60 seconds")
+
     LOGGER.info(f"accessing {url}")
     resp = http_client.get(url)
     resp.raise_for_status()
