@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 import logging
 
-from .wait_utils import wait_for_http_response
+from tests.general.wait_utils import wait_for_http_response
 
 LOGGER = logging.getLogger(__name__)
 

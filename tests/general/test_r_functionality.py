@@ -19,7 +19,7 @@ import time
 
 import pytest
 
-from .wait_utils import wait_for_exec_success
+from tests.general.wait_utils import wait_for_exec_success
 
 LOGGER = logging.getLogger(__name__)
 

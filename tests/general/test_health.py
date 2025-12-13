@@ -19,7 +19,7 @@ import time
 
 import pytest
 
-from .wait_utils import (
+from tests.general.wait_utils import (
     wait_for_http_response,
     wait_for_condition,
     wait_for_port_open
