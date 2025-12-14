@@ -104,22 +104,37 @@ Once the docker container is running, it will serve a localhost url to connect t
 
 Automated tests are included for the generated Docker images using `pytest`.
 This testing suite is modified from the [docker-stacks](https://github.com/jupyter/docker-stacks) test suite.
-Image testing is invoked through `make test/IMAGENAME`
-(with optional `REPO` and `TAG` arguments like `make build`).
+Image testing is invoked through various `make test-*` commands:
+
+- `make test/IMAGENAME` - Run full test suite for a specific image
+- `make test-smoke/IMAGENAME` - Run critical path tests only (fast)
+- `make test-fast/IMAGENAME` - Run all tests except slow/integration tests
+- `make test-coverage/IMAGENAME` - Run tests and generate coverage reports
 
 Testing of a given image consists of general and image-specific tests:
 
 ```
 └── tests
-    ├── general                             # General tests applied to all images
-    │   └── some_general_test.py
-    └── jupyterlab-cpu                      # Test applied to a specific image
-        └── some_jupyterlab-cpu-specific_test.py
+    ├── general/                            # General tests applied to all images
+    │   ├── wait_utils.py                   # Polling utilities with exponential backoff
+    │   ├── test_health.py                  # Server health and readiness checks
+    │   ├── test_kernel_execution.py        # Kernel functionality tests
+    │   ├── test_environment.py             # Environment variable configuration
+    │   ├── test_notebook.py                # Notebook server functionality
+    │   ├── test_packages.py                # Package import verification
+    │   ├── test_r_functionality.py         # R language functionality
+    │   ├── test_code_server.py             # Code-server functionality
+    │   ├── test_python_data_science.py     # Python data science stack
+    │   ├── test_rstudio_web.py             # RStudio integration tests
+    │   ├── test_negative_scenarios.py      # Error handling and failure tests
+    │   └── README.md                       # Test suite documentation
+    └── IMAGENAME/                          # Test applied to a specific image
+        └── some_image_specific_test.py
 ```
 
 Where `tests/general` tests are applied to all images,
 and `tests/IMAGENAME` are applied only to a specific image.
-Pytest will start the image locally and then run the provided tests to determine if Jupyterlab is running, python packages are working properly, etc.
+Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, Python packages are working properly, etc.
 Tests are formatted using typical pytest formats
 (python files with `def test_SOMETHING()` functions).
 `conftest.py` defines some standard scaffolding for image management, etc.
@@ -177,6 +192,40 @@ The workflows will trigger on the following:
 This allows for easy scanning and automated testing for images.
 
 [![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bryan/coverage-badge-endpoint/main/coverage.json)](https://github.com/StatCan/zone-kubeflow-containers)
+
+### Testing Strategies
+
+Our test suite employs multiple strategies to ensure reliability and comprehensive coverage:
+
+**Unit Tests**: Individual component verification for packages and binaries
+**Integration Tests**: End-to-end functionality verification across components
+**Performance Tests**: Timing verification and resource usage validation
+**Negative Tests**: Error handling and failure scenario testing
+**Smoke Tests**: Critical path verification for quick validation
+
+### Test Categories
+
+The test suite is organized into these categories:
+
+| Category | Purpose | Location |
+|----------|---------|----------|
+| Core Health Tests | Server availability and responsiveness | `test_health.py` |
+| Kernel Execution Tests | Python, R, and Julia kernel functionality | `test_kernel_execution.py` |
+| Data Science Tests | Package verification and workflow testing | `test_python_data_science.py` |
+| Language Support Tests | R, Python, Julia functionality | `test_r_functionality.py` |
+| Code Editor Tests | Code-server functionality | `test_code_server.py` |
+| Negative Scenario Tests | Error handling and failure conditions | `test_negative_scenarios.py` |
+
+### Reliable Timing
+
+Tests now use intelligent polling mechanisms instead of fixed sleep times:
+
+- **Exponential Backoff**: Adaptive waiting with increasing intervals
+- **Jitter**: Randomization to prevent synchronized polling
+- **Timeout Handling**: Graceful failure when conditions aren't met
+- **Readiness Checks**: Proper server/container readiness verification
+
+This approach eliminates flaky tests caused by timing issues across different environments.
 
 After the workflow is complete,
 the images will be available on artifactory.cloud.statcan.ca/das-aaw-docker.
@@ -281,6 +330,58 @@ When using both a startup script and a service script, environment variables dec
 
 To circumvent this limitation, if you need to declare new environment variables from a custom script, you can first create a custom environment location, like `/run/s6-env`. Then, you can store your new environment variables in that new location, using for example `echo ${TEST_ENV_VAR} > /run/s6-env/TEST_ENV_VAR`. 
 Then, when executing the long-running service, you can use `s6-envdir /run/s6-env` to point to your custom environment location in the `exec` command.
+
+### Testing Quick Reference
+
+To help users quickly understand the available testing commands:
+
+#### Running Tests
+
+```bash
+# Install dev dependencies first
+make install-python-dev-venv
+
+# Run tests for a specific image
+make test/jupyterlab-cpu
+make test/base
+make test/sas
+
+# Run smoke tests (fast, critical path only)
+make test-smoke/jupyterlab-cpu
+
+# Run fast tests (skip slow/integration tests)
+make test-fast/jupyterlab-cpu
+
+# Run tests with coverage reporting
+make test-coverage/jupyterlab-cpu
+
+# Run all tests automatically
+make test
+```
+
+#### Test Markers
+
+Tests are categorized with markers for selective execution:
+
+| Marker | Purpose | Example |
+|--------|---------|---------|
+| `@pytest.mark.smoke` | Critical path tests only | Fast validation |
+| `@pytest.mark.integration` | Tests requiring Docker | Container execution |
+| `@pytest.mark.slow` | Long-running tests | Skip with `-m "not slow"` |
+| `@pytest.mark.info` | Informational/diagnostic tests | Skip by default |
+
+#### Running Selective Tests
+
+```bash
+# Run only smoke tests
+pytest -m smoke
+
+# Run all except slow tests
+pytest -m "not slow"
+
+# Run integration tests only
+pytest -m integration
+```
 
 ### Modifying and Testing CI
 
@@ -432,21 +533,34 @@ This was tested on Linux Ubuntu 20.04 virtual machine.
 ├── Makefile                                # Controls the interactions with docker commands
 │
 ├── make_helpers                            # Scripts used by makefile
-│   ├── get_branch_name.sh
-│   ├── get-nvidia-stuff.sh
-│   └── post-build-hook.sh
+│   ├── get_branch_name.sh
+│   ├── get-nvidia-stuff.sh
+│   └── post-build-hook.sh
 │
 ├── images                                  # Dockerfile and required resources for stage builds
-│   ├── base                                # Common base of the images
-│   ├── jupyterlab                          # Jupyterlab specific Dockerfile
-│   ├── mid                                 # Common mid point for all images
-│   ├── sas                                 # SAS specific Dockerfile
-|   └── sas_kernel                          # Dockerfile for installation of sas_kernel
+│   ├── base                                # Common base of the images
+│   ├── jupyterlab                          # Jupyterlab specific Dockerfile
+│   ├── mid                                 # Common mid point for all images
+│   ├── sas                                 # SAS specific Dockerfile
+│   └── sas_kernel                          # Dockerfile for installation of sas_kernel
 │
 ├── docs                                    # files/images used in documentation (ex. Readme's)
 │
 └── tests
     ├── general/                            # General tests applied to all images
+    │   ├── wait_utils.py                   # Polling utilities with exponential backoff
+    │   ├── test_health.py                  # Server health and readiness checks
+    │   ├── test_kernel_execution.py        # Kernel functionality tests
+    │   ├── test_environment.py             # Environment variable configuration
+    │   ├── test_notebook.py                # Notebook server functionality
+    │   ├── test_packages.py                # Package import verification
+    │   ├── test_r_functionality.py         # R language functionality
+    │   ├── test_code_server.py             # Code-server functionality
+    │   ├── test_python_data_science.py     # Python data science stack
+    │   ├── test_rstudio_web.py             # RStudio integration tests
+    │   ├── test_negative_scenarios.py      # Error handling and failure tests
+    │   └── README.md                       # Test suite documentation
     ├── jupyterlab-cpu/                     # Test applied to a specific image
-    └── README.md
+    ├── sas/                                # Test applied to a specific image
+    └── sas-kernel/                         # Test applied to a specific image
 ```
