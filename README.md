@@ -176,6 +176,8 @@ The workflows will trigger on the following:
 
 This allows for easy scanning and automated testing for images.
 
+[![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bryan/coverage-badge-endpoint/main/coverage.json)](https://github.com/StatCan/zone-kubeflow-containers)
+
 After the workflow is complete,
 the images will be available on artifactory.cloud.statcan.ca/das-aaw-docker.
 You can access these images on https://zone.statcan.ca using any of the following:

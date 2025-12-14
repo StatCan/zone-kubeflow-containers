@@ -74,6 +74,18 @@ jobs:
       - name: Test image
         run: make test/${{ inputs.image }} TAG=${{ inputs.tag }}
 
+      - name: Generate test coverage report
+        run: make test-coverage/${{ inputs.image }} TAG=${{ inputs.tag }}
+
+      # Upload coverage to Codecov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml  # Assuming coverage is generated in standard format
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
       # Free up space from build process (containerscan action will run out of space if we don't)
       - name: cleanup runner
         run: ./.github/scripts/cleanup_runner.sh
