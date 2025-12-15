@@ -7,7 +7,7 @@ import pytest
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.mark.skip(reason="Not yet compliant with JupyterLab 3")
+@pytest.mark.xfail(reason="Not yet compliant with JupyterLab 3", strict=False)
 @pytest.mark.parametrize(
     "extension",
     [

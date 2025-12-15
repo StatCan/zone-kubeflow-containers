@@ -17,6 +17,8 @@ def _execute_on_container(package_helper, command):
     LOGGER.debug(f"Running command [{command}] ...")
     return package_helper.running_container.exec_run(command)
 
+@pytest.mark.integration
+@pytest.mark.smoke
 def test_rstudio(package_helper):
     result = _execute_on_container(package_helper, ["rstudio-server", "start"])
     LOGGER.info(f"starting up rstudio: {result}")

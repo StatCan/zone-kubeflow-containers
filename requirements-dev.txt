@@ -1,6 +1,9 @@
 docker
 # pre-commit
 pytest
+pytest-cov
+pytest-timeout
+pytest-retry
 recommonmark
 requests==2.31.0
 # sphinx>=1.6
