@@ -266,8 +266,8 @@ import sys
 
 # Test core Jupyter packages
 try:
-    import jupyter
-    print(f"Jupyter: {jupyter.__version__}")
+    import jupyter_core
+    print(f"Jupyter: {jupyter_core.__version__}")
 except ImportError:
     print("Jupyter not available")
 
