@@ -1,5 +1,7 @@
 # Zone-kubeflow-containers
 
+[![codecov](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg)](https://codecov.io/gh/StatCan/zone-kubeflow-containers)
+
 Container images to be used with [The Zone](https://zone.statcan.ca).
 User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
 
@@ -13,6 +15,9 @@ User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
   - [Testing Images](#testing-images)
     - [Running and Connecting to Images Locally/Interactively](#running-and-connecting-to-images-locallyinteractively)
     - [Automated Testing](#automated-testing)
+      - [Available Test Commands](#available-test-commands)
+      - [Common Workflows](#common-workflows)
+      - [Troubleshooting](#troubleshooting)
 - [General Development Workflow](#general-development-workflow)
   - [Overview of Images](#overview-of-images)
   - [Running A Zone Container Locally](#running-a-zone-container-locally)
@@ -102,27 +107,100 @@ Once the docker container is running, it will serve a localhost url to connect t
 
 #### Automated Testing
 
-Automated tests are included for the generated Docker images using `pytest`.
-This testing suite is modified from the [docker-stacks](https://github.com/jupyter/docker-stacks) test suite.
-Image testing is invoked through `make test/IMAGENAME`
-(with optional `REPO` and `TAG` arguments like `make build`).
+Automated tests are included for the generated Docker images using `pytest`. This testing suite is modified from the [docker-stacks](https://github.com/jupyter/docker-stacks) test suite. Image testing is invoked through `make test/IMAGENAME` (with optional `REPO` and `TAG` arguments like `make build`).
+
+##### Available Test Commands
+
+**Get Help and List Images:**
+```bash
+make help                    # Show all available commands (including test options)
+make test                    # Run quick smoke tests for all images
+```
+
+**Test Specific Image:**
+```bash
+# First, build the image
+make bake/base
+make bake/jupyterlab-cpu
+make bake/sas
+
+# Then test it
+make test/base
+make test/jupyterlab-cpu
+make test/sas
+```
+
+**Test Variants:**
+```bash
+# Run only critical smoke tests (fast feedback)
+make test-smoke/base
+make test-smoke/jupyterlab-cpu
+
+# Skip slow and integration tests (for quick iteration)
+make test-fast/base
+make test-fast/jupyterlab-cpu
+
+# Generate coverage reports
+make test-coverage/base
+make test-coverage/jupyterlab-cpu
+```
+
+**Available Images for Testing:**
+- `base` — Foundation image
+- `mid` — Extended tools and kernels
+- `sas-kernel` — SAS kernel integration
+- `jupyterlab-cpu` — Full JupyterLab environment
+- `sas` — SAS Studio environment
+
+##### Common Workflows
+
+**Quick Development Iteration:**
+```bash
+# Build and test quickly (smoke tests only)
+make bake/jupyterlab-cpu && make test-smoke/jupyterlab-cpu
+```
+
+**Full Validation:**
+```bash
+# Build and run all tests
+make bake/jupyterlab-cpu && make test/jupyterlab-cpu
+```
+
+**Coverage Analysis:**
+```bash
+# Build image
+make bake/base
+
+# Generate coverage report
+make test-coverage/base
+
+# View HTML report (location varies by OS)
+open htmlcov/index.html  # Mac
+xdg-open htmlcov/index.html  # Linux
+start htmlcov/index.html  # Windows
+```
+
+##### Troubleshooting
+
+If you see `Image name not found in environment variable IMAGE_NAME`, you need to:
+
+1. **Build an image first**: `make bake/<image-name>`
+2. **Then test it**: `make test/<image-name>`
+
+Or use the all-in-one command:
+```bash
+make test  # builds and tests everything
+```
 
 Testing of a given image consists of general and image-specific tests:
 
 ```
 └── tests
     ├── general                             # General tests applied to all images
-    │   └── some_general_test.py
     └── jupyterlab-cpu                      # Test applied to a specific image
-        └── some_jupyterlab-cpu-specific_test.py
 ```
 
-Where `tests/general` tests are applied to all images,
-and `tests/IMAGENAME` are applied only to a specific image.
-Pytest will start the image locally and then run the provided tests to determine if Jupyterlab is running, python packages are working properly, etc.
-Tests are formatted using typical pytest formats
-(python files with `def test_SOMETHING()` functions).
-`conftest.py` defines some standard scaffolding for image management, etc.
+Where `tests/general` tests are applied to all images, and `tests/IMAGENAME` are applied only to a specific image. Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, python packages are working properly, etc. Tests are formatted using typical pytest formats (python files with `def test_SOMETHING()` functions). `conftest.py` defines some standard scaffolding for image management, etc.
 
 ---
 
