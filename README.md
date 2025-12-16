@@ -27,6 +27,7 @@
 ```
 
 Container images to be used with [The Zone](https://zone.statcan.ca).
+
 User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
 
 ## Table of Contents
@@ -68,20 +69,19 @@ These customized images are maintained by the Zone team and are the default imag
 
 ## Quick Start for New Developers
 
-Get up and running quickly with these steps:
+Get up and running quickly with:
 
-1. **Prerequisites**: Install Docker, Python 3.8+, and Make
-2. **Clone and setup**:
-   ```bash
-   git clone https://github.com/StatCan/zone-kubeflow-containers
-   make install-python-dev-venv
-   ```
-3. **Build and run a test image**:
-   ```bash
-   make bake/jupyterlab-cpu
-   make test-smoke/jupyterlab-cpu
-   make dev/jupyterlab-cpu
-   ```
+**Clone and setup**:
+```bash
+git clone https://github.com/StatCan/zone-kubeflow-containers
+make install-python-dev-venv
+```
+**Build and run a test image**:
+```bash
+make bake/jupyterlab-cpu
+make test-smoke/jupyterlab-cpu
+make dev/jupyterlab-cpu
+```
 
 This will build the jupyterlab-cpu image, run quick smoke tests, and start an interactive container at http://localhost:8888.
 
@@ -467,16 +467,13 @@ This release can help us communicate what changes have been done to our containe
 ### Github CI
 
 The Github workflow is set up to build the images and their dependant stages.
+
 See below for a flowchart of this build.
 
-The main workflow is `docker.yaml`,
-it controls the stage build order, and what triggers the CI.
-(Pushes to master, pushes to an open pull-request, and nightly builds)
+The main workflow is `docker.yaml`, it controls the stage build order, and what triggers the CI. (Pushes to master, pushes to an open pull-request, and nightly builds)
 
-The building of a stage is controled by `docker-steps.yaml`.
-It checks if there are changes to the stage or dependant stages.
-Builds a new image if there are changes, 
-or pulls a copy of the existing image if not.
+The building of a stage is controled by `docker-steps.yaml`. It checks if there are changes to the stage or dependant stages. Builds a new image if there are changes, or pulls a copy of the existing image if not.
+
 Testing will be performed if this is the final stage in the build of an image.
 
 ![A flowchart of the Github CI workflow](./docs/images/Workflows.png)
@@ -569,11 +566,10 @@ make help
 docker container prune
 ```
 
-If running using a VM and RStudio image was built successfully but is not opening correctly on localhost (error 5000 page),
+- If running using a VM and RStudio image was built successfully but is not opening correctly on localhost (error 5000 page),
 change your CPU allocation in your Linux VM settings to >= 3.
-You can also use your VM's system monitor to examine if all CPUs are 100% being used as your container is running.
-If so, increase CPU allocation.
-This was tested on Linux Ubuntu 20.04 virtual machine.
+- You can also use your VM's system monitor to examine if all CPUs are 100% being used as your container is running.
+- If so, increase CPU allocation. This was tested on Linux Ubuntu 20.04 virtual machine.
 
 ## Repository Structure
 
