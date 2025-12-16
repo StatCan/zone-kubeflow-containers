@@ -1,6 +1,11 @@
 # Zone Kubeflow Containers
 
 [![codecov](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg)](https://codecov.io/gh/StatCan/zone-kubeflow-containers)
+[![Python Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=python-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=python-tests)
+[![R Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=r-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=r-tests)
+[![Julia Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=julia-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=julia-tests)
+[![SAS Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=sas-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=sas-tests)
+[![Kubeflow Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=kubeflow-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=kubeflow-tests)
 
 ```
 ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄   ▄▄▄    ▄▄▄  ▄▄▄▄▄▄▄
