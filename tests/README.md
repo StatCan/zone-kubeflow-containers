@@ -32,17 +32,21 @@ make test/base
 ## Test Structure
 
 ### Test Directories
-- **`general/`** — Tests that run on all images
+- **`general/`** — Infrastructure and core functionality tests that run on all images
   - `test_health.py` — Health checks and readiness tests
   - `test_environment.py` — Environment variables and configuration
   - `test_kernel_execution.py` — Kernel execution and notebook functionality
   - `test_notebook.py` — Jupyter server startup
   - `test_packages.py` — Package import verification
-- **`jupyterlab-cpu/`** — JupyterLab-specific tests
+  - `test_code_server.py` — VS Code server functionality
+  - `test_rstudio.py` — RStudio server functionality
+  - `test_kubeflow_integration.py` — Kubeflow platform integration
+- **`jupyterlab-cpu/`** — User-facing data science package tests
+  - `test_python_data_science.py` — Python data science stack (pandas, numpy, matplotlib, etc.)
+  - `test_r_functionality.py` — R language and packages functionality
+  - `test_julia.py` — Julia language and packages functionality
+  - `test_sas.py` — SAS language and saspy integration functionality
   - `test_extensions.py` — JupyterLab extension checks
-  - `test_matplotlib.py` — Matplotlib functionality
-  - `test_pandas.py` — Pandas functionality
-  - `test_julia.py` — Julia language support
 
 ## Test Markers
 
@@ -182,6 +186,7 @@ make test/my-image
 - JupyterLab extension tests marked as `@pytest.mark.xfail` (see `test_extensions.py`)
 - pytables import test excluded due to known compatibility issues
 - Some R tests may be skipped if R kernel not installed
+- SAS and saspy tests may be skipped if SAS is not available in the image
 
 ## References
 
