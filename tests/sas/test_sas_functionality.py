@@ -478,18 +478,17 @@ try:
     sas = saspy.SASsession()
     
     # Run a simple SAS command to verify connection
-    result = sas.submit('''
-        options obs=10;
-        data test;
-            input x y;
-            datalines;
-        1 2
-        3 4
-        5 6
-        ;
-        run;
-        proc print data=test; run;
-    ''')
+    result = sas.submit("""options obs=10;
+data test;
+    input x y;
+    datalines;
+1 2
+3 4
+5 6
+;
+run;
+proc print data=test; run;
+""")
     
     print("saspy connection established and basic SAS code executed")
     
@@ -595,18 +594,17 @@ try:
     sas = saspy.SASsession()
     
     # Create a simple dataset in SAS
-    sas.submit('''
-        data sample_data;
-            input id name $ age score;
-            datalines;
-        1 Alice 25 85
-        2 Bob 30 92
-        3 Charlie 35 78
-        4 Diana 28 96
-        5 Eve 32 88
-        ;
-        run;
-    ''')
+    sas.submit("""data sample_data;
+    input id name $ age score;
+    datalines;
+1 Alice 25 85
+2 Bob 30 92
+3 Charlie 35 78
+4 Diana 28 96
+5 Eve 32 88
+;
+run;
+""")
     
     # Access the data using saspy
     table = sas.sasdata("sample_data", results='text')
@@ -663,16 +661,15 @@ try:
     sas = saspy.SASsession()
     
     # Create sample data
-    sas.submit('''
-        data stat_data;
-            input treatment $ response @@;
-            datalines;
-        A 12 A 15 A 14 A 13 A 16
-        B 18 B 20 B 19 B 17 B 21
-        C 10 C 11 C 9 C 12 C 13
-        ;
-        run;
-    ''')
+    sas.submit("""data stat_data;
+    input treatment $ response @@;
+    datalines;
+A 12 A 15 A 14 A 13 A 16
+B 18 B 20 B 19 B 17 B 21
+C 10 C 11 C 9 C 12 C 13
+;
+run;
+""")
     
     # Use saspy to run statistical procedures
     stat_data = sas.sasdata("stat_data", results='text')
