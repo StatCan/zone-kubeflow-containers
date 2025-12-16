@@ -242,8 +242,8 @@ test-coverage/%: check-test-prereqs ## Run tests with coverage for a specific im
 		echo "Found specific tests folder";\
 	fi;\
 	echo "Running tests with coverage on folders '$${TESTS}'";\
-	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest --cov=tests --cov-report=html --cov-report=term $${TESTS} -v; \
-	echo "Coverage report generated in htmlcov/index.html"
+	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest --cov=tests --cov-report=html --cov-report=xml:coverage.xml --cov-report=term $${TESTS} -v; \
+	echo "Coverage report generated in htmlcov/index.html and coverage.xml"
 
 test/%: REPO?=$(DEFAULT_REPO)
 test/%: TAG?=$(DEFAULT_TAG)
