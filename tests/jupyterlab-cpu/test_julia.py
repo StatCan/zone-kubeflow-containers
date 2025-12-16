@@ -30,7 +30,7 @@ def julia_basic_helper(container):
     container.run()
     
     # Wait for container to be ready to execute commands
-    check_cmd = ["julia", "--startup-file=no", "-e", "Base.banner()"]
+    check_cmd = ["julia", "--startup-file=no", "-e", "1"]
     success, output = wait_for_exec_success(
         container=container,
         command=check_cmd,
@@ -51,7 +51,7 @@ def julia_comprehensive_helper(container):
     container.run()
 
     # Wait for container to be ready to execute commands
-    check_cmd = ["julia", "--startup-file=no", "-e", "Base.banner()"]
+    check_cmd = ["julia", "--startup-file=no", "-e", "1"]
     success, output = wait_for_exec_success(
         container=container,
         command=check_cmd,
