@@ -30,6 +30,14 @@ target "jupyterlab-cpu" {
     tags = ["jupyterlab-cpu"]
 }
 
+target "jupyterlab-slim" {
+    args = {
+        BASE_IMAGE="mid"
+    }
+    context = "./images/slim"
+    tags = ["jupyterlab-slim"]
+}
+
 target "sas" {
     args = {
         BASE_IMAGE="sas-kernel"
