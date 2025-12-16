@@ -570,11 +570,10 @@ make help
 docker container prune
 ```
 
-If running using a VM and RStudio image was built successfully but is not opening correctly on localhost (error 5000 page),
+- If running using a VM and RStudio image was built successfully but is not opening correctly on localhost (error 5000 page),
 change your CPU allocation in your Linux VM settings to >= 3.
-You can also use your VM's system monitor to examine if all CPUs are 100% being used as your container is running.
-If so, increase CPU allocation.
-This was tested on Linux Ubuntu 20.04 virtual machine.
+- You can also use your VM's system monitor to examine if all CPUs are 100% being used as your container is running.
+- If so, increase CPU allocation. This was tested on Linux Ubuntu 20.04 virtual machine.
 
 ## Repository Structure
 
