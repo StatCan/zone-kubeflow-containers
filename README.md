@@ -183,19 +183,19 @@ This testing suite is modified from the [docker-stacks](https://github.com/jupyt
 Image testing is invoked through `make test/IMAGENAME`
 (with optional `REPO` and `TAG` arguments like `make build`).
 
-Testing of a given image consists of general and image-specific tests:
+Testing is organized into two categories:
 
 ```
 └── tests
-    ├── general                             # General tests applied to all images
-    │   └── some_general_test.py
-    └── jupyterlab-cpu                      # Test applied to a specific image
-        └── some_jupyterlab-cpu-specific_test.py
+    ├── general                             # Infrastructure tests applied to all images
+    │   └── some_infrastructure_test.py
+    └── jupyterlab-cpu                      # User-facing data science package tests
+        └── some_data_science_package_test.py
 ```
 
-Where `tests/general` tests are applied to all images,
-and `tests/IMAGENAME` are applied only to a specific image.
-Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, python packages are working properly, etc.
+Where `tests/general` tests verify infrastructure functionality (health checks, environment, kernels, etc.) across all images,
+and `tests/jupyterlab-cpu` tests verify user-facing data science packages (Python, R, Julia, SAS).
+Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, data science packages are working properly, etc.
 Tests are formatted using typical pytest formats
 (python files with `def test_SOMETHING()` functions).
 `conftest.py` defines some standard scaffolding for image management, etc.
@@ -204,8 +204,8 @@ Tests are formatted using typical pytest formats
 
 Our test suite ensures images work correctly using pytest. Tests are organized by functionality:
 
-- `tests/general/` - Tests applied to all images (Python/R packages, kernels, etc.)
-- `tests/jupyterlab-cpu/` - JupyterLab-specific tests
+- `tests/general/` - Infrastructure and core functionality tests (health checks, environment, kernels, servers, etc.) that run on all images
+- `tests/jupyterlab-cpu/` - User-facing data science package tests (Python/R/Julia/SAS functionality)
 
 ### Test Commands:
 ```bash
@@ -589,8 +589,8 @@ change your CPU allocation in your Linux VM settings to >= 3.
 │   ├── jupyterlab/            # Final JupyterLab image
 │   └── sas/                   # Final SAS image
 ├── tests/                     # Automated tests
-│   ├── general/               # Tests for all images
-│   └── jupyterlab-cpu/        # JupyterLab-specific tests
+│   ├── general/               # Infrastructure and core functionality tests (run on all images)
+│   └── jupyterlab-cpu/        # User-facing data science package tests (Python/R/Julia/SAS)
 ├── make_helpers/              # Helper scripts for Makefile
 └── docs/                      # Documentation files
 ```
