@@ -205,7 +205,8 @@ Tests are formatted using typical pytest formats
 Our test suite ensures images work correctly using pytest. Tests are organized by functionality:
 
 - `tests/general/` - Infrastructure and core functionality tests (health checks, environment, kernels, servers, etc.) that run on all images
-- `tests/jupyterlab-cpu/` - User-facing data science package tests (Python/R/Julia/SAS functionality)
+- `tests/jupyterlab-cpu/` - Data science package tests (Python/R/Julia functionality) for jupyterlab-cpu image
+- `tests/sas/` - SAS-specific tests (SAS functionality and SAS Studio) for sas image
 
 ### Test Commands:
 ```bash
@@ -590,7 +591,8 @@ change your CPU allocation in your Linux VM settings to >= 3.
 │   └── sas/                   # Final SAS image
 ├── tests/                     # Automated tests
 │   ├── general/               # Infrastructure and core functionality tests (run on all images)
-│   └── jupyterlab-cpu/        # User-facing data science package tests (Python/R/Julia/SAS)
+│   ├── jupyterlab-cpu/        # Data science package tests (Python/R/Julia)
+│   └── sas/                   # SAS-specific tests (SAS functionality and SAS Studio)
 ├── make_helpers/              # Helper scripts for Makefile
 └── docs/                      # Documentation files
 ```
