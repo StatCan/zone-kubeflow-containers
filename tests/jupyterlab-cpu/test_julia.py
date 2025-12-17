@@ -14,38 +14,19 @@ import logging
 
 import pytest
 
-from tests.general.wait_utils import wait_for_exec_success
-
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function")
-def julia_helper(container):
-    """Return a container ready for Julia testing"""
-    container.run()
-
-    # Wait for container to be ready to execute commands
-    check_cmd = ["julia", "--startup-file=no", "-e", "1"]
-    success, output = wait_for_exec_success(
-        container=container,
-        command=check_cmd,
-        timeout=60,  # Julia takes longer to start
-        initial_delay=1.0,
-        max_delay=5.0
-    )
-
-    if not success:
-        raise AssertionError(f"Container failed to be ready for Julia execution within timeout. Output: {output}")
-
-    return container
-
-
-def test_julia(julia_helper):
+@pytest.mark.integration
+def test_julia(container):
     """Basic julia test"""
     LOGGER.info("Test that julia is correctly installed ...")
-    command = ["julia", "--startup-file=no", "-e", "Base.banner() || println(Base.banner) || 1"]
-    result = julia_helper.container.exec_run(command)
-    output = result.output.decode("utf-8")
-    assert result.exit_code == 0, f"Julia execution failed {output}"
+    running_container = container.run(
+        tty=True, command=["start.sh", "bash", "-c", "sleep infinity"]
+    )
+    command = "julia --version"
+    cmd = running_container.exec_run(command)
+    output = cmd.output.decode("utf-8")
+    assert cmd.exit_code == 0, f"Command {command} failed {output}"
     LOGGER.debug(output)
     LOGGER.info("Julia basic functionality test completed")
