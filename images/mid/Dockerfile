@@ -26,6 +26,8 @@ ENV CS_DISABLE_FILE_DOWNLOADS=1
 ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
 ENV SERVICE_URL=https://extensions.coder.com/api
 
+RUN echo "hello world"
+
 # System operations and cleanup
 RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
