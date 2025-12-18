@@ -52,44 +52,39 @@ flags:
     paths:
       - "tests/**/test_*python*.py"
       - "tests/**/test_*data_science*.py"
-      - "tests/general/test_python_data_science.py"
+      - "tests/jupyterlab-cpu/test_python_data_science.py"
       - "tests/general/test_environment.py"
       - "tests/general/test_packages.py"
-      - "tests/jupyterlab-cpu/test_pandas.py"
-      - "tests/jupyterlab-cpu/test_matplotlib.py"
       - "tests/jupyterlab-cpu/test_extensions.py"
-      - "tests/general/test_saspy_integration.py"
     carryforward: true
 
   r-tests:
     paths:
       - "tests/**/test_*r*.py"
-      - "tests/general/test_r_functionality.py"
-      - "tests/general/test_r_comprehensive.py"
+      - "tests/jupyterlab-cpu/test_r_functionality.py"
       - "tests/general/test_rstudio.py"
-      - "tests/general/test_rstudio_web.py"
     carryforward: true
 
   julia-tests:
     paths:
       - "tests/**/test_*julia*.py"
       - "tests/jupyterlab-cpu/test_julia.py"
-      - "tests/general/test_julia_comprehensive.py"
     carryforward: true
 
   sas-tests:
     paths:
       - "tests/**/test_*sas*.py"
-      - "tests/general/test_sas_comprehensive.py"
-      - "tests/general/test_saspy_integration.py"
+      - "tests/sas/test_sas_functionality.py"
+      - "tests/sas/test_sas_studio.py"
     carryforward: true
 
   kubeflow-tests:
     paths:
       - "tests/**/test_*kubeflow*.py"
+      - "tests/**/test_*kubernetes*.py"
+      - "tests/**/test_*kube*.py"
       - "tests/general/test_kubeflow_integration.py"
       - "tests/general/test_notebook.py"
-      - "tests/general/test_health.py"
       - "tests/general/test_kernel_execution.py"
     carryforward: true
 
@@ -97,6 +92,7 @@ flags:
     paths:
       - "tests/general/"
       - "!tests/jupyterlab-cpu/"
+      - "!tests/sas/"
     carryforward: true
 
   jupyterlab-tests:
