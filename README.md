@@ -1,12 +1,46 @@
-# Zone-kubeflow-containers
+# Zone Kubeflow Containers
+
+[![codecov](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg)](https://codecov.io/gh/StatCan/zone-kubeflow-containers)
+[![Python Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=python-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=python-tests)
+[![R Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=r-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=r-tests)
+[![Julia Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=julia-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=julia-tests)
+[![SAS Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=sas-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=sas-tests)
+[![Kubeflow Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=kubeflow-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=kubeflow-tests)
+
+```
+▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄   ▄▄▄    ▄▄▄  ▄▄▄▄▄▄▄
+▀▀▀▀▀████ ▄███████▄ ████▄  ███ ███▀▀▀▀▀
+   ▄███▀  ███   ███ ███▀██▄███ ███▄▄
+ ▄███▀    ███▄▄▄███ ███  ▀████ ███
+█████████  ▀█████▀  ███    ███ ▀███████
+
+
+
+▄▄▄   ▄▄▄ ▄▄▄  ▄▄▄ ▄▄▄▄▄▄▄    ▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄ ▄▄▄        ▄▄▄▄▄   ▄▄▄▄  ▄▄▄  ▄▄▄▄
+███ ▄███▀ ███  ███ ███▀▀███▄ ███▀▀▀▀▀ ███▀▀▀▀▀ ███      ▄███████▄ ▀███  ███  ███▀
+███████   ███  ███ ███▄▄███▀ ███▄▄    ███▄▄    ███      ███   ███  ███  ███  ███
+███▀███▄  ███▄▄███ ███  ███▄ ███      ███▀▀    ███      ███▄▄▄███  ███▄▄███▄▄███
+███  ▀███ ▀██████▀ ████████▀ ▀███████ ███      ████████  ▀█████▀    ▀████▀████▀
+
+
+
+ ▄▄▄▄▄▄▄   ▄▄▄▄▄   ▄▄▄    ▄▄▄ ▄▄▄▄▄▄▄▄▄   ▄▄▄▄   ▄▄▄▄▄ ▄▄▄    ▄▄▄  ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄    ▄▄▄▄▄▄▄
+███▀▀▀▀▀ ▄███████▄ ████▄  ███ ▀▀▀███▀▀▀ ▄██▀▀██▄  ███  ████▄  ███ ███▀▀▀▀▀ ███▀▀███▄ █████▀▀▀
+███      ███   ███ ███▀██▄███    ███    ███  ███  ███  ███▀██▄███ ███▄▄    ███▄▄███▀  ▀████▄
+███      ███▄▄▄███ ███  ▀████    ███    ███▀▀███  ███  ███  ▀████ ███      ███▀▀██▄     ▀████
+▀███████  ▀█████▀  ███    ███    ███    ███  ███ ▄███▄ ███    ███ ▀███████ ███  ▀███ ███████▀
+```
 
 Container images to be used with [The Zone](https://zone.statcan.ca).
+
 User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
 
 ## Table of Contents
 <!-- toc -->
 - [Introduction](#introduction)
-- [List of maintained images in this github repository](#list-of-maintained-images-in-this-github-repository)
+- [Quick Start for New Developers](#quick-start-for-new-developers)
+- [Requirements](#requirements)
+- [List of Maintained Images in This Repository](#list-of-maintained-images-in-this-repository)
 - [Usage](#usage)
   - [Building and Tagging Docker Images](#building-and-tagging-docker-images)
   - [Pulling and Pushing Docker Images](#pulling-and-pushing-docker-images)
@@ -16,18 +50,19 @@ User documentation can be found at https://zone.pages.cloud.statcan.ca/docs/en/
 - [General Development Workflow](#general-development-workflow)
   - [Overview of Images](#overview-of-images)
   - [Running A Zone Container Locally](#running-a-zone-container-locally)
-  - [Testing locally](#testing-locally)
+  - [Testing Locally](#testing-locally)
   - [Testing On-Platform](#testing-on-platform)
-  - [Adding new software](#adding-new-software)
-  - [Adding new Images](#adding-new-images)
+  - [Adding New Software](#adding-new-software)
+  - [Adding New Images](#adding-new-images)
+  - [Custom Scripts](#custom-scripts)
   - [Modifying and Testing CI](#modifying-and-testing-ci)
 - [Beta Process](#beta-process)
 - [Other Development Notes](#other-development-notes)
   - [Github CI](#github-ci)
-  - [The `v2` and `latest` tags for the master branch](#the-v2-and-latest-tags-for-the-master-branch)
+  - [The `v2` and `latest` Tags for the Master Branch](#the-v2-and-latest-tags-for-the-master-branch)
   - [Set User File Permissions](#set-user-file-permissions)
   - [Troubleshooting](#troubleshooting)
-- [Structure](#structure)
+- [Repository Structure](#repository-structure)
 <!-- tocstop -->
 
 ## Introduction
@@ -37,22 +72,33 @@ We chose those images because they are continuously updated and install the most
 This enables us to focus only on the additional toolsets that we require to enable our data scientists.
 These customized images are maintained by the Zone team and are the default images available on The Zone.
 
-## Overview of Images
+## Quick Start for New Developers
 
-Each directory in the images folder makes up one stage of the build process.
-They each contain the Dockerfile that directs the build, and all related files.
+Get up and running quickly with:
 
-The relationship between the stages and the final product is as shown below.
-```mermaid
-graph TD
-  upstream_nb["(upstream) datascience-notebook"]
-  upstream_nb --> base
-  base --> mid
-  mid --> sas_kernel
-  upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
-  sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
-  sas_kernel --> sas
+**Clone and setup**:
+```bash
+git clone https://github.com/StatCan/zone-kubeflow-containers
+make install-python-dev-venv
 ```
+**Build and run a test image**:
+```bash
+make bake/jupyterlab-cpu
+make test-smoke/jupyterlab-cpu
+make dev/jupyterlab-cpu
+```
+
+This will build the jupyterlab-cpu image, run quick smoke tests, and start an interactive container at http://localhost:8888.
+
+## Requirements
+
+- **Docker**: Version 20.10+ with Docker Buildx (check with `docker --version`)
+- **Python**: Version 3.8+ (needed for tests)
+- **Make**: GNU Make 4.0+ (for build automation)
+- **Git**: Version 2.25+ (for version control)
+- **System**: At least 8GB RAM and 20GB disk space
+
+## List of Maintained Images in This Repository
 
 ### Base Images
 
@@ -73,9 +119,27 @@ Image | Notes | Installations
 [jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
 [sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
 
+### Overview of Images
+
+Each directory in the images folder makes up one stage of the build process.
+They each contain the Dockerfile that directs the build, and all related files.
+
+The relationship between the stages and the final product is as shown below.
+
+```mermaid
+graph TD
+  upstream_nb["(upstream) datascience-notebook"]
+  upstream_nb --> base
+  base --> mid
+  mid --> sas_kernel
+  upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
+  sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
+  sas_kernel --> sas
+```
+
 ## Usage
 
-### Building Images
+### Building and Tagging Docker Images
 
 We have setup [Docker Bake](https://docs.docker.com/build/bake/) to help with building our images. Docker Bake lets us define our build configuration for our images through a file instead of CLI instructions.
 
@@ -89,7 +153,19 @@ This file is currently setup for local development. We use parameter overrides f
 **Note:** Our workflows save all our images in our Azure Container Registry. To pull and push to our ACR locally, 
 you will first have to login using `az acr login -n k8scc01covidacr`
 
-**Note:** `make push` by default does `docker push --all-tags` in order to push the SHA, SHORT_SHA, etc., tags.  
+**Note:** `make push` by default does `docker push --all-tags` in order to push the SHA, SHORT_SHA, etc., tags.
+
+### Pulling and Pushing Docker Images
+
+To pull an image from our Azure Container Registry:
+```bash
+docker pull k8scc01covidacr.azurecr.io/jupyterlab-cpu:v2
+```
+
+To push built images to the registry:
+```bash
+make push/jupyterlab-cpu
+```
 
 ### Testing Images
 
@@ -107,32 +183,89 @@ This testing suite is modified from the [docker-stacks](https://github.com/jupyt
 Image testing is invoked through `make test/IMAGENAME`
 (with optional `REPO` and `TAG` arguments like `make build`).
 
-Testing of a given image consists of general and image-specific tests:
+Testing is organized into two categories:
 
 ```
 └── tests
-    ├── general                             # General tests applied to all images
-    │   └── some_general_test.py
-    └── jupyterlab-cpu                      # Test applied to a specific image
-        └── some_jupyterlab-cpu-specific_test.py
+    ├── general                             # Infrastructure tests applied to all images
+    │   └── some_infrastructure_test.py
+    └── jupyterlab-cpu                      # User-facing data science package tests
+        └── some_data_science_package_test.py
 ```
 
-Where `tests/general` tests are applied to all images,
-and `tests/IMAGENAME` are applied only to a specific image.
-Pytest will start the image locally and then run the provided tests to determine if Jupyterlab is running, python packages are working properly, etc.
+Where `tests/general` tests verify infrastructure functionality (health checks, environment, kernels, etc.) across all images,
+and `tests/jupyterlab-cpu` tests verify user-facing data science packages (Python, R, Julia, SAS).
+Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, data science packages are working properly, etc.
 Tests are formatted using typical pytest formats
 (python files with `def test_SOMETHING()` functions).
 `conftest.py` defines some standard scaffolding for image management, etc.
 
----
+## Testing
+
+Our test suite ensures images work correctly using pytest. Tests are organized by functionality:
+
+- `tests/general/` - Infrastructure and core functionality tests (health checks, environment, kernels, servers, etc.) that run on all images
+- `tests/jupyterlab-cpu/` - Data science package tests (Python/R/Julia functionality) for jupyterlab-cpu image
+- `tests/sas/` - SAS-specific tests (SAS functionality and SAS Studio) for sas image
+
+### Test Commands:
+```bash
+# Quick smoke tests (recommended for development)
+make test-smoke/jupyterlab-cpu
+
+# Skip slow integration tests (faster development cycle)
+make test-fast/jupyterlab-cpu
+
+# Full test suite (for final validation)
+make test/jupyterlab-cpu
+
+# Run all image tests (comprehensive, takes longer)
+make test
+
+# Generate coverage reports
+make test-coverage/jupyterlab-cpu
+```
+
+### Test Types:
+- **Smoke tests**: Critical functionality checks (fast, for daily development)
+- **Fast tests**: All non-slow tests (good balance of speed and coverage)
+- **Full tests**: All tests including slow/integration tests (comprehensive validation)
 
 ## General Development Workflow
+
+### Understanding Our Images
+
+Our images are built in stages, starting from upstream Jupyter Docker Stacks:
+
+```
+upstream datascience-notebook → base → mid → sas-kernel → [jupyterlab-cpu | sas]
+```
+
+### Building Images
+
+We use Docker Bake for building images, managed through Make commands:
+
+**Build a specific image:**
+```bash
+make bake/base
+make bake/jupyterlab-cpu
+make bake/sas
+```
+
+**Build with custom parameters:**
+```bash
+make bake/jupyterlab-cpu REPO=myrepo TAG=dev
+```
+
+**View all available commands:**
+```bash
+make help
+```
 
 ### Running A Zone Container Locally
 
 1. Clone the repository with `git clone https://github.com/StatCan/zone-kubeflow-containers`.
 2. Run `make install-python-dev-venv` to build a development Python virtual environment.
-2.5 Add back from statements in Dockerfiles.
 3. Build your image using `make bake/IMAGENAME`,
 e.g. run `make bake/base`.
 4. Test your image using automated tests through `make test/IMAGENAME`,
@@ -149,10 +282,10 @@ k8scc01covidacr.azurecr.io/jupyterlab-cpu   v2         13f8dc0e4f7a   26 minutes
 k8scc01covidacr.azurecr.io/sas              v2         2b9acb795079   19 hours ago     15.5GB
 ```
 
-7. Run your image with `docker run -p 8888:8888 REPO/IMAGENAME:TAG`, e.g. `docker run -p 8888:8888 k8scc01covidacr.azurecr.io/sas:v2`.
-8. Open [http://localhost:8888](http://localhost:8888) or `<ip-address-of-server>:8888`.
+6. Run your image with `docker run -p 8888:8888 REPO/IMAGENAME:TAG`, e.g. `docker run -p 8888:8888 k8scc01covidacr.azurecr.io/sas:v2`.
+7. Open [http://localhost:8888](http://localhost:8888) or `<ip-address-of-server>:8888`.
 
-### Testing locally
+### Testing Locally
 
 1. Clone the repo
 2. Edit an image via the [image stages](/images) that are used to create it.
@@ -189,7 +322,7 @@ Pushes to master will also have the following tags:
 - artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:latest
 - artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:v2
 
-### Adding new software
+### Adding New Software
 
 Software needs to be added by modifying the relevant image stage,
 then following the normal build instructions starting with the Generate Dockerfiles step.
@@ -199,7 +332,7 @@ and increasing that size would negatively impact the time it takes up for a work
 (as well as first time image pulls to a node).
 In such cases it may be more relevant to make an image under [aaw-contrib-containers](https://github.com/StatCan/aaw-contrib-containers) as mentioned earlier.
 
-### Adding new Images
+### Adding New Images
 
 1. Identify where the new stage will be placed in the build order
 2. Create a new subdirectory in the `/images/` directory for the stage
@@ -260,10 +393,9 @@ and the image name must be added to the matrix in `./github/workflows/docker-nig
 7. Update the documentation for the new stage.
 This is generally updating `images-stages.png` and `image-stages.drawio` in the `docs/images` folder using draw.io.
 
-### Custom scripts
+### Custom Scripts
 
 To manage our custom scripts that we want to execute after a container starts up, we use the [s6-overlay](https://github.com/just-containers/s6-overlay). Kubeflow upstream also uses this tool with their [example notebook servers](https://github.com/kubeflow/kubeflow/blob/master/components/example-notebook-servers/README.md#configure-s6-overlay)
-
 
 Scripts that need to run during the startup of the container can be placed in `/etc/cont-init.d/`, and are executed in ascending alphanumeric order.
 
@@ -273,7 +405,7 @@ Extra services to be monitored by s6-overlay should be placed in their own folde
 
 An example of a long-running service can be found in our [main run script](./images/mid/s6/services.d/jupyter/run) which is used to start JupyterLab itself.
 
-#### Note on setting environment variables in startup scripts
+#### Note on Setting Environment Variables in Startup Scripts
 
 When using both a startup script and a service script, environment variables declared in the startup script (using `export VAR=value` for example) will not be available in the service script.
 
@@ -341,22 +473,18 @@ This release can help us communicate what changes have been done to our containe
 ### Github CI
 
 The Github workflow is set up to build the images and their dependant stages.
+
 See below for a flowchart of this build.
 
-The main workflow is `docker.yaml`,
-it controls the stage build order, and what triggers the CI.
-(Pushes to master, pushes to an open pull-request, and nightly builds)
+The main workflow is `docker.yaml`, it controls the stage build order, and what triggers the CI. (Pushes to master, pushes to an open pull-request, and nightly builds)
 
-The building of a stage is controled by `docker-steps.yaml`.
-It checks if there are changes to the stage or dependant stages.
-Builds a new image if there are changes, 
-or pulls a copy of the existing image if not.
+The building of a stage is controled by `docker-steps.yaml`. It checks if there are changes to the stage or dependant stages. Builds a new image if there are changes, or pulls a copy of the existing image if not.
+
 Testing will be performed if this is the final stage in the build of an image.
 
 ![A flowchart of the Github CI workflow](./docs/images/Workflows.png)
 
-### The `v2` and `latest` tags for the master branch
-
+### The `v2` and `latest` Tags for the Master Branch
 
 These tags are intended to be `long-lived` in that they will not change.
 Subsequent pushes will clobber the previous `IMAGENAME:v2` image.
@@ -400,7 +528,7 @@ So something like:
 
 ```
 RUN add_1GB_file_with_wrong_permissions_to_NB_USER.sh && \
-	fix-permissions /home/$NB_USER
+fix-permissions /home/$NB_USER
 ```
 
 would add a single layer of about 1GB, whereas
@@ -413,38 +541,58 @@ RUN fix-permissions /home/$NB_USER
 
 would add two layers, each about 1GB (2GB total).
 
+### Adding New Software
+
+When adding new software:
+
+1. **Choose the right image stage**: Add to the earliest stage that needs it
+2. **Minimize image size**: Clean up package managers and temporary files
+3. **Set permissions**: Use `fix-permissions $CONDA_DIR && fix-permissions /home/$NB_USER` after installations
+4. **Test thoroughly**: Run smoke tests to ensure functionality
+
+**Important**: Be selective with software installation as images are already large (>15GB). Consider if the software belongs in [aaw-contrib-containers](https://github.com/StatCan/aaw-contrib-containers) instead.
+
 ### Troubleshooting
 
-If running using a VM and RStudio image was built successfully but is not opening correctly on localhost (error 5000 page),
-change your CPU allocation in your Linux VM settings to >= 3.
-You can also use your VM's system monitor to examine if all CPUs are 100% being used as your container is running.
-If so, increase CPU allocation.
-This was tested on Linux Ubuntu 20.04 virtual machine.
+#### Common Issues:
+- **Port conflicts**: Use different port (`make dev/image PORT=8889`) or kill conflicting processes
+- **Docker permissions**: Add user to docker group (`sudo usermod -aG docker $USER`)
+- **Insufficient memory**: Build/run smaller images first or increase Docker resources
+- **Test timeouts**: The framework uses exponential backoff to handle slow environments automatically
 
-## Structure
+#### Quick Fixes:
+```bash
+# Clear Docker cache if builds are failing
+docker system prune -a
+
+# View help for all make commands
+make help
+
+# Clean up test containers if tests fail
+docker container prune
+```
+
+- If running using a VM and RStudio image was built successfully but is not opening correctly on localhost (error 5000 page),
+change your CPU allocation in your Linux VM settings to >= 3.
+- You can also use your VM's system monitor to examine if all CPUs are 100% being used as your container is running.
+- If so, increase CPU allocation. This was tested on Linux Ubuntu 20.04 virtual machine.
+
+## Repository Structure
 
 ```
 .
-├── .github/workflow                        # Github CI. Controls the stage build order
-│
-├── Makefile                                # Controls the interactions with docker commands
-│
-├── make_helpers                            # Scripts used by makefile
-│   ├── get_branch_name.sh
-│   ├── get-nvidia-stuff.sh
-│   └── post-build-hook.sh
-│
-├── images                                  # Dockerfile and required resources for stage builds
-│   ├── base                                # Common base of the images
-│   ├── jupyterlab                          # Jupyterlab specific Dockerfile
-│   ├── mid                                 # Common mid point for all images
-│   ├── sas                                 # SAS specific Dockerfile
-|   └── sas_kernel                          # Dockerfile for installation of sas_kernel
-│
-├── docs                                    # files/images used in documentation (ex. Readme's)
-│
-└── tests
-    ├── general/                            # General tests applied to all images
-    ├── jupyterlab-cpu/                     # Test applied to a specific image
-    └── README.md
+├── Makefile                    # Build/test automation (start here!)
+├── docker-bake.hcl            # Docker Buildx configuration
+├── images/                    # Dockerfiles for each image stage
+│   ├── base/                  # Base image customizations
+│   ├── mid/                   # Mid-level tools and configs
+│   ├── sas_kernel/            # SAS kernel integration
+│   ├── jupyterlab/            # Final JupyterLab image
+│   └── sas/                   # Final SAS image
+├── tests/                     # Automated tests
+│   ├── general/               # Infrastructure and core functionality tests (run on all images)
+│   ├── jupyterlab-cpu/        # Data science package tests (Python/R/Julia)
+│   └── sas/                   # SAS-specific tests (SAS functionality and SAS Studio)
+├── make_helpers/              # Helper scripts for Makefile
+└── docs/                      # Documentation files
 ```
