@@ -1,0 +1,122 @@
+# Codecov configuration for Zone Kubeflow Containers
+# This file configures how coverage reports are processed and displayed
+
+codecov:
+  notify:
+    require_ci_to_pass: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 5%
+      python:
+        flags: 
+          - python-tests
+        target: 70%
+        threshold: 5%
+      r:
+        flags:
+          - r-tests
+        target: 70%
+        threshold: 5%
+      julia:
+        flags:
+          - julia-tests
+        target: 60%  # Julia might have lower coverage initially
+        threshold: 10%
+      sas:
+        flags:
+          - sas-tests
+        target: 50%  # SAS might have lower coverage due to availability
+        threshold: 10%
+      kubeflow:
+        flags:
+          - kubeflow-tests
+        target: 70%
+        threshold: 5%
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+    changes: false
+
+# Define flags for different test categories
+flags:
+  python-tests:
+    paths:
+      - "tests/**/test_*python*.py"
+      - "tests/**/test_*data_science*.py"
+      - "tests/general/test_python_data_science.py"
+      - "tests/general/test_environment.py"
+      - "tests/general/test_packages.py"
+      - "tests/jupyterlab-cpu/test_pandas.py"
+      - "tests/jupyterlab-cpu/test_matplotlib.py"
+      - "tests/jupyterlab-cpu/test_extensions.py"
+      - "tests/general/test_saspy_integration.py"
+    carryforward: true
+
+  r-tests:
+    paths:
+      - "tests/**/test_*r*.py"
+      - "tests/general/test_r_functionality.py"
+      - "tests/general/test_r_comprehensive.py"
+      - "tests/general/test_rstudio.py"
+      - "tests/general/test_rstudio_web.py"
+    carryforward: true
+
+  julia-tests:
+    paths:
+      - "tests/**/test_*julia*.py"
+      - "tests/jupyterlab-cpu/test_julia.py"
+      - "tests/general/test_julia_comprehensive.py"
+    carryforward: true
+
+  sas-tests:
+    paths:
+      - "tests/**/test_*sas*.py"
+      - "tests/general/test_sas_comprehensive.py"
+      - "tests/general/test_saspy_integration.py"
+    carryforward: true
+
+  kubeflow-tests:
+    paths:
+      - "tests/**/test_*kubeflow*.py"
+      - "tests/general/test_kubeflow_integration.py"
+      - "tests/general/test_notebook.py"
+      - "tests/general/test_health.py"
+      - "tests/general/test_kernel_execution.py"
+    carryforward: true
+
+  general-tests:
+    paths:
+      - "tests/general/"
+      - "!tests/jupyterlab-cpu/"
+    carryforward: true
+
+  jupyterlab-tests:
+    paths:
+      - "tests/jupyterlab-cpu/"
+    carryforward: true
+
+# Ignore certain files/directories for coverage
+ignore:
+  - "tests/.*"  # Don't include test files themselves in coverage
+  - "*/test_.*"
+  - "*/conftest.py"
+  - "*/setup.py"
+  - "*/venv/*"
+  - "*/.venv/*"
+  - "*/env/*"
+  - "*/.env/*"
+
+# Specific settings for pull request comments
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: false
