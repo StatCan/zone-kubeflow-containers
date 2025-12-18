@@ -98,6 +98,7 @@ class CondaPackageHelper:
 
     @staticmethod
     def _packages_from_json(env_export):
+        LOGGER.info(f"env_export: {env_export}")
         """Extract packages and versions from the lines returned by the list of specifications"""
         # dependencies = filter(lambda x:  isinstance(x, str), json.loads(env_export).get("dependencies"))
         dependencies = json.loads(env_export).get("dependencies")
