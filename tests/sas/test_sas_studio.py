@@ -105,21 +105,30 @@ def test_sas_studio_startup_script_functionality(sas_studio_helper):
     """Test SAS Studio startup script functionality."""
     LOGGER.info("Testing SAS Studio startup script functionality...")
 
-    # Check that the script exists and is executable
-    result = sas_studio_helper.container.exec_run([
-        "test", "-x", "/usr/local/SASHome/studioconfig/sasstudio.sh"
-    ])
-    
-    assert result.exit_code == 0, "SAS Studio startup script should be executable"
+    # Use wait utils to check that the script exists and is executable
+    check_exec_cmd = ["test", "-x", "/usr/local/SASHome/studioconfig/sasstudio.sh"]
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=check_exec_cmd,
+        timeout=15,
+        initial_delay=0.2,
+        max_delay=2.0
+    )
 
-    # Check that we can read the script content
-    result = sas_studio_helper.container.exec_run([
-        "head", "-10", "/usr/local/SASHome/studioconfig/sasstudio.sh"
-    ])
-    
-    assert result.exit_code == 0, "Should be able to read SAS Studio startup script content"
+    assert success, f"SAS Studio startup script should be executable. Output: {output}"
 
-    output = result.output.decode('utf-8')
+    # Use wait utils to check that we can read the script content
+    read_cmd = ["head", "-10", "/usr/local/SASHome/studioconfig/sasstudio.sh"]
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=read_cmd,
+        timeout=15,
+        initial_delay=0.2,
+        max_delay=2.0
+    )
+
+    assert success, f"Should be able to read SAS Studio startup script content. Output: {output}"
+
     LOGGER.debug(f"SAS Studio startup script preview: {output[:200]}...")
 
     # Verify it looks like a bash script
@@ -133,31 +142,57 @@ def test_sas_studio_web_accessibility(sas_studio_helper):
     """Test that SAS Studio web interface is accessible through Jupyter proxy."""
     LOGGER.info("Testing SAS Studio web interface accessibility...")
 
-    # Check for processes related to SAS Studio (though they may not be running)
-    result = sas_studio_helper.container.exec_run(["bash", "-c", 
-        "ps aux | grep -i sasstudio || echo 'No SAS Studio processes found (expected if not started)'" 
+    # Check for processes related to SAS Studio (though they may not be running by default)
+    result = sas_studio_helper.container.exec_run(["bash", "-c",
+        "ps aux | grep -i sasstudio || echo 'No SAS Studio processes found (expected if not started)'"
     ])
-    
+
     output = result.output.decode('utf-8')
     LOGGER.info(f"SAS Studio processes check: {output[:200]}...")
 
-    # Check if SAS Studio files are in place
-    result = sas_studio_helper.container.exec_run([
-        "bash", "-c", "find /usr/local/SASHome -name '*studio*' -type f | head -10"
-    ])
+    # Also test that we can check for web service availability using the wait utils
+    # Since the service might not be actively running in tests, we'll check if it can be started
+    check_cmd = ["bash", "-c",
+        "if [ -f '/usr/local/SASHome/studioconfig/sasstudio.sh' ]; then "
+        "timeout 10s bash -c 'ls /usr/local/SASHome/studioconfig/' 2>/dev/null || echo 'Checked SAS Studio config dir'; "
+        "else echo 'SAS Studio script not found'; fi"
+    ]
 
-    if result.exit_code != 0:
-        # Alternative check for SAS Studio content
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=check_cmd,
+        timeout=20,
+        initial_delay=0.5,
+        max_delay=3.0
+    )
+
+    if not success:
+        LOGGER.warning("Could not confirm SAS Studio config directory accessibility within timeout")
+
+    # Use wait utils to check if SAS Studio files are accessible
+    check_studio_files_cmd = ["bash", "-c", "find /usr/local/SASHome -name '*studio*' -type f | head -5"]
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=check_studio_files_cmd,
+        timeout=15,
+        initial_delay=0.2,
+        max_delay=2.0
+    )
+
+    if success and "studio" in output.lower():
+        LOGGER.info("SAS Studio related files found and accessible")
+    elif not success:
+        # Use alternative check without wait utils
         result = sas_studio_helper.container.exec_run([
-            "bash", "-c", 
+            "bash", "-c",
             "find /usr/local/SASHome -maxdepth 3 -type d | grep -i studio || echo 'No studio directory found'"
         ])
-    
-    output = result.output.decode('utf-8')
-    if "studio" in output.lower():
-        LOGGER.info("SAS Studio related files/directories found")
-    else:
-        LOGGER.warning(f"SAS Studio directories not found as expected. Output: {output[:100]}")
+
+        output = result.output.decode('utf-8')
+        if "studio" in output.lower():
+            LOGGER.info("SAS Studio related directories found")
+        else:
+            LOGGER.warning(f"SAS Studio directories not found as expected. Output: {output[:100]}")
 
     LOGGER.info("SAS Studio web accessibility check completed")
 
@@ -196,27 +231,31 @@ def test_jupyter_sasstudio_proxy_installed(sas_studio_helper):
     """Test that jupyter-sasstudio-proxy is properly installed."""
     LOGGER.info("Testing jupyter-sasstudio-proxy installation...")
 
-    # Check that the jupyter-sasstudio-proxy module can be imported
-    result = sas_studio_helper.container.exec_run([
-        "python", "-c", "import jupyter_sasstudio_proxy; print('jupyter_sasstudio_proxy import successful')"
-    ])
-    
-    assert result.exit_code == 0, (
-        f"jupyter-sasstudio-proxy module not found\n"
-        f"Output: {result.output.decode('utf-8')}"
+    # Use wait utils to check that the jupyter-sasstudio-proxy module can be imported
+    import_cmd = ["python", "-c", "import jupyter_sasstudio_proxy; print('jupyter_sasstudio_proxy import successful')"]
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=import_cmd,
+        timeout=20,
+        initial_delay=0.5,
+        max_delay=3.0
     )
 
-    # Check that proxy config is accessible
-    result = sas_studio_helper.container.exec_run([
-        "python", "-c", "from jupyter_sasstudio_proxy import setup_sasstudio; config = setup_sasstudio(); print(config.get('port', 'No port found'))"
-    ])
-    
-    assert result.exit_code == 0, (
-        f"jupyter-sasstudio-proxy config should be accessible\n"
-        f"Output: {result.output.decode('utf-8')}"
+    assert success, f"jupyter-sasstudio-proxy module not found. Output: {output}"
+
+    # Use wait utils to check that proxy config is accessible
+    config_cmd = ["python", "-c", "from jupyter_sasstudio_proxy import setup_sasstudio; config = setup_sasstudio(); print(config.get('port', 'No port found'))"]
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=config_cmd,
+        timeout=20,
+        initial_delay=0.5,
+        max_delay=3.0
     )
 
-    output = result.output.decode('utf-8').strip()
+    assert success, f"jupyter-sasstudio-proxy config should be accessible. Output: {output}"
+
+    output = output.strip()
     # Should output the port number (38080) from the proxy configuration
     assert "38080" in output or "No port found" not in output, f"Expected port configuration, got: {output}"
 
@@ -259,31 +298,41 @@ def test_sas_studio_file_structure(sas_studio_helper):
     """Test SAS Studio file structure and organization."""
     LOGGER.info("Testing SAS Studio file structure...")
 
-    # Look for SAS Studio related files and directories in the SAS Home directory
-    result = sas_studio_helper.container.exec_run([
-        "bash", "-c", "find /usr/local/SASHome -type d -name '*studio*' -o -path '*/studio/*' | head -10"
-    ])
+    # Use wait utils to look for SAS Studio related files and directories
+    find_cmd = ["bash", "-c", "find /usr/local/SASHome -type d -name '*studio*' -o -path '*/studio/*' | head -10"]
+    success, output = wait_for_exec_success(
+        container=sas_studio_helper,
+        command=find_cmd,
+        timeout=20,
+        initial_delay=0.5,
+        max_delay=3.0
+    )
 
-    assert result.exit_code == 0, "Should be able to search for SAS Studio files"
+    assert success, f"Should be able to search for SAS Studio files. Output: {output}"
 
-    output = result.output.decode('utf-8').strip()
+    output = output.strip()
     if output:
         directories = output.split('\n')
         LOGGER.info(f"Found SAS Studio-related directories: {directories[:5]}")
-        
+
         # At least one studio-related directory should exist
         studio_dirs = [d for d in directories if 'studio' in d.lower()]
         assert len(studio_dirs) > 0, f"Should find at least one SAS Studio directory, found: {studio_dirs}"
     else:
-        # If no directories with 'studio' in the name are found, check more broadly
-        result = sas_studio_helper.container.exec_run([
-            "bash", "-c", "find /usr/local/SASHome -type f -name '*studio*' | head -5"
-        ])
-        
-        assert result.exit_code == 0, "Should be able to find SAS Studio related files"
-        
-        output = result.output.decode('utf-8').strip()
-        assert output, "Should find some SAS Studio related files or directories"
+        # If no directories with 'studio' in the name are found, use alternative check
+        alt_cmd = ["bash", "-c", "find /usr/local/SASHome -type f -name '*studio*' | head -5"]
+        success, output = wait_for_exec_success(
+            container=sas_studio_helper,
+            command=alt_cmd,
+            timeout=15,
+            initial_delay=0.5,
+            max_delay=2.0
+        )
+
+        assert success, f"Should be able to find SAS Studio related files. Output: {output}"
+
+        output = output.strip()
+        assert output, f"Should find some SAS Studio related files or directories. Got: {output}"
 
     LOGGER.info("SAS Studio file structure test successful")
 
