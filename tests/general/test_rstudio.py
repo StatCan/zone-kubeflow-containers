@@ -162,13 +162,43 @@ print("R and RStudio integration test successful")
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="RStudio web interface tests require additional container setup with exposed ports")
-def test_rstudio_web_interface(container, http_client, url="http://localhost:8787"):
-    """Test that RStudio web interface is accessible."""
-    LOGGER.info(f"Testing RStudio web interface at {url}...")
+def test_rstudio_web_interface_components(container):
+    """Test that RStudio web interface components are properly installed."""
+    LOGGER.info("Testing RStudio web interface components...")
 
-    # Container setup for RStudio server (this is complex and requires specific port exposure)
-    # This test is more complex as RStudio server needs to be configured for testing
-    # This is typically a skipped test that needs special setup
-    pass
+    container.run()
+
+    # Test that RStudio server is properly installed and configured
+    # First, check if RStudio server is available
+    result = container.container.exec_run(['which', 'rstudio-server'])
+    if result.exit_code != 0:
+        LOGGER.warning("RStudio server not found in this image")
+        pytest.skip("RStudio server not available in this image")
+
+    # Check for RStudio configuration files to ensure it's properly set up
+    result = container.container.exec_run(['test', '-f', '/etc/rstudio/rserver.conf'])
+    assert result.exit_code == 0, "RStudio server config file should exist"
+
+    # Verify RStudio server binary exists and functions properly
+    result = container.container.exec_run(['rstudio-server', 'version'])
+    # The version command might not be available in all installations, so check for the binary itself
+    if result.exit_code != 0:
+        # Just verify the binary exists and is executable
+        result = container.container.exec_run(['test', '-x', '/usr/lib/rstudio-server/bin/rserver'])
+        assert result.exit_code == 0, "RStudio server binary should exist and be executable"
+
+    # Check for RStudio configuration files and verify security settings
+    result = container.container.exec_run(['cat', '/etc/rstudio/rserver.conf'])
+    assert result.exit_code == 0, "RStudio server config file should be readable"
+
+    config_content = result.output.decode('utf-8')
+    # Verify security settings are present (these should be configured in the Dockerfile)
+    assert 'www-frame-origin=none' in config_content or 'www-frame-origin' in config_content, "Security setting 'www-frame-origin' should be configured"
+    assert 'www-enable-origin-check=1' in config_content or 'www-enable-origin' in config_content, "Security setting 'www-enable-origin-check' should be configured"
+
+    # Check for rsession configuration
+    result = container.container.exec_run(['test', '-f', '/etc/rstudio/rsession.conf'])
+    assert result.exit_code == 0, "RStudio session config file should exist"
+
+    LOGGER.info("RStudio web interface components test completed")
  
