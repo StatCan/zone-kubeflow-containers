@@ -34,8 +34,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class CondaPackageHelper:
-    """Conda package helper permitting to get information about packages
-    """
+    """Conda package helper permitting to get information about packages"""
 
     def __init__(self, container):
         # if isinstance(container, TrackedContainer):
@@ -52,16 +51,16 @@ class CondaPackageHelper:
         # Original docker-stacks version explicitly set
         # command=["start.sh", "bash", "-c", "sleep infinity"] for start below.  Why?
         # Shouldn't these start's create servers which will stay alive?  Modified this
-        # to use the default start command (that way if we've changed the CMD, we can 
+        # to use the default start command (that way if we've changed the CMD, we can
         # still use this same code)
-        # If we wanted to add this back in, we should pull the actual CMD from the 
+        # If we wanted to add this back in, we should pull the actual CMD from the
         # image like:
         # return container.run(
         #     tty=True, command=container.get_cmd()
         # )
 
         return container.run(
-            tty=True, 
+            tty=True,
             # command=["start.sh", "bash", "-c", "sleep infinity"]  # See note above
         )
 
@@ -101,9 +100,11 @@ class CondaPackageHelper:
         """Extract packages and versions from the lines returned by the list of specifications"""
         # Handle cases where conda outputs warning messages before JSON
         # Find the start of the actual JSON by looking for the opening brace
-        json_start = env_export.find('{')
+        json_start = env_export.find("{")
         if json_start == -1:
-            raise ValueError(f"Could not find JSON in conda output: {env_export[:200]}...")
+            raise ValueError(
+                f"Could not find JSON in conda output: {env_export[:200]}..."
+            )
 
         json_content = env_export[json_start:]
         dependencies = json.loads(json_content).get("dependencies")
@@ -129,9 +130,7 @@ class CondaPackageHelper:
     def available_packages(self):
         """Return the available packages"""
         if self.available is None:
-            LOGGER.info(
-                "Grabing the list of available packages (can take a while) ..."
-            )
+            LOGGER.info("Grabing the list of available packages (can take a while) ...")
             # Keeping command line output since `conda search --outdated --json` is way too long ...
             self.available = CondaPackageHelper._extract_available(
                 self._execute_command(["conda", "search", "--outdated"])
@@ -178,6 +177,7 @@ class CondaPackageHelper:
         def mysplit(string):
             def version_substrs(x):
                 return re.findall(r"([A-z]+|\d+)", x)
+
             return list(chain(map(version_substrs, string.split("."))))
 
         def str_ord(string):
