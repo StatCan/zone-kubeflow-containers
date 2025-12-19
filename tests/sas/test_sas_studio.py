@@ -379,10 +379,10 @@ def test_complete_sas_studio_integration_pipeline(sas_studio_helper):
 
     # This test verifies that all components necessary for SAS Studio operation are present
     # and properly configured, without actually starting the service
-    
+
     # 1. Check SAS base installation
-    result = sas_studio_helper.container.exec_run(["sas", "--version"])
-    assert result.exit_code == 0 or result.exit_code == 1, "SAS installation should be accessible (exit code 1 might be just no input)"
+    result = sas_studio_helper.container.exec_run(["which", "sas"])
+    assert result.exit_code == 0, "SAS should be available in the PATH"
 
     # 2. Check web server components (Java-based for SAS Studio)
     result = sas_studio_helper.container.exec_run([
@@ -410,14 +410,17 @@ def test_complete_sas_studio_integration_pipeline(sas_studio_helper):
 
     # 6. Verify proxy configuration is accessible
     result = sas_studio_helper.container.exec_run([
-        "python", "-c", 
+        "python", "-c",
         "from jupyter_sasstudio_proxy import setup_sasstudio; config = setup_sasstudio(); print(config['port']); print(config['launcher_entry']['title'])"
     ])
-    assert result.exit_code == 0, "Proxy configuration should be accessible"
-    
+    assert result.exit_code == 0, (
+        f"Proxy configuration should be accessible\n"
+        f"Output: {result.output.decode('utf-8')}"
+    )
+
     output = result.output.decode('utf-8').strip().split('\n')
     assert len(output) >= 2, f"Should get both port and title, got: {output}"
-    
+
     # Extract the actual port and title, ignoring extra debug output
     port_found = False
     title_found = False
@@ -426,7 +429,7 @@ def test_complete_sas_studio_integration_pipeline(sas_studio_helper):
             port_found = True
         if 'SAS Studio' in line:
             title_found = True
-    
+
     assert port_found, f"Expected port 38080 in output, got: {output}"
     assert title_found, f"Expected 'SAS Studio' title in output, got: {output}"
 
