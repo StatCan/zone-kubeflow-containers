@@ -14,9 +14,63 @@ ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 # see `s6/cont-init.d/01-copy-tmp-home`
 ENV HOME_TMP=/tmp_home/$NB_USER
 
-# s6-overlay only gives 5 seconds by default, which is too small for slow PVC storage backends
-# when running `/etc/cont-inid.d/01-copy-tmp-home` (note, this is in milliseconds)
-ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=300000
+RUN apt-get update --yes \
+    && apt-get install --yes language-pack-fr \
+    && apt-get upgrade --yes libwebp7 \
+    && rm -rf /var/lib/apt/lists/* \
+    && chmod +x /usr/bin/clean-layer.sh
+
+COPY suspend-server.sh /usr/local/bin
+COPY adjust-server-resources.py /usr/local/bin
+
+# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
+RUN mamba install --quiet \
+      'pillow' \
+      'pyyaml' \
+      'joblib==1.2.0' \
+      # s3 file system tool forked by Zach, ~4 years old, to be upgraded
+      's3fs' \ 
+      'fire==0.5.0' \
+      'graphviz' && \
+      pip install 'kubeflow-training' && \
+      clean-layer.sh && \
+      fix-permissions $CONDA_DIR && \
+      fix-permissions /home/$NB_USER && \
+      chmod +x /usr/local/bin/suspend-server.sh && \
+      chmod +x /usr/local/bin/adjust-server-resources.py
+
+# Add helpers for shell initialization
+COPY shell_helpers.sh /tmp/shell_helpers.sh
+
+# Dependencies
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+      'byobu' \
+      'pass' \
+      'htop' \
+      'jq' \
+      'openssl' \
+      'ranger' \
+      'tig' \
+      'tmux' \
+      'tree' \
+      'vim' \
+      'zip' \
+      'zsh' \
+      'pinentry-tty' \
+      'dos2unix' \
+      # installs necessary tool for kerberos authentication setup
+      'krb5-user' \
+      # these are required by some r packages, adding these here so they get
+      # installed into all images.
+      'libfreetype6-dev' \
+      'libpng-dev' \
+      'libtiff5-dev' \
+      'libjpeg-dev' \
+      'libtiff-dev' \
+      'libfreetype-dev' \
+      'libfreetype6' && \
+    rm -rf /var/lib/apt/lists/*
 
 # s6-overlay does not fail by default if the `/etc/cont-init.d/` or `/etc/services.d/` scripts fail
 # this is not the desired behavior, so we set it to fail
