@@ -30,6 +30,8 @@ ENV SERVICE_URL=https://extensions.coder.com/api
 RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix \
+    # && wget -q https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/Posit/air-vscode/0.18.0@linux-x64.vsix
+    && wget -q https://marketplace.visualstudio.com/_apis/public/gallery/publishers/Posit/vsextensions/air-vscode/0.18.0/vspackage?targetPlatform=linux-x64
     && apt-get update \
     && apt-get install -y --no-install-recommends nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
     && dpkg -i ./vscode.deb \
@@ -48,7 +50,9 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
     code-server --install-extension cpptools-linux.vsix \
+    code-server --install-extension Posit.air-vscode-0.18.0@linux-x64.vsix \
     && rm cpptools-linux.vsix \
+    && rm Posit.air-vscode-0.18.0@linux-x64.vsix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && fix-permissions $CS_DEFAULT_HOME
