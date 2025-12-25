@@ -81,4 +81,6 @@ RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
 
+RUN rm -rf /usr/bin/python3.13
+
 USER $NB_USER
