@@ -102,10 +102,8 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sf' \
     'r-sparklyr' \
     'r-tidyverse' \
-    && mamba install --yes -c conda-forge --force-reinstall \
-        'pysqlite3' \
+    && mamba install --yes -c conda-forge \
         'sqlite>=3.45' \
-        'libsqlite' \
     && pip install --no-cache-dir \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
