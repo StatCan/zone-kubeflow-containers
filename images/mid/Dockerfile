@@ -104,7 +104,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-tidyverse' \
     && mamba install --yes -c conda-forge --force-reinstall \
         'pysqlite3' \
-        'sqlite' \
+        'sqlite>=3.45' \
         'libsqlite' \
     && pip install --no-cache-dir \
         'kubeflow-training' \
