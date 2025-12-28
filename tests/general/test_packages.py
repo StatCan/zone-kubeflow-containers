@@ -68,6 +68,7 @@ EXCLUDED_PACKAGES = [
     # Binaries
     "tini",
     "python",
+    "sqlite",
     "hdf5",
     "bzip2",
     'nodejs', 
