@@ -66,6 +66,7 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
+    'sqlite>=3.45' \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
@@ -91,7 +92,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'jupyter-lsp' \
     'r-arrow' \
     'r-aws.s3' \
-    'r-base=4.4.1' \
+    'r-base=4.5.1' \
     'r-catools' \
     'r-e1071' \
     'r-hdf5r' \
@@ -174,8 +175,8 @@ RUN wget -q https://github.com/openmpp/main/releases/download/v${OMPP_VERSION}/o
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
 # install rstudio-server
-ARG RSTUDIO_VERSION=2024.12.0-467
-ARG SHA256=1493188cdabcc1047db27d1bd0e46947e39562cbd831158c7812f88d80e742b3
+ARG RSTUDIO_VERSION=2025.09.1-401
+ARG SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
 # RStudio installation with cleanup
 RUN apt-get update \
     && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
@@ -224,6 +225,15 @@ COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
 
 COPY --chmod=755 keep-alive.sh start-oms.sh restart-oms.sh /usr/local/bin/
+
+# SSL Certs
+# https://jirab.statcan.ca/browse/ZONE-274?focusedId=3674862&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-3674862
+COPY --from=k8scc01covidacr.azurecr.io/publiccerts:latest /home/certs/ /opt/conda/ssl/certs
+RUN echo >> /opt/conda/ssl/cacert.pem && \
+    cd /opt/conda/ssl/certs/ && \
+    for file in *.crt; do (echo "# ${file}"; cat "${file}"; echo) >> /opt/conda/ssl/cacert.pem; done
+
+ENV REQUESTS_CA_BUNDLE=/opt/conda/ssl/cacert.pem
 
 USER $NB_USER
 
