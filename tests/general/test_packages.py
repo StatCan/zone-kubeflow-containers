@@ -68,7 +68,6 @@ EXCLUDED_PACKAGES = [
     # Binaries
     "tini",
     "python",
-    "sqlite",
     "hdf5",
     "bzip2",
     'nodejs', 
@@ -88,6 +87,8 @@ EXCLUDED_PACKAGES = [
     # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
     # previously "blas=", which didn't work
     "blas=[build",
+
+    "sqlite",
 
     "protobuf",
     "r-irkernel",
@@ -184,7 +185,7 @@ def _import_packages(package_helper, filtered_packages, check_function, max_fail
             "If you're adding new conda installs to this build that cannot "
             "be imported by python or R (eg: jupyterlab extensions, etc) see "
             "README.md instructions and add to test_packages.py's exclusion "
-            "list", failures)
+            "list", failures, EXCLUDED_PACKAGES, "sqlite" in EXCLUDED_PACKAGES)
     elif len(failures) > 0:
         LOGGER.warning(f"Some import(s) has(have) failed: {failures}")
 
