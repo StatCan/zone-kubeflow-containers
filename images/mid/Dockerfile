@@ -66,7 +66,6 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
-    'sqlite>=3.45' \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
