@@ -185,7 +185,7 @@ def _import_packages(package_helper, filtered_packages, check_function, max_fail
             "If you're adding new conda installs to this build that cannot "
             "be imported by python or R (eg: jupyterlab extensions, etc) see "
             "README.md instructions and add to test_packages.py's exclusion "
-            "list", failures, EXCLUDED_PACKAGES, "sqlite" in EXCLUDED_PACKAGES)
+            "list", failures, EXCLUDED_PACKAGES, filtered_packages, len(EXCLUDED_PACKAGES), len(filtered_packages))
     elif len(failures) > 0:
         LOGGER.warning(f"Some import(s) has(have) failed: {failures}")
 
