@@ -65,25 +65,56 @@ serviceaccounttoken <- Sys.getenv("ARTIFACTORY_TOKEN")
 options(
   repos = list(
     "ppm" = paste0("https://", serviceaccountname, ":", serviceaccounttoken, "@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-", rver, "-remote")
-
   )
 )
 
-# --- Migration helper (optional) ---
+# --- Future-proof migration helper ---
 migrate_old_packages <- function() {
-  old_lib <- "~/R/r-packages-4.4.1"
   new_lib <- Sys.getenv("R_LIBS_USER")
-  if (!file.exists("~/.migration_done") && dir.exists(old_lib)) {
+  dir.create(new_lib, recursive = TRUE, showWarnings = FALSE)
+  
+  # Skip if migration already done
+  if (file.exists("~/.migration_done")) {
+    message("Migration already done.")
+    return(invisible(TRUE))
+  }
+  
+  # Detect previous R version libraries in ~/R
+  r_dir <- "~/R"
+  if (!dir.exists(r_dir)) return(message("No previous R libraries found."))
+
+  old_libs <- list.dirs(r_dir, recursive = FALSE, full.names = TRUE)
+  
+  # Only consider directories with version lower than current
+  current_version <- as.numeric(paste0(R.Version()$major, ".", R.Version()$minor))
+  version_from_dir <- function(dir) as.numeric(sub(".*([0-9]+\\.[0-9]+)$", "\\1", dir))
+  old_libs <- old_libs[sapply(old_libs, function(d) {
+    v <- version_from_dir(d)
+    !is.na(v) && v < current_version
+  })]
+  
+  if (length(old_libs) == 0) {
+    message("No previous R libraries to migrate from.")
+    file.create("~/.migration_done")
+    return(invisible(TRUE))
+  }
+  
+  # Pick the latest previous version
+  old_lib <- old_libs[which.max(sapply(old_libs, version_from_dir))]
+  
+  # Only migrate if current library is empty
+  if (length(list.files(new_lib)) == 0) {
     pkgs <- list.files(old_lib)
     if (length(pkgs) > 0) {
-      message("Migrating ", length(pkgs), " packages from old R library to current library...")
+      message("Migrating ", length(pkgs), " packages from ", old_lib, " → ", new_lib)
       install.packages(pkgs, lib=new_lib, repos=getOption("repos"))
     }
-    file.create("~/.migration_done")
-    message("Migration complete.")
   } else {
-    message("No migration needed or already done.")
+    message("Current library not empty; skipping migration.")
   }
+  
+  file.create("~/.migration_done")
+  message("Migration complete.")
 }
 EOF
 fi
