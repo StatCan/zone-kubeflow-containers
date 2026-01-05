@@ -89,12 +89,32 @@ fi
 
 # -------------------- Language Configuration --------------------
 if [ -n "${KF_LANG}" ]; then
-  if [ "${KF_LANG}" = "en" ]; then
-    export LANG="en_US.utf8"
-  else
-    export LANG="fr_FR"
-  fi
-  echo "${LANG}" > "${S6_ENV}/LANG"
+    if [ "${KF_LANG}" = "en" ]; then
+        export LANG="en_US.utf8"
+    else
+        export LANG="fr_FR.utf8"
+        
+        # JupyterLab language settings
+        lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
+        if [ ! -e "${lang_file}" ]; then
+            mkdir -p "$(dirname "${lang_file}")"
+            cat > "${lang_file}" << EOF
+{
+    "locale": "${LANG}"
+}
+EOF
+        fi
+
+        # VS Code language settings
+        vscode_language="/home/${NB_USER}/.vscode/User/argv.json"
+        if [ ! -e "${vscode_language}" ]; then
+            mkdir -p "$(dirname "${vscode_language}")"
+            echo "{\"locale\":\"fr\"}" > "${vscode_language}"
+        fi
+    fi
+    echo "${LANG}" > "${S6_ENV}/LANG"
 fi
+
+echo "Language configuration complete"
 
 echo "--------------------Startup complete--------------------"
