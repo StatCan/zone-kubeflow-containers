@@ -74,6 +74,38 @@ jobs:
       - name: Test image
         run: make test/${{ inputs.image }} TAG=${{ inputs.tag }}
 
+      # Generate and upload coverage reports to Codecov
+      - name: Generate coverage reports
+        run: |
+          # Generate coverage reports for the tests that just ran
+          # Use the test-coverage make target to run tests with coverage
+          make test-coverage/${{ inputs.image }} TAG=${{ inputs.tag }} || echo "Coverage test had issues but continuing..."
+
+          # Check if coverage.xml was generated in various typical locations
+          if [ -f coverage.xml ]; then
+            echo "Found coverage.xml at root"
+          elif [ -f htmlcov/coverage.xml ]; then
+            cp htmlcov/coverage.xml .
+            echo "Found coverage.xml in htmlcov/"
+          elif [ -f cov.xml ]; then
+            cp cov.xml coverage.xml
+            echo "Found cov.xml and renamed to coverage.xml"
+          else
+            echo "No coverage.xml found at standard locations"
+          fi
+        continue-on-error: true
+
+      # Upload coverage to Codecov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-${{ inputs.image }}
+          fail_ci_if_error: false
+        continue-on-error: true
+
       # Free up space from build process (containerscan action will run out of space if we don't)
       - name: cleanup runner
         run: ./.github/scripts/cleanup_runner.sh
