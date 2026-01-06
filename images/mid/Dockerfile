@@ -51,7 +51,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && rm cpptools-linux.vsix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && rm -rf ~/.local/share/code-server/extensions/ms-python.vscode-python-envs-1.10.0-universal \
+    && rm -rf ~/.local/share/code-server/extensions/ms-python.vscode-python-envs-1.14.0-universal \
     && fix-permissions $CS_DEFAULT_HOME
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
