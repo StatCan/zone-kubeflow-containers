@@ -44,6 +44,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
+    code-server --install-extension continue.continue --force && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
@@ -216,6 +217,17 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 RUN wget -qO- https://pixi.sh/install.sh | sh \
     && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
+# install ollama
+
+RUN curl -fsSL https://ollama.com/install.sh | sh \
+    # ollama server must be up to pull images, but it's blocking, so start it in the background
+    && (nohup ollama serve > /tmp/ollama.log 2>&1 &) \
+    # wait for ollama server to start
+    && sleep 10 \
+    && ollama pull qwen2.5-coder:0.5b \
+    && pkill ollama \
+    && chmod +r "${HOME}/.ollama/id_ed25519"
+
 # Configure container startup
 
 # Copy over pip config
@@ -272,5 +284,8 @@ COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
     # give group same access as user (needed for OpenShift)
  && chmod -R g=u "${HOME_TMP}"
+
+ # s7 - copy continue.dev config
+COPY --chown=${NB_USER}:${NB_GID} continue.yaml ${HOME}/.continue/config.yaml
 
 EXPOSE 8888
