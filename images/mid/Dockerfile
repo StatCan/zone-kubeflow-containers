@@ -18,8 +18,8 @@ USER root
     # jupyterlab-spreadsheet
 
 # Install vscode
-ARG VSCODE_VERSION=4.99.4
-ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
+ARG VSCODE_VERSION=4.106.3
+ARG VSCODE_SHA=9043c0583051b0f500a558c2fcd5ff0f11cb89438c73300a89b18eef609df8b3
 ARG VSCODE_URL=https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server_${VSCODE_VERSION}_amd64.deb
 
 ENV CS_DISABLE_FILE_DOWNLOADS=1
@@ -38,10 +38,10 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
     # Manage extensions
-    code-server --install-extension ms-python.python@2025.4.0 && \
-    code-server --install-extension ms-python.debugpy@2025.4.0 && \
-    code-server --install-extension REditorSupport.r@2.8.4 && \
-    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
+    code-server --install-extension ms-python.python@2025.16.0 && \
+    code-server --install-extension ms-python.debugpy@2025.14.1 && \
+    code-server --install-extension REditorSupport.r@2.8.6 && \
+    code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.106.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
@@ -51,6 +51,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && rm cpptools-linux.vsix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf ~/.local/share/code-server/extensions/ms-python.vscode-python-envs-1.14.0-universal \
     && fix-permissions $CS_DEFAULT_HOME
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
