@@ -1,6 +1,6 @@
 target "base" {
     args = {
-        BASE_IMAGE="quay.io/jupyter/datascience-notebook:2025-03-05"
+        BASE_IMAGE="quay.io/jupyter/datascience-notebook:python-3.13.11"
     }
     context = "./images/base"
     tags = ["base"]
