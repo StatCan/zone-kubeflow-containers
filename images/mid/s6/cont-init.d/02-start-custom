@@ -1,4 +1,6 @@
 #!/command/with-contenv bash
+# CHANGE: Fail fast and catch unset variables
+set -euo pipefail
 
 echo "--------------------Starting up--------------------"
 
@@ -6,92 +8,137 @@ echo "--------------------Starting up--------------------"
 S6_ENV="/run/s6-env"
 [ -d "${S6_ENV}" ] || mkdir -p "${S6_ENV}"
 
+# CHANGE: ensure secrets written here are not world-readable
+chmod 700 "${S6_ENV}"
+
 # Introduced by RStudio 1.4
 # See https://github.com/jupyterhub/jupyter-rsession-proxy/issues/95
 # And https://github.com/blairdrummond/jupyter-rsession-proxy/blob/master/jupyter_rsession_proxy/__init__.py
-export RSERVER_WWW_ROOT_PATH=$NB_PREFIX/rstudio
-echo ${RSERVER_WWW_ROOT_PATH} > ${S6_ENV}/RSERVER_WWW_ROOT_PATH
+export RSERVER_WWW_ROOT_PATH="${NB_PREFIX}/rstudio"
+echo "${RSERVER_WWW_ROOT_PATH}" > "${S6_ENV}/RSERVER_WWW_ROOT_PATH"
 
-export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
-echo ${NB_NAMESPACE} > ${S6_ENV}/NB_NAMESPACE
+export NB_NAMESPACE="$(echo "${NB_PREFIX}" | awk -F '/' '{print $3}')"
+echo "${NB_NAMESPACE}" > "${S6_ENV}/NB_NAMESPACE"
 
+# CHANGE: read JWT safely and restrict permissions
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-echo ${JWT} > ${S6_ENV}/JWT
+echo "${JWT}" > "${S6_ENV}/JWT"
+chmod 600 "${S6_ENV}/JWT"
 
 # Setup environment variables for R and Rstudio
-echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
-echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
-echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
-printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
-echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
+REN="/opt/conda/lib/R/etc/Renviron"
+
+# CHANGE: idempotent writes to Renviron
+grep -qxF "NB_PREFIX=${NB_PREFIX}" "${REN}" || echo "NB_PREFIX=${NB_PREFIX}" >> "${REN}"
+grep -qxF "NB_NAMESPACE=${NB_NAMESPACE}" "${REN}" || echo "NB_NAMESPACE=${NB_NAMESPACE}" >> "${REN}"
+grep -qxF "NLS_LANG=${NLS_LANG}" "${REN}" || echo "NLS_LANG=${NLS_LANG}" >> "${REN}"
+grep -qxF "SPARK_HOME=${SPARK_HOME}" "${REN}" || echo "SPARK_HOME=${SPARK_HOME}" >> "${REN}"
+
+# CHANGE: whitelist Kubernetes env vars instead of grepping everything
+printenv | grep -E '^KUBERNETES_(HOST|PORT|SERVICE)' >> "${REN}" || true
+
 # Filer related env vars for R & Rstudio
-printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
+# CHANGE: still allowed, but guarded
+printenv | grep '^svm_' >> "${REN}" || true
 
 # Retrieve service account details
-serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
-serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
-# Point conda to Artifactory repository
-conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/
-conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
-conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
-conda config --remove channels 'defaults'
-conda config --remove channels conda-forge --system
+# CHANGE: keep kubectl, but fail clearly if it breaks
+serviceaccountname="$(kubectl get secret artifactory-creds -n "${NB_NAMESPACE}" --template='{{.data.Username}}' | base64 --decode)"
+serviceaccounttoken="$(kubectl get secret artifactory-creds -n "${NB_NAMESPACE}" --template='{{.data.Token}}' | base64 --decode)"
 
-pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+# Point conda to Artifactory repository
+conda config --add channels "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"
+conda config --add channels "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/"
+conda config --add channels "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/"
+conda config --remove channels 'defaults'
+conda config --remove channels conda-forge --system || true
+
+pip config set global.index-url \
+  "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple"
 
 # create pixi config to change default channel
-if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
+# CHANGE: fix file vs directory test
+PIXICONFIG="/home/${NB_USER}/.pixi/config.toml"
+if [ ! -f "${PIXICONFIG}" ]; then
   echo "Creating pixi config"
-  cat > /home/${NB_USER}/.pixi/config.toml << EOF
-default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
+  mkdir -p "$(dirname "${PIXICONFIG}")"
+  cat > "${PIXICONFIG}" << EOF
+default-channels = ["https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
+  chmod 600 "${PIXICONFIG}"
 fi
 
 # if rprofile doesnt exist
-if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
+# CHANGE: file test instead of directory test
+RPROFILE="/opt/conda/lib/R/etc/Rprofile.site"
+if [ ! -f "${RPROFILE}" ]; then
   echo "Creating rprofile"
-  cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
-options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
+  cat > "${RPROFILE}" << 'EOF'
+options(jupyter.plot_mimetypes = c(
+  'text/plain',
+  'image/png',
+  'image/jpeg',
+  'image/svg+xml',
+  'application/pdf'
+))
 
-local(
-  options(
-    repos = list(
-      "ppm" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.5-remote"
-    )
+# Dependency-free, credential-safe, idempotent PPM configuration
+local({
+  repos <- getOption("repos")
+  cran_remote <- repos[["cran-remote"]]
+  if (is.null(cran_remote)) return(invisible())
+
+  # Extract key without regex
+  no_scheme <- sub("^https://", "", cran_remote)
+  auth_part <- strsplit(no_scheme, "@", fixed = TRUE)[[1]][1]
+  key <- sub("^svc-das:", "", auth_part)
+  if (!nzchar(key)) return(invisible())
+
+  r_ver <- paste0(R.version$major, ".", R.version$minor)
+
+  ppm_url <- sprintf(
+    "https://artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-%s-remote",
+    r_ver
   )
-)
+
+  if (!identical(repos[["ppm"]], ppm_url)) {
+    options(
+      repos = c(
+        ppm = ppm_url,
+        repos[setdiff(names(repos), "ppm")]
+      )
+    )
+  }
+})
 EOF
 fi
 
 # Configure the language
-if [ -n "${KF_LANG}" ]; then
-    if [ "${KF_LANG}" = "en" ]; then
-        export LANG="en_US.utf8"
-        echo ${LANG} > ${S6_ENV}/LANG
-    else
-        export LANG="fr_FR"
-        echo ${LANG} > ${S6_ENV}/LANG
+if [ -n "${KF_LANG:-}" ]; then
+  if [ "${KF_LANG}" = "en" ]; then
+    export LANG="en_US.utf8"
+    echo "${LANG}" > "${S6_ENV}/LANG"
+  else
+    export LANG="fr_FR"
+    echo "${LANG}" > "${S6_ENV}/LANG"
 
-        lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
-        if [ ! -e ${lang_file} ]; then
-          mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
-          ( echo    '{'
-            echo     '   // Langue'
-            echo     '   // @jupyterlab/translation-extension:plugin'
-            echo     '   // Paramètres de langue.'
-            echo  -e '   // ****************************************\n'
-            echo     '   // Langue locale'
-            echo     '   // Définit la langue d'\''affichage de l'\''interface. Exemples: '\''es_CO'\'', '\''fr'\''.'
-            echo     '   "locale": "'${LANG}'"'
-            echo     '}'
-          ) > $lang_file
-        fi
-
-        vscode_language="${CS_DEFAULT_HOME}/User/argv.json"
-        if [ ! -e ${vscode_language} ]; then
-          echo "{\"locale\":\"fr\"}" >> $vscode_language
-        fi
+    lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
+    if [ ! -f "${lang_file}" ]; then
+      mkdir -p "$(dirname "${lang_file}")"
+      cat > "${lang_file}" << EOF
+{
+  "locale": "${LANG}"
+}
+EOF
     fi
+
+    vscode_language="${CS_DEFAULT_HOME}/User/argv.json"
+    # CHANGE: overwrite instead of append to avoid broken JSON
+    if [ ! -f "${vscode_language}" ]; then
+      mkdir -p "$(dirname "${vscode_language}")"
+      echo '{"locale":"fr"}' > "${vscode_language}"
+    fi
+  fi
 fi
 
 echo "language has been configured"
