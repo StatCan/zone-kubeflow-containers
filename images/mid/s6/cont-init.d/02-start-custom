@@ -2,151 +2,125 @@
 
 echo "--------------------Starting up--------------------"
 
-# -------------------- S6 Overlay Environment --------------------
+# create directory to store env vars for s6-overlay
 S6_ENV="/run/s6-env"
-mkdir -p "${S6_ENV}"
+[ -d "${S6_ENV}" ] || mkdir -p "${S6_ENV}"
 
-# -------------------- RStudio / Jupyter Proxy --------------------
-export RSERVER_WWW_ROOT_PATH="${NB_PREFIX}/rstudio"
-echo "${RSERVER_WWW_ROOT_PATH}" > "${S6_ENV}/RSERVER_WWW_ROOT_PATH"
+# Introduced by RStudio 1.4
+# See https://github.com/jupyterhub/jupyter-rsession-proxy/issues/95
+# And https://github.com/blairdrummond/jupyter-rsession-proxy/blob/master/jupyter_rsession_proxy/__init__.py
+export RSERVER_WWW_ROOT_PATH=$NB_PREFIX/rstudio
+echo ${RSERVER_WWW_ROOT_PATH} > ${S6_ENV}/RSERVER_WWW_ROOT_PATH
 
-export NB_NAMESPACE=$(echo "$NB_PREFIX" | awk -F '/' '{print $3}')
-echo "${NB_NAMESPACE}" > "${S6_ENV}/NB_NAMESPACE"
+export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
+echo ${NB_NAMESPACE} > ${S6_ENV}/NB_NAMESPACE
 
-# JWT token
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-echo "${JWT}" > "${S6_ENV}/JWT"
+echo ${JWT} > ${S6_ENV}/JWT
 
-# -------------------- R Environment --------------------
-RENVCFG="/opt/conda/lib/R/etc/Renviron"
+# Setup environment variables for R and Rstudio
+echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
+echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
+echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
+printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
+echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
+# Filer related env vars for R & Rstudio
+printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
 
-# Append environment variables to R environment
-{
-  echo "NB_PREFIX=${NB_PREFIX}"
-  echo "NB_NAMESPACE=${NB_NAMESPACE}"
-  echo "NLS_LANG=${NLS_LANG}"
-  printenv | grep KUBERNETES
-  echo "SPARK_HOME=${SPARK_HOME}"
-  printenv | grep svm
-} >> "${RENVCFG}"
-
-# -------------------- Conda Channels --------------------
-serviceaccountname=$(kubectl get secret artifactory-creds -n "$NB_NAMESPACE" --template={{.data.Username}} | base64 --decode)
-serviceaccounttoken=$(kubectl get secret artifactory-creds -n "$NB_NAMESPACE" --template={{.data.Token}} | base64 --decode)
-
-conda config --add channels "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"
-conda config --add channels "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/"
-conda config --add channels "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/"
+# Retrieve service account details
+serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
+serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
+# Point conda to Artifactory repository
+conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/
+conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
+conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
 conda config --remove channels 'defaults'
 conda config --remove channels conda-forge --system
 
-pip config set global.index-url "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple"
+pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
-# -------------------- Pixi Config --------------------
-PIXICONF="/home/${NB_USER}/.pixi/config.toml"
-if [ ! -f "$PIXICONF" ]; then
-  mkdir -p "$(dirname "$PIXICONF")"
-  cat > "$PIXICONF" <<EOF
+# create pixi config to change default channel
+if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
+  echo "Creating pixi config"
+  cat > /home/${NB_USER}/.pixi/config.toml << EOF
 default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
 fi
 
-# -------------------- Rprofile.site (future-proof) --------------------
-RPROFILE="/opt/conda/lib/R/etc/Rprofile.site"
-if [ ! -f "$RPROFILE" ]; then
-  cat > "$RPROFILE" <<'EOF'
-# --- Ensure user library exists ---
-dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
+# if rprofile doesnt exist
+if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
+  echo "Creating rprofile"
+  cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
+options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
 
-# --- Set repos dynamically based on R version ---
-rver <- paste0(R.Version()$major, ".", R.Version()$minor)
-serviceaccountname <- Sys.getenv("ARTIFACTORY_USER")
-serviceaccounttoken <- Sys.getenv("ARTIFACTORY_TOKEN")
-options(
-  repos = list(
-    "ppm" = paste0("https://", serviceaccountname, ":", serviceaccounttoken, "@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-", rver, "-remote")
+local({
+  repos <- getOption("repos")
+
+  ## 1. Require cran-remote to exist
+  cran_remote <- repos[["cran-remote"]]
+  if (is.null(cran_remote)) return(invisible())
+
+  ## 2. Extract credentials WITHOUT regex
+  # Expected form: https://svc-das:<KEY>@artifactory...
+  no_scheme <- sub("^https://", "", cran_remote)
+  auth_part <- strsplit(no_scheme, "@", fixed = TRUE)[[1]][1]
+  key <- sub("^svc-das:", "", auth_part)
+
+  if (!nzchar(key)) return(invisible())
+
+  ## 3. Compute R major.minor safely
+  r_ver <- paste0(R.version$major, ".", R.version$minor)
+
+  ## 4. Build credential-free PPM URL (Posit-style)
+  ppm_url <- sprintf(
+    "https://artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-%s-remote",
+    r_ver
   )
-)
 
-# --- Future-proof migration helper ---
-migrate_old_packages <- function() {
-  new_lib <- Sys.getenv("R_LIBS_USER")
-  dir.create(new_lib, recursive = TRUE, showWarnings = FALSE)
-  
-  # Skip if migration already done
-  if (file.exists("~/.migration_done")) {
-    message("Migration already done.")
-    return(invisible(TRUE))
+  ## 5. Idempotent repo update
+  if (!identical(repos[["ppm"]], ppm_url)) {
+    options(
+      repos = c(
+        ppm = ppm_url,
+        repos[setdiff(names(repos), "ppm")]
+      )
+    )
   }
-  
-  # Detect previous R version libraries in ~/R
-  r_dir <- "~/R"
-  if (!dir.exists(r_dir)) return(message("No previous R libraries found."))
+})
 
-  old_libs <- list.dirs(r_dir, recursive = FALSE, full.names = TRUE)
-  
-  # Only consider directories with version lower than current
-  current_version <- as.numeric(paste0(R.Version()$major, ".", R.Version()$minor))
-  version_from_dir <- function(dir) as.numeric(sub(".*([0-9]+\\.[0-9]+)$", "\\1", dir))
-  old_libs <- old_libs[sapply(old_libs, function(d) {
-    v <- version_from_dir(d)
-    !is.na(v) && v < current_version
-  })]
-  
-  if (length(old_libs) == 0) {
-    message("No previous R libraries to migrate from.")
-    file.create("~/.migration_done")
-    return(invisible(TRUE))
-  }
-  
-  # Pick the latest previous version
-  old_lib <- old_libs[which.max(sapply(old_libs, version_from_dir))]
-  
-  # Only migrate if current library is empty
-  if (length(list.files(new_lib)) == 0) {
-    pkgs <- list.files(old_lib)
-    if (length(pkgs) > 0) {
-      message("Migrating ", length(pkgs), " packages from ", old_lib, " → ", new_lib)
-      install.packages(pkgs, lib=new_lib, repos=getOption("repos"))
-    }
-  } else {
-    message("Current library not empty; skipping migration.")
-  }
-  
-  file.create("~/.migration_done")
-  message("Migration complete.")
-}
+
 EOF
 fi
 
-# -------------------- Language Configuration --------------------
+# Configure the language
 if [ -n "${KF_LANG}" ]; then
     if [ "${KF_LANG}" = "en" ]; then
         export LANG="en_US.utf8"
+        echo ${LANG} > ${S6_ENV}/LANG
     else
-        export LANG="fr_FR.utf8"
-        
-        # JupyterLab language settings
+        export LANG="fr_FR"
+        echo ${LANG} > ${S6_ENV}/LANG
+
         lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
-        if [ ! -e "${lang_file}" ]; then
-            mkdir -p "$(dirname "${lang_file}")"
-            cat > "${lang_file}" << EOF
-{
-    "locale": "${LANG}"
-}
-EOF
+        if [ ! -e ${lang_file} ]; then
+          mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
+          ( echo    '{'
+            echo     '   // Langue'
+            echo     '   // @jupyterlab/translation-extension:plugin'
+            echo     '   // Paramètres de langue.'
+            echo  -e '   // ****************************************\n'
+            echo     '   // Langue locale'
+            echo     '   // Définit la langue d'\''affichage de l'\''interface. Exemples: '\''es_CO'\'', '\''fr'\''.'
+            echo     '   "locale": "'${LANG}'"'
+            echo     '}'
+          ) > $lang_file
         fi
 
-        # VS Code language settings
-        vscode_language="/home/${NB_USER}/.vscode/User/argv.json"
-        if [ ! -e "${vscode_language}" ]; then
-            mkdir -p "$(dirname "${vscode_language}")"
-            echo "{\"locale\":\"fr\"}" > "${vscode_language}"
+        vscode_language="${CS_DEFAULT_HOME}/User/argv.json"
+        if [ ! -e ${vscode_language} ]; then
+          echo "{\"locale\":\"fr\"}" >> $vscode_language
         fi
     fi
-    echo "${LANG}" > "${S6_ENV}/LANG"
 fi
 
-echo "Language configuration complete"
-
-echo "--------------------Startup complete--------------------"
+echo "language has been configured"
