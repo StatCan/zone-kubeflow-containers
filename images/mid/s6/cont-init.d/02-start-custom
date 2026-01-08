@@ -53,13 +53,42 @@ if [ ! -d "/opt/conda/lib/R/etc/Rprofile.site" ]; then
   cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
 
-local(
-  options(
-    repos = list(
-      "ppm" = "https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-4.5-remote"
-    )
+local({
+  repos <- getOption("repos")
+
+  ## 1. Require cran-remote to exist
+  cran_remote <- repos[["cran-remote"]]
+  if (is.null(cran_remote)) return(invisible())
+
+  ## 2. Extract credentials WITHOUT regex
+  # Expected form: https://svc-das:<KEY>@artifactory...
+  no_scheme <- sub("^https://", "", cran_remote)
+  auth_part <- strsplit(no_scheme, "@", fixed = TRUE)[[1]][1]
+  key <- sub("^svc-das:", "", auth_part)
+
+  if (!nzchar(key)) return(invisible())
+
+  ## 3. Compute R major.minor safely
+  r_ver <- paste0(R.version$major, ".", R.version$minor)
+
+  ## 4. Build credential-free PPM URL (Posit-style)
+  ppm_url <- sprintf(
+    "https://artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-%s-remote",
+    r_ver
   )
-)
+
+  ## 5. Idempotent repo update
+  if (!identical(repos[["ppm"]], ppm_url)) {
+    options(
+      repos = c(
+        ppm = ppm_url,
+        repos[setdiff(names(repos), "ppm")]
+      )
+    )
+  }
+})
+
+
 EOF
 fi
 
