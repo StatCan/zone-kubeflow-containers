@@ -63,13 +63,20 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # Install Python dependencies and tools
 # https://github.com/StatCan/aaw-kubeflow-containers/issues/293
 # https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
+# Install SQLite3 dependencies first to prevent compatibility issues
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sqlite3 \
+    libsqlite3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
-    's3fs' \ 
+    's3fs' \
     'fire' \
     'mkl' \
     'graphviz' \
@@ -107,6 +114,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         'git+https://github.com/betatim/vscode-binder' \
         'jupyter-rsession-proxy==2.2.0' \
         'pyspark[ml]==3.5.5' \
+    # Reinstall SQLite support to fix compatibility issues
+    && pip install --no-cache-dir --force-reinstall 'pysqlite3-binary' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
         '@jupyterlab/translation-extension' \
