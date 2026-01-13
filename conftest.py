@@ -3,6 +3,7 @@ import os
 import logging
 
 import docker
+from docker.errors import APIError
 import pytest
 import requests
 from urllib3.util.retry import Retry
@@ -147,7 +148,7 @@ class TrackedContainer(object):
 @pytest.fixture(scope='function', autouse=True)
 def cleanup_containers(docker_client):
     """Autouse fixture to ensure all containers are cleaned up after each test.
-    
+
     This fixture runs automatically for every test and ensures that any containers
     created during testing are properly removed, even if the test fails. This prevents
     port conflicts and resource leaks.
@@ -162,7 +163,7 @@ def cleanup_containers(docker_client):
                 try:
                     LOGGER.debug(f"Cleaning up container {container.short_id}")
                     container.remove(force=True)
-                except docker.errors.APIError as e:
+                except APIError as e:
                     LOGGER.warning(f"Failed to remove container {container.short_id}: {e}")
     except Exception as e:
         LOGGER.error(f"Error during container cleanup: {e}")
