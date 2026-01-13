@@ -12,13 +12,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.smoke
-def test_python_available(jupyter_container):
+def test_python_available(container):
     """Test that Python is available in the jupyterlab-cpu image."""
     LOGGER.info("Testing Python availability...")
 
     try:
+        # Start the container
+        container.run()
+
         # Execute a simple Python command
-        result = jupyter_container.container.exec_run(["python", "--version"])
+        result = container.container.exec_run(["python", "--version"])
     except Exception as e:
         pytest.fail(f"Failed to execute Python command in container: {str(e)}")
 

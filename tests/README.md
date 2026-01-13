@@ -37,18 +37,18 @@ make test/base
   - `test_environment.py` — Environment variables and configuration
   - `test_kernel_execution.py` — Kernel execution and notebook functionality
   - `test_notebook.py` — Jupyter server startup
-  - `test_packages.py` — Package import verification
+  - `test_packages.py` — Package import verification (tests that installed packages can be imported)
   - `test_code_server.py` — VS Code server functionality
-  - `test_rstudio.py` — RStudio server functionality
+  - `test_rstudio.py` — RStudio server functionality (skips if RStudio not available in image)
   - `test_kubeflow_integration.py` — Kubeflow platform integration
 - **`jupyterlab-cpu/`** — Data science package tests for jupyterlab-cpu image
   - `test_python_data_science.py` — Python data science stack (pandas, numpy, matplotlib, etc.)
   - `test_r_functionality.py` — R language and packages functionality
-  - `test_julia.py` — Julia language and packages functionality
-  - `test_extensions.py` — JupyterLab extension checks
+  - `test_julia.py` — Julia language and packages functionality (skips if Julia not available in image)
+  - `test_extensions.py` — JupyterLab extension checks (may be skipped depending on JupyterLab version)
 - **`sas/`** — SAS-specific tests for sas image
-  - `test_sas_functionality.py` — SAS language and saspy integration functionality
-  - `test_sas_studio.py` — SAS Studio environment and functionality
+  - `test_sas_functionality.py` — SAS language and saspy integration functionality (skips if SAS not available in image)
+  - `test_sas_studio.py` — SAS Studio environment and functionality (skips if SAS Studio not available in image)
 
 ## Test Markers
 
@@ -95,13 +95,19 @@ All tests have access to these fixtures from `conftest.py`:
 def test_something_important(container, http_client):
     """Test that something important works."""
     container.run()
-    
+
     resp = http_client.get("http://localhost:8888/")
     assert resp.status_code == 200, (
         f"Expected 200, got {resp.status_code}\n"
         f"Response: {resp.text[:500]}"
     )
 ```
+
+### Test Helpers
+The test suite includes helper functions in the `general/` directory:
+
+- **`wait_utils.py`** — Utilities for waiting on HTTP responses and container readiness
+- **`helpers.py`** — Basic configuration and utility functions
 
 ### Key Practices
 - Add appropriate markers (`@pytest.mark.smoke`, `@pytest.mark.integration`, etc.)
