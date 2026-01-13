@@ -16,6 +16,16 @@ IMAGE_NAME_ENV_VAR = "IMAGE_NAME"
 NB_PREFIX_ENV_VAR = "NB_PREFIX"
 
 
+def pytest_configure(config):
+    """Validate test configuration before running tests."""
+    # Check for required environment variables early
+    image_name = os.getenv(IMAGE_NAME_ENV_VAR)
+    if not image_name:
+        # Don't fail here, but log for awareness - the fixture will handle the error
+        LOGGER.warning(f"Environment variable {IMAGE_NAME_ENV_VAR} not set. "
+                      f"Tests may fail if not properly configured.")
+
+
 @pytest.fixture(scope='session')
 def http_client():
     """Requests session with retries and backoff."""

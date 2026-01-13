@@ -15,13 +15,19 @@ LOGGER = logging.getLogger(__name__)
 def test_python_available(jupyter_container):
     """Test that Python is available in the jupyterlab-cpu image."""
     LOGGER.info("Testing Python availability...")
-    
-    # Execute a simple Python command
-    result = jupyter_container.container.exec_run(["python", "--version"])
-    
-    assert result.exit_code == 0, f"Python command failed with exit code {result.exit_code}"
-    
+
+    try:
+        # Execute a simple Python command
+        result = jupyter_container.container.exec_run(["python", "--version"])
+    except Exception as e:
+        pytest.fail(f"Failed to execute Python command in container: {str(e)}")
+
+    assert result.exit_code == 0, (
+        f"Python command failed with exit code {result.exit_code}. "
+        f"Output: {result.output.decode('utf-8')}"
+    )
+
     output = result.output.decode('utf-8').strip()
     assert "Python" in output, f"Unexpected Python version output: {output}"
-    
+
     LOGGER.info(f"Python available: {output}")

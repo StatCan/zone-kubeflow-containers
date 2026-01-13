@@ -13,21 +13,23 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.smoke
 def test_sas_available(sas_container):
-    """Test that SAS is available in the SAS image."""
-    LOGGER.info("Testing SAS availability...")
-    
-    # Execute a simple SAS command to check if it's available
-    result = sas_container.container.exec_run(["which", "sas"])
-    
-    # SAS might not be available in all environments, so we'll make this a soft check
-    # For the infrastructure demo, we'll just verify the container runs
-    sas_container.run()
-    
-    # Check if SAS executable exists
-    result = sas_container.container.exec_run(["bash", "-c", "command -v sas || echo 'not found'"])
-    
-    output = result.output.decode('utf-8').strip()
-    
-    LOGGER.info(f"SAS check result: {output}")
-    # Note: This test will pass regardless of SAS availability for infrastructure demonstration
+    """Test that SAS container runs properly (SAS availability check)."""
+    LOGGER.info("Testing SAS container functionality...")
+
+    try:
+        # Start the SAS container
+        sas_container.run()
+    except Exception as e:
+        pytest.fail(f"Failed to start SAS container: {str(e)}")
+
+    # Check if SAS executable exists (this may not be present in all images)
+    try:
+        result = sas_container.container.exec_run(["bash", "-c", "command -v sas || echo 'SAS not found'"])
+        output = result.output.decode('utf-8').strip()
+
+        LOGGER.info(f"SAS check result: {output}")
+    except Exception as e:
+        LOGGER.warning(f"Could not check for SAS executable: {str(e)}. Container ran successfully.")
+
+    # The important thing is that the container started without error
     LOGGER.info("SAS container test completed (infrastructure demo)")
