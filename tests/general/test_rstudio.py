@@ -3,7 +3,7 @@ import pytest
 
 LOGGER = logging.getLogger(__name__)
 
-EXPECTED = "2025.09.1+401 (Cucumberleaf Sunflower) for Ubuntu Jammy"
+EXPECTED = "2024.12.0+467 (Kousa Dogwood) for Ubuntu Jammy"
 
 def test_rstudio(container):
     """Test that RStudio server is available and responds with expected version."""
