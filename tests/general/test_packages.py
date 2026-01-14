@@ -52,7 +52,6 @@ PACKAGE_MAPPING = {
     "scikit-image": "skimage",
     "spylon-kernel": "spylon_kernel",
     "pillow": "PIL",
-    "sqlite": "sqlite3",
     "pytables": "tables",
     "pyyaml": "yaml",
     "jupyterhub-singleuser": "jupyterhub.singleuser",
