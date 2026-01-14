@@ -67,7 +67,7 @@ class CondaPackageHelper:
 
     def _conda_export_command(self, from_history=False):
         """Return the conda export command with or without history"""
-        self._execute_command(["conda", "config", "--add", "channels", "defaults"])
+        # self._execute_command(["conda", "config", "--add", "channels", "defaults"])
         cmd = ["conda", "env", "export", "-n", "base", "--json", "--no-builds"]
         if from_history:
             cmd.append("--from-history")
@@ -100,6 +100,11 @@ class CondaPackageHelper:
     def _packages_from_json(env_export):
         """Extract packages and versions from the lines returned by the list of specifications"""
         # dependencies = filter(lambda x:  isinstance(x, str), json.loads(env_export).get("dependencies"))
+        s = env_export.strip()
+        start = s.find("{")
+        if start == -1:
+            raise ValueError("No JSON object could be decoded: missing opening '{':", s)
+        env_export = s[start:]    
         dependencies = json.loads(env_export).get("dependencies")
         # Filtering packages installed through pip in this case it's a dict {'pip': ['toree==0.3.0']}
         # Since we only manage packages installed through conda here

@@ -85,6 +85,7 @@ RUN apt-get update --yes \
         libfribidi-dev \
         # Use headless Java to save space
         openjdk-8-jre-headless \
+        smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
 
