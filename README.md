@@ -347,7 +347,6 @@ then following the normal build instructions starting with the Generate Dockerfi
 Be selective with software installation as image sizes are already quite big (16Gb plus),
 and increasing that size would negatively impact the time it takes up for a workspace server to come up
 (as well as first time image pulls to a node).
-In such cases it may be more relevant to make an image under [aaw-contrib-containers](https://github.com/StatCan/aaw-contrib-containers) as mentioned earlier.
 
 ### Adding New Images
 
@@ -566,8 +565,6 @@ When adding new software:
 2. **Minimize image size**: Clean up package managers and temporary files
 3. **Set permissions**: Use `fix-permissions $CONDA_DIR && fix-permissions /home/$NB_USER` after installations
 4. **Test thoroughly**: Run smoke tests to ensure functionality
-
-**Important**: Be selective with software installation as images are already large (>15GB). Consider if the software belongs in [aaw-contrib-containers](https://github.com/StatCan/aaw-contrib-containers) instead.
 
 ### Troubleshooting
 
