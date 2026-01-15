@@ -100,29 +100,17 @@ class CondaPackageHelper:
     def _packages_from_json(env_export):
         """Extract packages and versions from the lines returned by the list of specifications"""
         # Handle cases where stderr messages are mixed with JSON output
-        # Look for the actual JSON by finding the opening brace and closing brace
-        # Common stderr prefixes that need to be stripped
-        lines = env_export.strip().split('\n')
-        json_start_idx = 0
+        # Find the start and end of the actual JSON to handle stderr messages
+        start = env_export.find('{')
+        if start == -1:
+            raise ValueError(f"Could not find JSON in conda output: {env_export[:200]}...")
 
-        # Find the start of the JSON (first line that starts with '{' or contains '{')
-        for i, line in enumerate(lines):
-            stripped_line = line.strip()
-            if stripped_line.startswith('{') or '{' in stripped_line:
-                json_start_idx = i
-                break
+        end = env_export.rfind('}')  # Find the last closing brace
+        if end == -1:
+            raise ValueError(f"Could not find end of JSON in conda output: {env_export[-200:]}...")
 
-        # Reconstruct the JSON portion
-        json_part = '\n'.join(lines[json_start_idx:])
-
-        # Clean up any trailing stderr-like messages after the JSON
-        # Find the last '}' to properly close the JSON
-        last_brace_pos = json_part.rfind('}') + 1
-        if last_brace_pos > 0:
-            json_part = json_part[:last_brace_pos]
-
-        # dependencies = filter(lambda x:  isinstance(x, str), json.loads(json_part).get("dependencies"))
-        dependencies = json.loads(json_part).get("dependencies")
+        json_content = env_export[start:end+1]  # Include the closing brace
+        dependencies = json.loads(json_content).get("dependencies")
         # Filtering packages installed through pip in this case it's a dict {'pip': ['toree==0.3.0']}
         # Since we only manage packages installed through conda here
         dependencies = filter(lambda x: isinstance(x, str), dependencies)
