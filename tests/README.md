@@ -33,22 +33,17 @@ make test/base
 
 ### Test Directories
 - **`general/`** — Infrastructure and core functionality tests that run on all images
-  - `test_health.py` — Health checks and readiness tests
-  - `test_environment.py` — Environment variables and configuration
-  - `test_kernel_execution.py` — Kernel execution and notebook functionality
   - `test_notebook.py` — Jupyter server startup
   - `test_packages.py` — Package import verification
-  - `test_code_server.py` — VS Code server functionality
   - `test_rstudio.py` — RStudio server functionality
-  - `test_kubeflow_integration.py` — Kubeflow platform integration
+  - `helpers.py` — Helper functions and configuration for tests
 - **`jupyterlab-cpu/`** — Data science package tests for jupyterlab-cpu image
-  - `test_python_data_science.py` — Python data science stack (pandas, numpy, matplotlib, etc.)
-  - `test_r_functionality.py` — R language and packages functionality
+  - `test_pandas.py` — Pandas functionality and integration tests
+  - `test_matplotlib.py` — Matplotlib plotting functionality
   - `test_julia.py` — Julia language and packages functionality
   - `test_extensions.py` — JupyterLab extension checks
 - **`sas/`** — SAS-specific tests for sas image
-  - `test_sas_functionality.py` — SAS language and saspy integration functionality
-  - `test_sas_studio.py` — SAS Studio environment and functionality
+  - (Currently no SAS-specific test files in this branch)
 
 ## Test Markers
 

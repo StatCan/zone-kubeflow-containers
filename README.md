@@ -188,9 +188,18 @@ Testing is organized into two categories:
 ```
 └── tests
     ├── general                             # Infrastructure tests applied to all images
-    │   └── some_infrastructure_test.py
-    └── jupyterlab-cpu                      # User-facing data science package tests
-        └── some_data_science_package_test.py
+    │   ├── test_notebook.py                # Jupyter server startup
+    │   ├── test_packages.py                # Package import verification
+    │   ├── test_rstudio.py                 # RStudio server functionality
+    │   └── helpers.py                      # Helper functions and configuration
+    └── jupyterlab-cpu                      # Data science package tests for jupyterlab-cpu image
+        ├── test_pandas.py                  # Pandas functionality and integration tests
+        ├── test_matplotlib.py              # Matplotlib plotting functionality
+        ├── test_julia.py                   # Julia language and packages functionality
+        ├── test_extensions.py              # JupyterLab extension checks
+        └── data/                           # Test data files
+            ├── matplotlib_1.py
+            └── matplotlib_fonts_1.py
 ```
 
 Where `tests/general` tests verify infrastructure functionality (health checks, environment, kernels, etc.) across all images,
@@ -205,7 +214,15 @@ Tests are formatted using typical pytest formats
 Our test suite ensures images work correctly using pytest. Tests are organized by functionality:
 
 - `tests/general/` - Infrastructure and core functionality tests (health checks, environment, kernels, servers, etc.) that run on all images
+  - `test_notebook.py` - Jupyter server startup
+  - `test_packages.py` - Package import verification
+  - `test_rstudio.py` - RStudio server functionality
+  - `helpers.py` - Helper functions and configuration for tests
 - `tests/jupyterlab-cpu/` - Data science package tests (Python/R/Julia functionality) for jupyterlab-cpu image
+  - `test_pandas.py` - Pandas functionality and integration tests
+  - `test_matplotlib.py` - Matplotlib plotting functionality
+  - `test_julia.py` - Julia language and packages functionality
+  - `test_extensions.py` - JupyterLab extension checks
 - `tests/sas/` - SAS-specific tests (SAS functionality and SAS Studio) for sas image
 
 ### Test Commands:
