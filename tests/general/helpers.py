@@ -67,7 +67,7 @@ class CondaPackageHelper:
 
     def _conda_export_command(self, from_history=False):
         """Return the conda export command with or without history"""
-        # self._execute_command(["conda", "config", "--add", "channels", "defaults"])
+        self._execute_command(["conda", "config", "--add", "channels", "defaults"])
         cmd = ["conda", "env", "export", "-n", "base", "--json", "--no-builds"]
         if from_history:
             cmd.append("--from-history")
@@ -99,13 +99,30 @@ class CondaPackageHelper:
     @staticmethod
     def _packages_from_json(env_export):
         """Extract packages and versions from the lines returned by the list of specifications"""
-        # dependencies = filter(lambda x:  isinstance(x, str), json.loads(env_export).get("dependencies"))
-        s = env_export.strip()
-        start = s.find("{")
-        if start == -1:
-            raise ValueError("No JSON object could be decoded: missing opening '{':", s)
-        env_export = s[start:]    
-        dependencies = json.loads(env_export).get("dependencies")
+        # Handle cases where stderr messages are mixed with JSON output
+        # Look for the actual JSON by finding the opening brace and closing brace
+        # Common stderr prefixes that need to be stripped
+        lines = env_export.strip().split('\n')
+        json_start_idx = 0
+
+        # Find the start of the JSON (first line that starts with '{' or contains '{')
+        for i, line in enumerate(lines):
+            stripped_line = line.strip()
+            if stripped_line.startswith('{') or '{' in stripped_line:
+                json_start_idx = i
+                break
+
+        # Reconstruct the JSON portion
+        json_part = '\n'.join(lines[json_start_idx:])
+
+        # Clean up any trailing stderr-like messages after the JSON
+        # Find the last '}' to properly close the JSON
+        last_brace_pos = json_part.rfind('}') + 1
+        if last_brace_pos > 0:
+            json_part = json_part[:last_brace_pos]
+
+        # dependencies = filter(lambda x:  isinstance(x, str), json.loads(json_part).get("dependencies"))
+        dependencies = json.loads(json_part).get("dependencies")
         # Filtering packages installed through pip in this case it's a dict {'pip': ['toree==0.3.0']}
         # Since we only manage packages installed through conda here
         dependencies = filter(lambda x: isinstance(x, str), dependencies)
