@@ -43,7 +43,6 @@ make test/base
   - `test_julia.py` — Julia language and packages functionality
   - `test_extensions.py` — JupyterLab extension checks
 - **`sas/`** — SAS-specific tests for sas image
-  - (Currently no SAS-specific test files in this branch)
 
 ## Test Markers
 
