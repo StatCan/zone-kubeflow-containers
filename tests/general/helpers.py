@@ -22,11 +22,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
+import logging
 import re
 from collections import defaultdict
 from itertools import chain
-import logging
-import json
 
 from tabulate import tabulate
 
@@ -34,8 +34,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class CondaPackageHelper:
-    """Conda package helper permitting to get information about packages
-    """
+    """Conda package helper permitting to get information about packages"""
 
     def __init__(self, container):
         # if isinstance(container, TrackedContainer):
@@ -52,16 +51,16 @@ class CondaPackageHelper:
         # Original docker-stacks version explicitly set
         # command=["start.sh", "bash", "-c", "sleep infinity"] for start below.  Why?
         # Shouldn't these start's create servers which will stay alive?  Modified this
-        # to use the default start command (that way if we've changed the CMD, we can 
+        # to use the default start command (that way if we've changed the CMD, we can
         # still use this same code)
-        # If we wanted to add this back in, we should pull the actual CMD from the 
+        # If we wanted to add this back in, we should pull the actual CMD from the
         # image like:
         # return container.run(
         #     tty=True, command=container.get_cmd()
         # )
 
         return container.run(
-            tty=True, 
+            tty=True,
             # command=["start.sh", "bash", "-c", "sleep infinity"]  # See note above
         )
 
@@ -101,15 +100,19 @@ class CondaPackageHelper:
         """Extract packages and versions from the lines returned by the list of specifications"""
         # Handle cases where stderr messages are mixed with JSON output
         # Find the start and end of the actual JSON to handle stderr messages
-        start = env_export.find('{')
+        start = env_export.find("{")
         if start == -1:
-            raise ValueError(f"Could not find JSON in conda output: {env_export[:200]}...")
+            raise ValueError(
+                f"Could not find JSON in conda output: {env_export[:200]}..."
+            )
 
-        end = env_export.rfind('}')  # Find the last closing brace
+        end = env_export.rfind("}")  # Find the last closing brace
         if end == -1:
-            raise ValueError(f"Could not find end of JSON in conda output: {env_export[-200:]}...")
+            raise ValueError(
+                f"Could not find end of JSON in conda output: {env_export[-200:]}..."
+            )
 
-        json_content = env_export[start:end+1]  # Include the closing brace
+        json_content = env_export[start : end + 1]  # Include the closing brace
         dependencies = json.loads(json_content).get("dependencies")
         # Filtering packages installed through pip in this case it's a dict {'pip': ['toree==0.3.0']}
         # Since we only manage packages installed through conda here
@@ -133,9 +136,7 @@ class CondaPackageHelper:
     def available_packages(self):
         """Return the available packages"""
         if self.available is None:
-            LOGGER.info(
-                "Grabing the list of available packages (can take a while) ..."
-            )
+            LOGGER.info("Grabing the list of available packages (can take a while) ...")
             # Keeping command line output since `conda search --outdated --json` is way too long ...
             self.available = CondaPackageHelper._extract_available(
                 self._execute_command(["conda", "search", "--outdated"])
@@ -182,6 +183,7 @@ class CondaPackageHelper:
         def mysplit(string):
             def version_substrs(x):
                 return re.findall(r"([A-z]+|\d+)", x)
+
             return list(chain(map(version_substrs, string.split("."))))
 
         def str_ord(string):
