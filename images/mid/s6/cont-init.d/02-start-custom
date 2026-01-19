@@ -2,73 +2,76 @@
 
 echo "--------------------Starting up--------------------"
 
-# create directory to store env vars for s6-overlay
+# Setup directories
 S6_ENV="/run/s6-env"
-[ -d "${S6_ENV}" ] || mkdir -p "${S6_ENV}"
+mkdir -p "${S6_ENV}"
 
-# Introduced by RStudio 1.4
-# See https://github.com/jupyterhub/jupyter-rsession-proxy/issues/95
-# And https://github.com/blairdrummond/jupyter-rsession-proxy/blob/master/jupyter_rsession_proxy/__init__.py
-export RSERVER_WWW_ROOT_PATH=$NB_PREFIX/rstudio
-echo ${RSERVER_WWW_ROOT_PATH} > ${S6_ENV}/RSERVER_WWW_ROOT_PATH
+# Export RStudio web path for JupyterHub
+export RSERVER_WWW_ROOT_PATH="${NB_PREFIX}/rstudio"
+echo "${RSERVER_WWW_ROOT_PATH}" > "${S6_ENV}/RSERVER_WWW_ROOT_PATH"
 
-export NB_NAMESPACE=$(echo $NB_PREFIX | awk -F '/' '{print $3}')
-echo ${NB_NAMESPACE} > ${S6_ENV}/NB_NAMESPACE
+# Extract namespace from NB_PREFIX
+export NB_NAMESPACE=$(echo "${NB_PREFIX}" | cut -d'/' -f3)
+echo "${NB_NAMESPACE}" > "${S6_ENV}/NB_NAMESPACE"
 
+# Store JWT token
 export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-echo ${JWT} > ${S6_ENV}/JWT
+echo "${JWT}" > "${S6_ENV}/JWT"
 
-# Setup environment variables for R and Rstudio
-echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
-echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
-echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
-printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
-echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
-# Filer related env vars for R & Rstudio
-printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
+# Add environment variables to R configuration
+{
+    echo "NB_PREFIX=${NB_PREFIX}"
+    echo "NB_NAMESPACE=${NB_NAMESPACE}"
+    echo "NLS_LANG=${NLS_LANG}"
+    echo "SPARK_HOME=${SPARK_HOME}"
+    printenv | grep -E "^(KUBERNETES_|svm_)"
+} >> /opt/conda/lib/R/etc/Renviron
 
-# Retrieve service account details
-serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
-serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
-# Point conda to Artifactory repository
-conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/
-conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/
-conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/
-conda config --remove channels 'defaults'
-conda config --remove channels conda-forge --system
+# Get Artifactory credentials
+SERVICE_USER=$(kubectl get secret artifactory-creds -n "${NB_NAMESPACE}" --template={{.data.Username}} | base64 --decode)
+SERVICE_TOKEN=$(kubectl get secret artifactory-creds -n "${NB_NAMESPACE}" --template={{.data.Token}} | base64 --decode)
 
-pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+# Configure package managers with Artifactory
+configure_package_managers() {
+    local user="$1"
+    local token="$2"
 
-# create pixi config to change default channel
-if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
-  echo "Creating pixi config"
-  cat > /home/${NB_USER}/.pixi/config.toml << EOF
-default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
+    # Conda channels
+    conda config --add channels "https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"
+    conda config --add channels "https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/conda-pytorch-remote/"
+    conda config --add channels "https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/conda-nvidia-remote/"
+    conda config --remove channels 'defaults'
+    conda config --remove channels conda-forge --system
+
+    # Pip
+    pip config set global.index-url "https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple"
+
+    # Pixi (if not already configured)
+    PIXI_CONFIG="/home/${NB_USER}/.pixi/config.toml"
+    mkdir -p "$(dirname "${PIXI_CONFIG}")"
+    [ ! -f "${PIXI_CONFIG}" ] && cat > "${PIXI_CONFIG}" <<EOF
+default-channels = ["https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/conda-forge-remote/"]
 EOF
-fi
+}
 
-# Get the Ubuntu codename dynamically
-UBUNTU_CODENAME=$(lsb_release -cs)
+configure_package_managers "${SERVICE_USER}" "${SERVICE_TOKEN}"
 
-# Always update rprofile to ensure dynamic configuration
-echo "Updating rprofile with dynamic configuration"
-# Extract service account details to embed in R profile
-serviceaccountname=$(kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode)
-serviceaccounttoken=$(kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode)
+# Setup R configuration
+setup_r_config() {
+    local user="$1"
+    local token="$2"
+    local ubuntu_codename=$(lsb_release -cs)
 
-cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
+    cat > /opt/conda/lib/R/etc/Rprofile.site <<EOF
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
 
-# Compute R major.minor version for dynamic repository URL
-r_ver <- paste0(R.version$major, ".", R.version$minor)
-
-# Build dynamic PPM URL based on R version and Ubuntu codename with credentials
+# Dynamic PPM URL with credentials and Ubuntu codename
+r_ver <- paste0(R.version\$major, ".", R.version\$minor)
 ppm_url <- sprintf(
-  "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-%s-remote",
+  "https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${ubuntu_codename}-%s-remote",
   r_ver
 )
 
-# Set repository configuration - prioritize private repository
 options(
   repos = c(
     CRAN = "https://cran.r-project.org/",
@@ -76,43 +79,56 @@ options(
   )
 )
 
-# Ensure download method compatibility (matching .Rprofile setting)
 options(download.file.method = "wget")
+Sys.setenv(R_LIBS_USER = paste0(Sys.getenv("HOME"), "/R/r-packages-",
+                                R.version\$major, ".", R.version\$minor))
+EOF
+}
+
+setup_r_config "${SERVICE_USER}" "${SERVICE_TOKEN}"
+
+# Configure language
+setup_language() {
+    case "${KF_LANG}" in
+        "en")
+            export LANG="en_US.utf8"
+            ;;
+        "fr")
+            export LANG="fr_FR"
+            setup_french_ui
+            ;;
+        *)
+            export LANG="en_US.utf8"  # Default to English
+            ;;
+    esac
+
+    echo "${LANG}" > "${S6_ENV}/LANG"
+    echo "Language configured to: ${LANG}"
+}
+
+setup_french_ui() {
+    # JupyterLab French settings
+    JUPYTER_LANG_FILE="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
+    mkdir -p "$(dirname "${JUPYTER_LANG_FILE}")"
+    [ ! -f "${JUPYTER_LANG_FILE}" ] && cat > "${JUPYTER_LANG_FILE}" <<'EOF'
+{
+   // Langue
+   // @jupyterlab/translation-extension:plugin
+   // Paramètres de langue.
+   // ****************************************
+
+   // Langue locale
+   // Définit la langue d'affichage de l'interface. Exemples: 'es_CO', 'fr'.
+   "locale": "fr"
+}
 EOF
 
-# Additionally, set R_LIBS_USER to ensure proper library path setup
-# This ensures that the R packages are installed in the version-specific directory
-echo 'Sys.setenv(R_LIBS_USER=paste0(Sys.getenv("HOME"), "/R/r-packages-", R.version$major, ".", R.version$minor))' >> /opt/conda/lib/R/etc/Rprofile.site
+    # VSCode French settings
+    VSCODE_LANG_FILE="${CS_DEFAULT_HOME}/User/argv.json"
+    mkdir -p "$(dirname "${VSCODE_LANG_FILE}")"
+    [ ! -f "${VSCODE_LANG_FILE}" ] && echo '{"locale":"fr"}' > "${VSCODE_LANG_FILE}"
+}
 
-# Configure the language
-if [ -n "${KF_LANG}" ]; then
-    if [ "${KF_LANG}" = "en" ]; then
-        export LANG="en_US.utf8"
-        echo ${LANG} > ${S6_ENV}/LANG
-    else
-        export LANG="fr_FR"
-        echo ${LANG} > ${S6_ENV}/LANG
+[ -n "${KF_LANG}" ] && setup_language
 
-        lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
-        if [ ! -e ${lang_file} ]; then
-          mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
-          ( echo    '{'
-            echo     '   // Langue'
-            echo     '   // @jupyterlab/translation-extension:plugin'
-            echo     '   // Paramètres de langue.'
-            echo  -e '   // ****************************************\n'
-            echo     '   // Langue locale'
-            echo     '   // Définit la langue d'\''affichage de l'\''interface. Exemples: '\''es_CO'\'', '\''fr'\''.'
-            echo     '   "locale": "'${LANG}'"'
-            echo     '}'
-          ) > $lang_file
-        fi
-
-        vscode_language="${CS_DEFAULT_HOME}/User/argv.json"
-        if [ ! -e ${vscode_language} ]; then
-          echo "{\"locale\":\"fr\"}" >> $vscode_language
-        fi
-    fi
-fi
-
-echo "language has been configured"
+echo "--------------------Setup complete--------------------"
