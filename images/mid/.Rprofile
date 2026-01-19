@@ -1,5 +1,5 @@
-# Set Personal Package Directory
-#-------------------------------
+# Set Personal Package Directory with upgrade support
+#----------------------------------------------------
 home_dir <- Sys.getenv("HOME")
 package_dir <- paste0(home_dir, "/R/", "r-packages-", R.Version()$major, ".", R.Version()$minor)
 dir.create(package_dir, recursive = T, showWarnings = F)
