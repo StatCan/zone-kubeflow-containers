@@ -1,5 +1,5 @@
-# Set Personal Package Directory with upgrade support
-#----------------------------------------------------
+# Set Personal Package Directory with modern upgrade support
+#------------------------------------------------------------
 home_dir <- Sys.getenv("HOME")
 package_dir <- paste0(home_dir, "/R/", "r-packages-", R.Version()$major, ".", R.Version()$minor)
 dir.create(package_dir, recursive = T, showWarnings = F)
@@ -22,6 +22,11 @@ rm(existing_r_package_dirs)
 #options(stringsAsFactors = FALSE)
 #options(prompt = "ZONE> ")
 
-# using wget because https://github.com/StatCan/aaw-kubeflow-containers/issues/569
-# https://stackoverflow.com/questions/70559397/r-internet-routines-cannot-be-loaded-when-starting-from-rstudio
-options(download.file.method="wget")
+# Modern download method for compatibility
+options(download.file.method = "libcurl")
+# For older systems that don't support libcurl, fall back to wget
+if (capabilities("libcurl")) {
+  options(download.file.method = "libcurl")
+} else {
+  options(download.file.method = "wget")
+}
