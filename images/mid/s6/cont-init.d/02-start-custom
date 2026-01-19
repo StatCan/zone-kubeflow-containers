@@ -47,38 +47,39 @@ default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactor
 EOF
 fi
 
-# if rprofile doesnt exist
-if [ ! -f "/opt/conda/lib/R/etc/Rprofile.site" ]; then
-  echo "Creating rprofile"
-  # Extract service account details to embed in R profile
-  serviceaccountname=$(kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode)
-  serviceaccounttoken=$(kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode)
+# Always update rprofile to ensure dynamic configuration
+echo "Updating rprofile with dynamic configuration"
+# Extract service account details to embed in R profile
+serviceaccountname=$(kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode)
+serviceaccounttoken=$(kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode)
 
-  cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
+cat > /opt/conda/lib/R/etc/Rprofile.site<< EOF
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
 
-local({
-  # Compute R major.minor version for dynamic repository URL
-  r_ver <- paste0(R.version$major, ".", R.version$minor)
+# Compute R major.minor version for dynamic repository URL
+r_ver <- paste0(R.version$major, ".", R.version$minor)
 
-  # Build dynamic PPM URL based on R version with credentials
-  ppm_url <- sprintf(
-    "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-%s-remote",
-    r_ver
+# Build dynamic PPM URL based on R version with credentials
+ppm_url <- sprintf(
+  "https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-noble-%s-remote",
+  r_ver
+)
+
+# Set repository configuration - prioritize private repository
+options(
+  repos = c(
+    CRAN = "https://cran.r-project.org/",
+    ppm = ppm_url
   )
+)
 
-  # Update repository configuration with dynamic PPM
-  options(
-    repos = c(
-      CRAN = "https://cran.rstudio.com/",
-      ppm = ppm_url
-    )
-  )
-})
-
-
+# Ensure download method compatibility (matching .Rprofile setting)
+options(download.file.method = "wget")
 EOF
-fi
+
+# Additionally, set R_LIBS_USER to ensure proper library path setup
+# This ensures that the R packages are installed in the version-specific directory
+echo 'Sys.setenv(R_LIBS_USER=paste0(Sys.getenv("HOME"), "/R/r-packages-", R.version$major, ".", R.version$minor))' >> /opt/conda/lib/R/etc/Rprofile.site
 
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
