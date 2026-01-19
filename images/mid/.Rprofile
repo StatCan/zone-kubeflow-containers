@@ -1,5 +1,7 @@
-# Set Personal Package Directory with modern upgrade support
-#------------------------------------------------------------
+# Seamless R Package Upgrade Setup
+# Sets up personal library with automatic migration support
+
+# Create current R version's package directory
 home_dir <- Sys.getenv("HOME")
 package_dir <- paste0(home_dir, "/R/", "r-packages-", R.Version()$major, ".", R.Version()$minor)
 dir.create(package_dir, recursive = T, showWarnings = F)
@@ -27,6 +29,11 @@ options(download.file.method = "libcurl")
 # For older systems that don't support libcurl, fall back to wget
 if (capabilities("libcurl")) {
   options(download.file.method = "libcurl")
-} else {
+} else if (Sys.which("wget") != "") {
   options(download.file.method = "wget")
+} else {
+  options(download.file.method = "libcurl")  # fallback
 }
+
+# Cleanup
+rm(home_dir, current_package_dir, r_dir, existing_dirs, current_version)
