@@ -66,10 +66,12 @@ setup_r_config() {
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
 
 # Dynamic PPM URL with credentials and Ubuntu codename
-r_ver <- paste0(R.version\$major, ".", R.version\$minor)
+# Extract major.minor format (e.g., "4.5" from R version "4.5.1")
+r_version <- paste0(R.version\$major, ".", strsplit(R.version\$minor, "\\\\.")[[1]][1])
+
 ppm_url <- sprintf(
   "https://${user}:${token}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${ubuntu_codename}-%s-remote",
-  r_ver
+  r_version
 )
 
 options(
