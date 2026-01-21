@@ -20,7 +20,7 @@ rm(existing_r_package_dirs)
 # Add any customizations below
 #-----------------------------
 #options(stringsAsFactors = FALSE)
-#options(prompt = "AAW> ")
+#options(prompt = "ZONE> ")
 
 # using wget because https://github.com/StatCan/aaw-kubeflow-containers/issues/569
 # https://stackoverflow.com/questions/70559397/r-internet-routines-cannot-be-loaded-when-starting-from-rstudio
