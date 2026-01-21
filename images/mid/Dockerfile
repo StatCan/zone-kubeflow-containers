@@ -11,11 +11,11 @@ USER root
 
 # Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
 # this version of Jupyterlab and/or are not OL-compliant so they have been removed until new compatible versions are available:
-    # jupyterlab-kale
-    # jupyterlab-variableinspector
-    # jupyterlab-archive
-    # jupyterlab-spellchecker
-    # jupyterlab-spreadsheet
+# jupyterlab-kale
+# jupyterlab-variableinspector
+# jupyterlab-archive
+# jupyterlab-spellchecker
+# jupyterlab-spreadsheet
 
 # Install vscode
 ARG VSCODE_VERSION=4.99.4
@@ -104,15 +104,15 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sparklyr' \
     'r-tidyverse' \
     && pip install --no-cache-dir \
-        'kubeflow-training' \
-        'git+https://github.com/betatim/vscode-binder' \
-        'jupyter-rsession-proxy==2.2.0' \
-        'pyspark[ml]==3.5.5' \
+    'kubeflow-training' \
+    'git+https://github.com/betatim/vscode-binder' \
+    'jupyter-rsession-proxy==2.2.0' \
+    'pyspark[ml]==3.5.5' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
-        '@jupyterlab/translation-extension' \
-        '@jupyterlab/server-proxy' \
-        'nbdime-jupyterlab' \
+    '@jupyterlab/translation-extension' \
+    '@jupyterlab/server-proxy' \
+    'nbdime-jupyterlab' \
     && jupyter lab build \
     && jupyter lab clean \
     && clean-layer.sh \
@@ -126,11 +126,11 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && mamba install -c conda-forge --quiet --yes 'python-lsp-server' \
     && npm i -g \
-        'bash-language-server'  \
-        'dockerfile-language-server-nodejs' \
-        'javascript-typescript-langserver' \
-        'unified-language-server' \
-        'yaml-language-server' \
+    'bash-language-server'  \
+    'dockerfile-language-server-nodejs' \
+    'javascript-typescript-langserver' \
+    'unified-language-server' \
+    'yaml-language-server' \
     && npm cache clean --force \
     && rm -rf /root/.npm \
     && clean-layer.sh \ 
@@ -156,18 +156,10 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Harden rstudio-server
-RUN mkdir -p /etc/rstudio \
-    && echo "www-frame-origin=none" >> /etc/rstudio/rserver.conf \
-    && echo "www-enable-origin-check=1" >> /etc/rstudio/rserver.conf \
-    && echo "www-same-site=lax" >> /etc/rstudio/rserver.conf \
-    && echo "auth-timeout-minutes=10080" >> /etc/rstudio/rserver.conf  \
-    && echo "restrict-directory-view=1" >> /etc/rstudio/rsession.conf \
-    # Sets the default working dir
-    && echo "session-default-working-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf \
-    && echo "session-default-new-project-dir=/home/jovyan/workspace" >> /etc/rstudio/rsession.conf \
-    # https://github.com/rstudio/rstudio/issues/14060
-    && echo "rsession-ld-library-path=/opt/conda/lib" >> /etc/rstudio/rserver.conf 
+# Harden rstudio-server - copy config files
+# See: https://github.com/rstudio/rstudio/issues/14060 for rsession-ld-library-path
+RUN mkdir -p /etc/rstudio
+COPY rserver.conf rsession.conf /etc/rstudio/
 
 # Disables .RData settings
 RUN mkdir -p ${HOME}/.config/rstudio \
@@ -238,6 +230,6 @@ COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 #       and the contents of $HOME will be hidden
 RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
     # give group same access as user (needed for OpenShift)
- && chmod -R g=u "${HOME_TMP}"
+    && chmod -R g=u "${HOME_TMP}"
 
 EXPOSE 8888
