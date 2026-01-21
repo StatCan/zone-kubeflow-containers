@@ -76,7 +76,6 @@ ppm_url <- sprintf(
 
 options(
   repos = c(
-    CRAN = "https://cran.r-project.org/",
     ppm = ppm_url
   )
 )
