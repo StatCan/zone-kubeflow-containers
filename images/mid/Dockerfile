@@ -177,6 +177,7 @@ RUN mkdir -p ${HOME}/.config/rstudio \
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
+ENV R_ZIPCMD="zip"
 
 # install pixi package manager and enable autocomplete
 
