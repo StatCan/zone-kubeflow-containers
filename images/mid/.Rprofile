@@ -1,7 +1,5 @@
-# Seamless R Package Upgrade Setup
-# Sets up personal library with automatic migration support
-
-# Create current R version's package directory
+# Set Personal Package Directory
+#-------------------------------
 home_dir <- Sys.getenv("HOME")
 package_dir <- paste0(home_dir, "/R/", "r-packages-", R.Version()$major, ".", R.Version()$minor)
 dir.create(package_dir, recursive = T, showWarnings = F)
