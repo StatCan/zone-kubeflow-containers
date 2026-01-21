@@ -63,9 +63,11 @@ ENV SASPY_VERSION="5.4.0"
 
 RUN pip install sas_kernel
 
+# Stage SASPy config for user-level configuration
+# This will be copied to $HOME at runtime by 01-copy-tmp-home
 COPY sascfg.py /tmp/sascfg.py
-RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
-    && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
+RUN mkdir -p ${HOME_TMP}/.config/saspy \
+    && cp /tmp/sascfg.py ${HOME_TMP}/.config/saspy/sascfg_personal.py \
     && rm /tmp/sascfg.py
 
 # SAS GConfid
@@ -80,5 +82,11 @@ COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
+
+# s6 - 01-copy-tmp-home
+# NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
+#       this is a workaround because a PVC will be mounted at $HOME
+RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
+    && chmod -R g=u "${HOME_TMP}"
 
 USER $NB_USER
