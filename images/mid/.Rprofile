@@ -33,5 +33,3 @@ if (capabilities("libcurl")) {
   options(download.file.method = "libcurl")  # fallback
 }
 
-# Cleanup
-rm(home_dir, current_package_dir, r_dir, existing_dirs, current_version)
