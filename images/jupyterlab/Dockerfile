@@ -30,5 +30,14 @@ RUN cd ${RESOURCES_PATH} && \
    /bin/bash ./install.sh && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
+RUN mamba install --quiet --yes -c conda-forge \
+    'gt' \
+    'terra' \
+    'nlopptr' \
+    'nice' \
+    && clean-layer.sh \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
 USER $NB_USER
    
