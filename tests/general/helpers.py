@@ -22,11 +22,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import json
-import logging
 import re
 from collections import defaultdict
 from itertools import chain
+import logging
+import json
 
 from tabulate import tabulate
 
@@ -34,7 +34,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class CondaPackageHelper:
-    """Conda package helper permitting to get information about packages"""
+    """Conda package helper permitting to get information about packages
+    """
 
     def __init__(self, container):
         # if isinstance(container, TrackedContainer):
@@ -51,7 +52,7 @@ class CondaPackageHelper:
         # Original docker-stacks version explicitly set
         # command=["start.sh", "bash", "-c", "sleep infinity"] for start below.  Why?
         # Shouldn't these start's create servers which will stay alive?  Modified this
-        # to use the default start command (that way if we've changed the CMD, we can
+        # to use the default start command (that way if we've changed the CMD, we can 
         # still use this same code)
         # If we wanted to add this back in, we should pull the actual CMD from the
         # image like:
@@ -136,7 +137,9 @@ class CondaPackageHelper:
     def available_packages(self):
         """Return the available packages"""
         if self.available is None:
-            LOGGER.info("Grabing the list of available packages (can take a while) ...")
+            LOGGER.info(
+                "Grabing the list of available packages (can take a while) ..."
+            )
             # Keeping command line output since `conda search --outdated --json` is way too long ...
             self.available = CondaPackageHelper._extract_available(
                 self._execute_command(["conda", "search", "--outdated"])
