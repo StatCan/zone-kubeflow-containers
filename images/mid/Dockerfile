@@ -98,7 +98,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-hdf5r' \
     'r-markdown' \
     'r-odbc' \
-    'r-pak' \
     'r-renv' \
     'r-rodbc' \
     'r-sf' \
