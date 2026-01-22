@@ -65,10 +65,7 @@ RUN pip install sas_kernel
 
 # Stage SASPy config for user-level configuration
 # This will be copied to $HOME at runtime by 01-copy-tmp-home
-COPY sascfg.py /tmp/sascfg.py
-RUN mkdir -p ${HOME_TMP}/.config/saspy \
-    && cp /tmp/sascfg.py ${HOME_TMP}/.config/saspy/sascfg_personal.py \
-    && rm /tmp/sascfg.py
+COPY --chown=jovyan:sasstaff sascfg.py ${HOME_TMP}/.config/saspy/sascfg_personal.py
 
 # SAS GConfid
 
