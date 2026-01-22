@@ -158,7 +158,6 @@ RUN apt-get update \
 
 # Harden rstudio-server - copy config files
 # See: https://github.com/rstudio/rstudio/issues/14060 for rsession-ld-library-path
-RUN mkdir -p /etc/rstudio
 COPY rserver.conf rsession.conf /etc/rstudio/
 
 # Disables .RData settings
