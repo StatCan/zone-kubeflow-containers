@@ -20,16 +20,9 @@ rm(existing_r_package_dirs)
 # Add any customizations below
 #-----------------------------
 #options(stringsAsFactors = FALSE)
-#options(prompt = "ZONE> ")
+#options(prompt = "AAW> ")
 
-# Modern download method for compatibility
-options(download.file.method = "libcurl")
-# For older systems that don't support libcurl, fall back to wget
-if (capabilities("libcurl")) {
-  options(download.file.method = "libcurl")
-} else if (Sys.which("wget") != "") {
-  options(download.file.method = "wget")
-} else {
-  options(download.file.method = "libcurl")  # fallback
-}
+# using wget because https://github.com/StatCan/aaw-kubeflow-containers/issues/569
+# https://stackoverflow.com/questions/70559397/r-internet-routines-cannot-be-loaded-when-starting-from-rstudio
+options(download.file.method="wget")
 
