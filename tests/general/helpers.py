@@ -54,14 +54,14 @@ class CondaPackageHelper:
         # Shouldn't these start's create servers which will stay alive?  Modified this
         # to use the default start command (that way if we've changed the CMD, we can 
         # still use this same code)
-        # If we wanted to add this back in, we should pull the actual CMD from the
+        # If we wanted to add this back in, we should pull the actual CMD from the 
         # image like:
         # return container.run(
         #     tty=True, command=container.get_cmd()
         # )
 
         return container.run(
-            tty=True,
+            tty=True, 
             # command=["start.sh", "bash", "-c", "sleep infinity"]  # See note above
         )
 
@@ -186,7 +186,6 @@ class CondaPackageHelper:
         def mysplit(string):
             def version_substrs(x):
                 return re.findall(r"([A-z]+|\d+)", x)
-
             return list(chain(map(version_substrs, string.split("."))))
 
         def str_ord(string):
