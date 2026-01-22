@@ -24,6 +24,7 @@ echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
 echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
 printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
 echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
+echo "R_ZIPCMD=zip" >> /opt/conda/lib/R/etc/Renviron
 # Filer related env vars for R & Rstudio
 printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
 
