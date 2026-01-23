@@ -34,7 +34,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-gt' \
     'r-terra' \
     'r-nloptr' \
-    'r-nice' \
+    'nice' \
     && clean-layer.sh \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
