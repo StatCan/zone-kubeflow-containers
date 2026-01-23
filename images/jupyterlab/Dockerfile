@@ -23,21 +23,20 @@ RUN cd ${RESOURCES_PATH} && \
 ARG AOCC_VERSION=4.0.0
 ARG AOCC_SHA256=2729ec524cbc927618e479994330eeb72df5947e90cfcc49434009eee29bf7d4
 RUN cd ${RESOURCES_PATH} && \
-   wget --quiet https://download.amd.com/developer/eula/aocc-compiler/aocc-compiler-${AOCC_VERSION}.tar -O /tmp/aocc-compiler-${AOCC_VERSION}.tar && \
-   echo "${AOCC_SHA256} /tmp/aocc-compiler-${AOCC_VERSION}.tar" | sha256sum -c - && \
-   tar xf /tmp/aocc-compiler-${AOCC_VERSION}.tar -C ./ && \
-   cd ./aocc-compiler-${AOCC_VERSION} && \
-   /bin/bash ./install.sh && \
-   rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
+    wget --quiet https://download.amd.com/developer/eula/aocc-compiler/aocc-compiler-${AOCC_VERSION}.tar -O /tmp/aocc-compiler-${AOCC_VERSION}.tar && \
+    echo "${AOCC_SHA256} /tmp/aocc-compiler-${AOCC_VERSION}.tar" | sha256sum -c - && \
+    tar xf /tmp/aocc-compiler-${AOCC_VERSION}.tar -C ./ && \
+    cd ./aocc-compiler-${AOCC_VERSION} && \
+    /bin/bash ./install.sh && \
+    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
 RUN mamba install --quiet --yes -c conda-forge \
-    'gt' \
-    'terra' \
-    'nlopptr' \
-    'nice' \
+    'r-gt' \
+    'r-terra' \
+    'r-nloptr' \
+    'r-nice' \
     && clean-layer.sh \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
 USER $NB_USER
-   
