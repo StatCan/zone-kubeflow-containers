@@ -161,8 +161,8 @@ RUN apt-get update \
 COPY rserver.conf rsession.conf /etc/rstudio/
 
 # Disables .RData settings
-RUN mkdir -p ${HOME}/.config/rstudio \
-    && echo $'{\n\t"save_workspace": "never",\n\t"load_workspace": false\n}' > ${HOME}/.config/rstudio/rstudio-prefs.json
+RUN mkdir -p ${HOME}/.config/rstudio
+COPY --chown=${NB_USER}:${NB_GID} rstudio-prefs.json ${HOME}/.config/rstudio/rstudio-prefs.json
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
@@ -207,8 +207,9 @@ RUN mkdir -p ${HOME}/workspace \
     && echo "export GPG_TTY=\$(tty)" >> ${HOME}/.bashrc \
     # Create and set the gpg settings during first boot
     && mkdir -p ${HOME}/.gnupg \
-    && echo -e "default-cache-ttl 604800 \nmax-cache-ttl 604800 \n" > "${HOME}/.gnupg/gpg-agent.conf" \
     && chmod 700 "${HOME}/.gnupg"
+
+COPY --chown=${NB_USER}:${NB_GID} gpg-agent.conf ${HOME}/.gnupg/gpg-agent.conf
 
 # Set Python interpreter path for VSCode
 COPY --chown=${NB_USER}:${NB_GID} vscode_settings.json ${HOME}/workspace/.vscode/settings.json
