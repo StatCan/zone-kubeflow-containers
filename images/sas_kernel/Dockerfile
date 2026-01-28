@@ -1,7 +1,7 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=slim
+ARG BASE_IMAGE=jupyterlab-slim
 FROM $BASE_IMAGE
 
 USER root

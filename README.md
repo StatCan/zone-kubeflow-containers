@@ -47,8 +47,8 @@ The relationship between the stages and the final product is as shown below.
 graph TD
   upstream_nb["(upstream) datascience-notebook"]
   upstream_nb --> base
-  base --> slim
-  slim --> sas_kernel
+  base --> jupyterlab-slim
+  jupyterlab-slim --> sas_kernel
   upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
   sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
   sas_kernel --> sas
@@ -61,8 +61,8 @@ These images are chained together to perform the multi-staged build for our fina
 Image | Notes
 --- | ---
 [base](./images/base) | Base Image pulling from docker-stacks
-[slim](./images/slim) | Installs various tools on top of the base image
-[sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our slim image
+[jupyterlab-slim](./images/jupyterlab-slim) | Installs various tools on top of the base image
+[sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our jupyterlab-slim image
 
 ### Zone Images
 
@@ -267,11 +267,11 @@ To manage our custom scripts that we want to execute after a container starts up
 
 Scripts that need to run during the startup of the container can be placed in `/etc/cont-init.d/`, and are executed in ascending alphanumeric order.
 
-Scripts like our [start-custom](./images/slim/s6/cont-init.d/02-start-custom) use the with-contenv helper so that environment variables (passed to container) are available in the script.
+Scripts like our [start-custom](./images/jupyterlab-slim/s6/cont-init.d/02-start-custom) use the with-contenv helper so that environment variables (passed to container) are available in the script.
 
 Extra services to be monitored by s6-overlay should be placed in their own folder under `/etc/services.d/` containing a script called `run` and optionally a finishing script `finish`.
 
-An example of a long-running service can be found in our [main run script](./images/slim/s6/services.d/jupyter/run) which is used to start JupyterLab itself.
+An example of a long-running service can be found in our [main run script](./images/jupyterlab-slim/s6/services.d/jupyter/run) which is used to start JupyterLab itself.
 
 #### Note on setting environment variables in startup scripts
 
@@ -437,7 +437,7 @@ This was tested on Linux Ubuntu 20.04 virtual machine.
 ├── images                                  # Dockerfile and required resources for stage builds
 │   ├── base                                # Common base of the images
 │   ├── jupyterlab                          # Jupyterlab specific Dockerfile
-│   ├── slim                                 # Common slim point for all images
+│   ├── jupyterlab-slim                                 # Common jupyterlab-slim point for all images
 │   ├── sas                                 # SAS specific Dockerfile
 |   └── sas_kernel                          # Dockerfile for installation of sas_kernel
 │

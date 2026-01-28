@@ -52,12 +52,12 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  slim:
+  jupyterlab-slim:
     needs: [vars, base]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "slim"
-      directory: "slim"
+      image: "jupyterlab-slim"
+      directory: "jupyterlab-slim"
       parent-image: "base"
       parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -67,13 +67,13 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
   sas-kernel:
-    needs: [vars, slim]
+    needs: [vars, jupyterlab-slim]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "sas-kernel"
       directory: "sas_kernel"
-      parent-image: "slim"
-      parent-image-is-diff: "${{ needs.slim.outputs.is-diff }}"
+      parent-image: "jupyterlab-slim"
+      parent-image-is-diff: "${{ needs.jupyterlab-slim.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:

@@ -6,17 +6,17 @@ target "base" {
     tags = ["base"]
 }
 
-target "slim" {
+target "jupyterlab-slim" {
     args = {
         BASE_IMAGE="base"
     }
-    context = "./images/slim"
-    tags = ["slim"]
+    context = "./images/jupyterlab-slim"
+    tags = ["jupyterlab-slim"]
 }
 
 target "sas-kernel" {
     args = {
-        BASE_IMAGE="slim"
+        BASE_IMAGE="jupyterlab-slim"
     }
     context = "./images/sas_kernel"
     tags = ["sas-kernel"]
