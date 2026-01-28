@@ -52,12 +52,12 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  mid:
+  slim:
     needs: [vars, base]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "mid"
-      directory: "mid"
+      image: "slim"
+      directory: "slim"
       parent-image: "base"
       parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -67,13 +67,13 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
   sas-kernel:
-    needs: [vars, mid]
+    needs: [vars, slim]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "sas-kernel"
       directory: "sas_kernel"
-      parent-image: "mid"
-      parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
+      parent-image: "slim"
+      parent-image-is-diff: "${{ needs.slim.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:

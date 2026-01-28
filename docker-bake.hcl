@@ -6,17 +6,17 @@ target "base" {
     tags = ["base"]
 }
 
-target "mid" {
+target "slim" {
     args = {
         BASE_IMAGE="base"
     }
-    context = "./images/mid"
-    tags = ["mid"]
+    context = "./images/slim"
+    tags = ["slim"]
 }
 
 target "sas-kernel" {
     args = {
-        BASE_IMAGE="mid"
+        BASE_IMAGE="slim"
     }
     context = "./images/sas_kernel"
     tags = ["sas-kernel"]

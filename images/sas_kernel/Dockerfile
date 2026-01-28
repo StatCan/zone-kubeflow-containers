@@ -1,7 +1,7 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=mid
+ARG BASE_IMAGE=slim
 FROM $BASE_IMAGE
 
 USER root
