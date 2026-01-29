@@ -30,11 +30,20 @@ RUN cd ${RESOURCES_PATH} && \
    /bin/bash ./install.sh && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
-RUN mamba install --quiet --yes -c conda-forge \
+# Install system dependencies for r-terra
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libproj-dev \
+    proj-data \
+    proj-bin \
+    gdal-bin \
+    libgdal-dev \
+    && mamba install --quiet --yes -c conda-forge \
     'r-gt' \
     'r-terra' \
     'r-nloptr' \
     && fix-permissions $CONDA_DIR \
-    && fix-permissions /home/$NB_USER
+    && fix-permissions /home/$NB_USER \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 USER $NB_USER
