@@ -96,7 +96,7 @@ This will build the jupyterlab-cpu image, run quick smoke tests, and start an in
 - **Python**: Version 3.8+ (needed for tests)
 - **Make**: GNU Make 4.0+ (for build automation)
 - **Git**: Version 2.25+ (for version control)
-- **System**: At least 8GB RAM and 20GB disk space
+- **System**: At least 8GB RAM and 25GB+ disk space
 
 ## List of Maintained Images in This Repository
 
