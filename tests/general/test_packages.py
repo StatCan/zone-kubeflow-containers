@@ -107,7 +107,10 @@ EXCLUDED_PACKAGES = [
     # pytables is the package but we import tables
     "tables",
     "pytables",
-    "pkg-config"
+    "pkg-config",
+    # Geospatial packages - cannot be imported directly in standard tests
+    "proj",
+    "gdal",
 ]
 
 
