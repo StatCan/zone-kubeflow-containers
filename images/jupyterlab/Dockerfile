@@ -35,9 +35,14 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-gt' \
     'r-terra' \
     'r-nloptr' \
+    'r-nice' \
     'proj' \
+    'proj-data' \
     'gdal' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+ENV PROJ_LIB=${CONDA_DIR}/share/proj
+RUN echo "PROJ_LIB=${CONDA_DIR}/share/proj" >> /etc/R/Renviron.site
 
 USER $NB_USER
