@@ -16,7 +16,7 @@ RUN cd ${RESOURCES_PATH} && \
     tar xf /tmp/aocl-linux-aocc-${AOCL_VERSION}.tar -C ./ && \
     cd ./aocl-linux-aocc-${AOCL_VERSION} && \
     /bin/bash ./install.sh -t /opt/amd/aocl && \
-    cp setenv_aocl.sh ${AOCL_PATH} &&\
+    cp setenv_aocl.sh ${AOCL_PATH} && \
     rm /tmp/aocl-linux-aocc-${AOCL_VERSION}.tar
 
 # Install AMD AOCC
@@ -35,10 +35,14 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-gt' \
     'r-terra' \
     'r-nloptr' \
-    'r-nice' \
     'proj' \
     'proj-data' \
     'gdal' \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+# Install CRAN-only R package: nice
+RUN Rscript -e 'install.packages("nice", repos="https://cloud.r-project.org")' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
