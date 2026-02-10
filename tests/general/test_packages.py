@@ -110,6 +110,7 @@ EXCLUDED_PACKAGES = [
     "pkg-config",
     # Geospatial packages - cannot be imported directly in standard tests
     "proj",
+    "proj-data",
     "gdal",
 ]
 
