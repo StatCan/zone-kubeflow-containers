@@ -47,6 +47,6 @@ RUN Rscript -e 'install.packages("nice", repos="https://cloud.r-project.org")' \
     && fix-permissions /home/$NB_USER
 
 ENV PROJ_LIB=${CONDA_DIR}/share/proj
-RUN echo "PROJ_LIB=${CONDA_DIR}/share/proj" >> /etc/R/Renviron.site
+RUN echo "PROJ_LIB=${CONDA_DIR}/share/proj" >> /opt/conda/lib/R/etc/Renviron
 
 USER $NB_USER
