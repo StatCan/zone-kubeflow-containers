@@ -112,6 +112,22 @@ test/%: check-test-prereqs # Run all generic and image-specific tests against an
 	echo "Running tests on folders '$${TESTS}'";\
 	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest -m "not info" $${TESTS}
 
+test-smoke/%: REPO?=$(DEFAULT_REPO)
+test-smoke/%: TAG?=$(DEFAULT_TAG)
+test-smoke/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
+test-smoke/%: check-test-prereqs ## Run smoke tests for a specific image
+	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
+	TESTS="$(TESTS_DIR)/general";\
+	SPECIFIC_TEST_DIR="$(TESTS_DIR)/$(notdir $@)";\
+	if [ ! -d "$${SPECIFIC_TEST_DIR}" ]; then\
+		echo "No specific tests found for $${SPECIFIC_TEST_DIR}.  Running only general tests";\
+	else\
+		TESTS="$${TESTS} $${SPECIFIC_TEST_DIR}";\
+		echo "Found specific tests folder";\
+	fi;\
+	echo "Running smoke tests on folders '$${TESTS}'";\
+	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest -m "smoke" $${TESTS} -v
+
 dev/%: ARGS?=
 dev/%: DARGS?=
 dev/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
