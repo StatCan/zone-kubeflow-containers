@@ -42,7 +42,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     && fix-permissions /home/$NB_USER
 
 # Install CRAN-only R package: nice
-RUN Rscript -e 'install.packages("nice", repos="https://cloud.r-project.org")' \
+RUN Rscript -e 'install.packages("nice", repos="https://cloud.r-project.org", lib="/opt/conda/lib/R/library")' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
