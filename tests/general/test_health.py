@@ -30,6 +30,11 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.integration
 def test_server_startup_time(container, http_client, url="http://localhost:8888"):
     """Test that the Jupyter server starts within a reasonable timeframe."""
+    # Skip this test for the base image as it doesn't run a server
+    image_name = container.image_name.lower()
+    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+        pytest.skip("Base image does not run a server, skipping server startup test")
+        
     LOGGER.info("Testing server startup time...")
 
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
@@ -64,6 +69,11 @@ def test_server_startup_time(container, http_client, url="http://localhost:8888"
 @pytest.mark.integration
 def test_server_responds_to_requests(container, http_client, url="http://localhost:8888"):
     """Test that the server responds with valid HTTP status codes."""
+    # Skip this test for the base image as it doesn't run a server
+    image_name = container.image_name.lower()
+    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+        pytest.skip("Base image does not run a server, skipping server health test")
+    
     LOGGER.info("Testing server HTTP responses...")
 
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
@@ -99,6 +109,11 @@ def test_server_responds_to_requests(container, http_client, url="http://localho
 @pytest.mark.integration
 def test_server_has_valid_html(container, http_client, url="http://localhost:8888"):
     """Test that the server returns valid HTML content."""
+    # Skip this test for the base image as it doesn't run a server
+    image_name = container.image_name.lower()
+    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+        pytest.skip("Base image does not run a server, skipping HTML validation test")
+        
     LOGGER.info("Testing server HTML validity...")
 
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
@@ -146,6 +161,11 @@ def test_server_has_valid_html(container, http_client, url="http://localhost:888
 @pytest.mark.integration
 def test_api_endpoint_accessible(container, http_client, url="http://localhost:8888"):
     """Test that the Jupyter API is accessible."""
+    # Skip this test for the base image as it doesn't run a server
+    image_name = container.image_name.lower()
+    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+        pytest.skip("Base image does not run a server, skipping API accessibility test")
+        
     LOGGER.info("Testing Jupyter API accessibility...")
 
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
@@ -185,6 +205,11 @@ def test_api_endpoint_accessible(container, http_client, url="http://localhost:8
 @pytest.mark.integration
 def test_static_assets_accessible(container, http_client, url="http://localhost:8888"):
     """Test that static assets (CSS, JS) are accessible."""
+    # Skip this test for the base image as it doesn't run a server
+    image_name = container.image_name.lower()
+    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+        pytest.skip("Base image does not run a server, skipping static assets test")
+        
     LOGGER.info("Testing static assets accessibility...")
 
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
@@ -308,6 +333,11 @@ def test_container_logs_no_critical_errors(container):
 @pytest.mark.integration
 def test_port_8888_open(container, http_client, url="http://localhost:8888"):
     """Test that port 8888 is open and listening inside the container."""
+    # Skip this test for the base image as it doesn't run a server
+    image_name = container.image_name.lower()
+    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+        pytest.skip("Base image does not run a server, skipping port test")
+        
     LOGGER.info("Testing that port 8888 is listening...")
 
     nb_prefix = container.kwargs['environment']['NB_PREFIX']
