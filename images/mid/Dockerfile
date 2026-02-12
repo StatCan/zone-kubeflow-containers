@@ -72,7 +72,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
-    's3fs' \ 
+    's3fs' \
     'fire' \
     'mkl' \
     'graphviz' \
