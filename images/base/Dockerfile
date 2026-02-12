@@ -50,6 +50,7 @@ RUN apt-get update --yes \
         language-pack-fr \
         byobu \
         pass \
+        pinentry-tty \
         htop \
         jq \
         openssl \
