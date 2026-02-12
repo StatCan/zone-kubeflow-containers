@@ -11,7 +11,7 @@ def test_server_alive(container, http_client, url="http://localhost:8888"):
     
     # Skip this test for the base image as it doesn't run a server
     image_name = container.image_name.lower()
-    if 'base' in image_name and 'base' == image_name.split(':')[-1]:
+    if '/base:' in image_name or image_name.endswith('/base') or 'base:' in image_name.split('/')[-1]:
         pytest.skip("Base image does not run a server, skipping server alive test")
 
     # Redirect url to NB_PREFIX if it is set in the container environment
