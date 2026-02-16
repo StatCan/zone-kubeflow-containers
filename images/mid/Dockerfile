@@ -48,6 +48,8 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
+    # Added DuckDB SQL Tools for VSCode
+    code-server --install-extension RandomFractalsInc.vscode-duckdb-sql@1.6.0 && \
     code-server --install-extension cpptools-linux.vsix \
     && rm cpptools-linux.vsix \
     && apt-get clean \
@@ -67,6 +69,8 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
+    'duckdb=1.4.4' \
+    'python-duckdb=1.4.4' \
     'sqlite>=3.45' \
     'pillow' \
     'pyyaml' \
@@ -121,6 +125,23 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /home/$NB_USER/.node-gyp \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+# --- DuckDB Air-gapped Extension Setup ---
+# Pre-seeding extensions to prevent 503 download errors
+USER root
+# Note: DuckDB 1.4.x looks for extensions in a directory named 'v1.4.0' for compatibility
+ARG DUCKDB_INTERNAL_DIR=v1.4.0
+RUN mkdir -p /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
+
+# You must have these files in your local ./extensions/ directory during build
+COPY ./extensions/spatial.duckdb_extension.gz /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
+COPY ./extensions/httpfs.duckdb_extension.gz /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
+COPY ./extensions/parquet.duckdb_extension.gz /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
+
+RUN gunzip /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/*.gz && \
+    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb && \
+    fix-permissions /home/$NB_USER/.duckdb
+# ------------------------------------------
 
 # Install python, R, Julia and other useful language servers
 RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
