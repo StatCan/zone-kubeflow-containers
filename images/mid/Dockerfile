@@ -31,18 +31,22 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix \
     && apt-get update \
-    && apt-get install -y --no-install-recommends nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
+    && apt-get install -y --no-install-recommends \
+       nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
+       libxml2-dev libssl-dev libcurl4-openssl-dev libxt-dev \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
-    # Manage extensions
+    # Manage extensions - Restored original 2 Parquet + Added dvirtz for comparison
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
+    code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
+    code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
     code-server --install-extension dvirtz.parquet-viewer && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
@@ -73,7 +77,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
-    's3fs' \
+    's3fs' \ 
     'fire' \
     'mkl' \
     'graphviz' \
@@ -243,8 +247,8 @@ COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
 # s6 - 01-copy-tmp-home
 # NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
-#        this is a workaround because a PVC will be mounted at $HOME
-#        and the contents of $HOME will be hidden
+#       this is a workaround because a PVC will be mounted at $HOME
+#       and the contents of $HOME will be hidden
 RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
     # give group same access as user (needed for OpenShift)
     && chmod -R g=u "${HOME_TMP}"
