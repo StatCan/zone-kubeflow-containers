@@ -48,8 +48,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
-    # Added DuckDB SQL Tools for VSCode
-    code-server --install-extension RandomFractalsInc.vscode-duckdb-sql@1.6.0 && \
+    code-server --install-extension cweijan.vscode-mysql-client2@v1.1.3 && \
     code-server --install-extension cpptools-linux.vsix \
     && rm cpptools-linux.vsix \
     && apt-get clean \
@@ -69,8 +68,8 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
-    'duckdb=1.4.4' \
-    'python-duckdb=1.4.4' \
+    'duckdb' \
+    'python-duckdb' \
     'sqlite>=3.45' \
     'pillow' \
     'pyyaml' \
@@ -126,22 +125,19 @@ RUN mamba install --quiet --yes -c conda-forge \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
-# --- DuckDB Air-gapped Extension Setup ---
-# Pre-seeding extensions to prevent 503 download errors
+# DuckDB Extension Pre-install
 USER root
-# Note: DuckDB 1.4.x looks for extensions in a directory named 'v1.4.0' for compatibility
-ARG DUCKDB_INTERNAL_DIR=v1.4.0
-RUN mkdir -p /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
-
-# You must have these files in your local ./extensions/ directory during build
-COPY ./extensions/spatial.duckdb_extension.gz /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
-COPY ./extensions/httpfs.duckdb_extension.gz /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
-COPY ./extensions/parquet.duckdb_extension.gz /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/
-
-RUN gunzip /home/$NB_USER/.duckdb/extensions/${DUCKDB_INTERNAL_DIR}/linux_amd64/*.gz && \
+RUN DUCK_VER=$(duckdb --version | cut -d' ' -f1) && \
+    ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
+    mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
+    EXT_URL="http://extensions.duckdb.org/v${DUCK_VER}/linux_amd64" && \
+    wget -q "${EXT_URL}/spatial.duckdb_extension.gz" -O /tmp/spatial.gz && \
+    wget -q "${EXT_URL}/httpfs.duckdb_extension.gz" -O /tmp/httpfs.gz && \
+    wget -q "${EXT_URL}/icu.duckdb_extension.gz" -O /tmp/icu.gz && \
+    gunzip /tmp/*.gz && \
+    mv /tmp/*.duckdb_extension /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
     chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb && \
     fix-permissions /home/$NB_USER/.duckdb
-# ------------------------------------------
 
 # Install python, R, Julia and other useful language servers
 RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
