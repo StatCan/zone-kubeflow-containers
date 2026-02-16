@@ -130,7 +130,7 @@ RUN mamba install --quiet --yes -c conda-forge \
 
 # DuckDB Extension Pre-install
 USER root
-RUN DUCK_VER=$(duckdb --version | cut -d' ' -f1) && \
+RUN DUCK_VER=$(/opt/conda/bin/duckdb --version | cut -d' ' -f1) && \
     ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
     mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
     EXT_URL="http://extensions.duckdb.org/v${DUCK_VER}/linux_amd64" && \
