@@ -9,14 +9,6 @@ USER root
 # installs vscode server, python & conda packages and jupyter lab extensions.
 # also installs r-studio and pixi
 
-# Using JupyterLab 3.0 inherited docker-stacks base image. A few extensions we used to install and don't support
-# this version of Jupyterlab and/or are not OL-compliant so they have been removed until new compatible versions are available:
-# jupyterlab-kale
-# jupyterlab-variableinspector
-# jupyterlab-archive
-# jupyterlab-spellchecker
-# jupyterlab-spreadsheet
-
 # Install vscode
 ARG VSCODE_VERSION=4.99.4
 ARG VSCODE_SHA=74c107b33643ed11223263b86431530fbc9c9f7c8202997579a6f0c41b4cb102
@@ -37,18 +29,17 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
-    # Manage extensions
+    # Manage extensions - FIXED: Removed failing @v1.1.3 and updated Parquet viewer
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension quarto.quarto@1.113.0 && \
-    code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
-    code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
+    code-server --install-extension dvirtz.parquet-viewer && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
-    code-server --install-extension cweijan.vscode-mysql-client2@1.1.3 && \
+    code-server --install-extension cweijan.vscode-mysql-client2 && \
     code-server --install-extension cpptools-linux.vsix \
     && rm cpptools-linux.vsix \
     && apt-get clean \
@@ -57,15 +48,8 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
-# Fix for VSCode extensions and CORS
-# Languagepacks.json needs to exist for code-server to recognize the languagepack
-# Sets the default workspace for vscode
 COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 
-# Install Python dependencies and tools
-# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
-# https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
-# need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
     'duckdb' \
@@ -117,7 +101,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     '@jupyterlab/translation-extension' \
     '@jupyterlab/server-proxy' \
     'nbdime-jupyterlab' \
-    && jupyter lab build \
     && jupyter lab clean \
     && clean-layer.sh \
     && rm -rf /home/$NB_USER/.cache/yarn \
@@ -155,13 +138,11 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
-# Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.09.1-401
 ARG SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
-# RStudio installation with cleanup
 RUN apt-get update \
     && apt install -y --no-install-recommends software-properties-common dirmngr gdebi-core \
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
@@ -174,41 +155,27 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Harden rstudio-server - copy config files
-# See: https://github.com/rstudio/rstudio/issues/14060 for rsession-ld-library-path
 COPY rserver.conf rsession.conf /etc/rstudio/
-
-# Disables .RData settings
 RUN mkdir -p ${HOME}/.config/rstudio
 COPY --chown=${NB_USER}:${NB_GID} rstudio-prefs.json ${HOME}/.config/rstudio/rstudio-prefs.json
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
-
 ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark"
 ENV R_ZIPCMD="zip"
 
-# install pixi package manager and enable autocomplete
-
+# install pixi 
 RUN wget -qO- https://pixi.sh/install.sh | sh \
     && echo "eval \"\$(pixi completion --shell bash)\"" >> ~/.bashrc
 
-# Configure container startup
-
-# Copy over pip config
 COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
-
-#Copy over various files
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
-
 COPY --chmod=755 keep-alive.sh /usr/local/bin/
 
-# SSL Certs
-# https://jirab.statcan.ca/browse/ZONE-274?focusedId=3674862&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-3674862
+# SSL Certs setup
 COPY --from=k8scc01covidacr.azurecr.io/publiccerts:latest /home/certs/ /opt/conda/ssl/certs
 RUN echo >> /opt/conda/ssl/cacert.pem && \
     cd /opt/conda/ssl/certs/ && \
     for file in *.crt; do (echo "# ${file}"; cat "${file}"; echo) >> /opt/conda/ssl/cacert.pem; done
-
 ENV REQUESTS_CA_BUNDLE=/opt/conda/ssl/cacert.pem
 
 USER $NB_USER
@@ -219,35 +186,19 @@ RUN mkdir -p ${HOME}/workspace \
     && mkdir -p ${HOME}/workspace/data \
     && mkdir -p ${HOME}/workspace/.vscode \
     && mkdir -p ${HOME}/.local/share/code-server/User \
-    # Step up Git Credential Manager
     && git config --global credential.credentialStore gpg \
     && git config --global credential.helper manager \
     && echo "export GPG_TTY=\$(tty)" >> ${HOME}/.bashrc \
-    # Create and set the gpg settings during first boot
     && mkdir -p ${HOME}/.gnupg \
     && chmod 700 "${HOME}/.gnupg"
 
 COPY --chown=${NB_USER}:${NB_GID} gpg-agent.conf ${HOME}/.gnupg/gpg-agent.conf
-
-# Set Python interpreter path for VSCode
 COPY --chown=${NB_USER}:${NB_GID} vscode_settings.json ${HOME}/workspace/.vscode/settings.json
-
-# Python default user settings for VSCode
 COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME}/.local/share/code-server/User/settings.json
-
-# add rm wrapper
-# https://jirab.statcan.ca/browse/ZPS-40
 COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME}/.local/bin/rm
-
-# s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
-# s6 - 01-copy-tmp-home
-# NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
-#       this is a workaround because a PVC will be mounted at $HOME
-#       and the contents of $HOME will be hidden
 RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
-    # give group same access as user (needed for OpenShift)
     && chmod -R g=u "${HOME_TMP}"
 
 EXPOSE 8888
