@@ -39,7 +39,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
-    # Manage extensions - Restored original 2 Parquet + Added dvirtz for comparison
+    # Manage extensions
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension REditorSupport.r@2.8.4 && \
