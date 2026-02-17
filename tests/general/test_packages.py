@@ -109,6 +109,7 @@ EXCLUDED_PACKAGES = [
     "pytables",
     "pkg-config",
     "python-duckdb",
+    "duckdb-cli",
 ]
 
 
