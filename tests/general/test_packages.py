@@ -107,7 +107,8 @@ EXCLUDED_PACKAGES = [
     # pytables is the package but we import tables
     "tables",
     "pytables",
-    "pkg-config"
+    "pkg-config",
+    "python-duckdb",
 ]
 
 
