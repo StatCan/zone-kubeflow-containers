@@ -60,20 +60,12 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
-# Fix for VSCode extensions and CORS
-# Languagepacks.json needs to exist for code-server to recognize the languagepack
-# Sets the default workspace for vscode
 COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 
 # Install Python dependencies and tools
-# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
-# https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
-# need to add mamba install pkg-config so R can find freetype related packages
-# Combined conda and pip installations with cleanup
-
-# Split into steps to ensure mamba resolves before pip runs, preventing build hangs
 RUN mamba install --quiet --yes -c conda-forge \
     'duckdb' \
+    'duckdb-cli' \
     'python-duckdb' \
     'sqlite>=3.45' \
     'pillow' \
@@ -112,29 +104,24 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sf' \
     'r-sparklyr' \
     'r-tidyverse' \
-    && mamba clean --all -f -y \
-    && fix-permissions $CONDA_DIR
-
-RUN pip install --no-cache-dir \
+    && pip install --no-cache-dir \
     'kubeflow-training' \
     'git+https://github.com/betatim/vscode-binder' \
     'jupyter-rsession-proxy==2.2.0' \
-    'pyspark[ml]==3.5.5'
-
-# DuckDB extensions and Jupyter initialization
-RUN DUCK_BIN=$(which duckdb || echo "/opt/conda/bin/duckdb") && \
-    if [ -f "$DUCK_BIN" ]; then \
-        DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
-        ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
-        mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
-        EXT_URL="http://extensions.duckdb.org/v${DUCK_VER}/linux_amd64" && \
-        wget -q "${EXT_URL}/spatial.duckdb_extension.gz" -O /tmp/spatial.gz && \
-        wget -q "${EXT_URL}/httpfs.duckdb_extension.gz" -O /tmp/httpfs.gz && \
-        wget -q "${EXT_URL}/icu.duckdb_extension.gz" -O /tmp/icu.gz && \
-        gunzip /tmp/*.gz && \
-        mv /tmp/*.duckdb_extension /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
-        chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb; \
-    fi && \
+    'pyspark[ml]==3.5.5' \
+    && \
+    # --- DUCKDB EXTENSIONS START ---
+    # With duckdb-cli installed, we can now use the binary to install extensions
+    DUCK_BIN="/opt/conda/bin/duckdb" && \
+    DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
+    ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
+    mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
+    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu;" && \
+    # Set the extension directory in .duckdbrc to stop 503 errors at runtime
+    echo "SET extension_directory='/home/$NB_USER/.duckdb/extensions';" > /home/$NB_USER/.duckdbrc && \
+    echo "SET allow_unsigned_extensions=true;" >> /home/$NB_USER/.duckdbrc && \
+    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb /home/$NB_USER/.duckdbrc && \
+    # --- DUCKDB EXTENSIONS END ---
     jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
     '@jupyterlab/translation-extension' \
