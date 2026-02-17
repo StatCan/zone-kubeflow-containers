@@ -117,8 +117,8 @@ RUN mamba install --quiet --yes -c conda-forge \
     'pyspark[ml]==3.5.5' \
     && \
     # --- DUCKDB EXTENSIONS START ---
-    # Integrated here to ensure the duckdb binary is in the path during execution
-    DUCK_BIN="/opt/conda/bin/duckdb" && \
+    # Find the binary dynamically since the path can vary during the build phase
+    DUCK_BIN=$(which duckdb || echo "/opt/conda/bin/duckdb") && \
     DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
     ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
     mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
