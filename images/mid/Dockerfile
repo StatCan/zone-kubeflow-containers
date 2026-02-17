@@ -71,7 +71,7 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 
-# Refactored: Split into steps to ensure mamba resolves before pip runs, preventing build hangs
+# Split into steps to ensure mamba resolves before pip runs, preventing build hangs
 RUN mamba install --quiet --yes -c conda-forge \
     'duckdb' \
     'python-duckdb' \
