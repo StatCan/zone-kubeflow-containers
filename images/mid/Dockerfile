@@ -60,9 +60,16 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 COPY vscode-overrides.json $CS_DEFAULT_HOME/Machine/settings.json
+# Fix for VSCode extensions and CORS
+# Languagepacks.json needs to exist for code-server to recognize the languagepack
+# Sets the default workspace for vscode
 COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 
 # Install Python dependencies and tools
+# https://github.com/StatCan/aaw-kubeflow-containers/issues/293
+# https://stackoverflow.com/questions/68824450/error-configuration-failed-for-package-ragg
+# need to add mamba install pkg-config so R can find freetype related packages
+# Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
     'duckdb' \
     'duckdb-cli' \
