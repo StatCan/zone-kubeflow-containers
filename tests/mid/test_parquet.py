@@ -1,7 +1,7 @@
 """
 test_parquet
 ~~~~~~~~~~~~
-Test that parquet functionality works in the mid image.
+Test that parquet functionality works in the mid/jupyterlab images.
 """
 
 import logging
@@ -12,10 +12,11 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.integration
 def test_parquet_functionality(container):
     """Test that parquet functionality works properly in the container."""
-    # Only run this test on the mid image or images that should have parquet support
+    # Only run this test on images that have parquet support
+    # After refactoring, parquet is in jupyterlab (and mid if it inherits it)
     image_name = container.image_name.lower()
-    if 'base' in image_name or 'jupyterlab' in image_name:
-        pytest.skip("Parquet functionality not expected in base/jupyterlab images")
+    if 'base' in image_name:
+        pytest.skip("Parquet functionality not expected in base image")
     
     LOGGER.info("Testing parquet functionality...")
     

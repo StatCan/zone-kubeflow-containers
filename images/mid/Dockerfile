@@ -31,9 +31,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix \
     && apt-get update \
-    && apt-get install -y --no-install-recommends \
-       nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
-       libxml2-dev libssl-dev libcurl4-openssl-dev libxt-dev \
+    && apt-get install -y --no-install-recommends nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
@@ -71,14 +69,11 @@ COPY languagepacks.json coder.json $CS_DEFAULT_HOME/
 # need to add mamba install pkg-config so R can find freetype related packages
 # Combined conda and pip installations with cleanup
 RUN mamba install --quiet --yes -c conda-forge \
-    'duckdb' \
-    'duckdb-cli' \
-    'python-duckdb' \
     'sqlite>=3.45' \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
-    's3fs' \ 
+    's3fs' \
     'fire' \
     'mkl' \
     'graphviz' \
@@ -117,19 +112,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'jupyter-rsession-proxy==2.2.0' \
     'pyspark[ml]==3.5.5' \
     && \
-    # --- DUCKDB EXTENSIONS START ---
-    # With duckdb-cli installed, we can now use the binary to install extensions
-    DUCK_BIN="/opt/conda/bin/duckdb" && \
-    DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
-    ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
-    mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
-    # Added avro and parquet to the pre-install list to avoid 503 errors
-    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
-    # Set the extension directory in .duckdbrc to stop 503 errors at runtime
-    echo "SET extension_directory='/home/$NB_USER/.duckdb/extensions';" > /home/$NB_USER/.duckdbrc && \
-    echo "SET allow_unsigned_extensions=true;" >> /home/$NB_USER/.duckdbrc && \
-    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb /home/$NB_USER/.duckdbrc && \
-    # --- DUCKDB EXTENSIONS END ---
     jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
     '@jupyterlab/translation-extension' \

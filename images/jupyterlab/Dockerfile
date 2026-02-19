@@ -6,6 +6,12 @@ FROM $BASE_IMAGE
 
 USER root
 
+# Install libxt-dev for R graphics packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libxt-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install AMD AOCL
 ARG AOCL_VERSION=4.0
 ENV AOCL_PATH=/opt/amd/aocl/${AOCL_VERSION}
@@ -31,4 +37,23 @@ RUN cd ${RESOURCES_PATH} && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
 USER $NB_USER
+
+# Install DuckDB and parquet support
+RUN mamba install --quiet --yes -c conda-forge \
+    'duckdb' \
+    'duckdb-cli' \
+    'python-duckdb' \
+    && \
+    # Install DuckDB extensions
+    DUCK_BIN="/opt/conda/bin/duckdb" && \
+    DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
+    ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
+    mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
+    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
+    echo "SET extension_directory='/home/$NB_USER/.duckdb/extensions';" > /home/$NB_USER/.duckdbrc && \
+    echo "SET allow_unsigned_extensions=true;" >> /home/$NB_USER/.duckdbrc && \
+    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb /home/$NB_USER/.duckdbrc && \
+    clean-layer.sh \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
    
