@@ -123,7 +123,8 @@ RUN mamba install --quiet --yes -c conda-forge \
     DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
     ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
     mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
-    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu;" && \
+    # Added avro and parquet to the pre-install list to avoid 503 errors
+    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
     # Set the extension directory in .duckdbrc to stop 503 errors at runtime
     echo "SET extension_directory='/home/$NB_USER/.duckdb/extensions';" > /home/$NB_USER/.duckdbrc && \
     echo "SET allow_unsigned_extensions=true;" >> /home/$NB_USER/.duckdbrc && \
