@@ -6,12 +6,6 @@ FROM $BASE_IMAGE
 
 USER root
 
-# Install libxt-dev for R graphics packages
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libxt-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install AMD AOCL
 ARG AOCL_VERSION=4.0
 ENV AOCL_PATH=/opt/amd/aocl/${AOCL_VERSION}
