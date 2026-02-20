@@ -47,7 +47,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     echo "SET extension_directory='/home/$NB_USER/.duckdb/extensions';" > /home/$NB_USER/.duckdbrc && \
     echo "SET allow_unsigned_extensions=true;" >> /home/$NB_USER/.duckdbrc && \
     chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb /home/$NB_USER/.duckdbrc && \
-    clean-layer.sh \
-    && fix-permissions $CONDA_DIR \
+    fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
    
