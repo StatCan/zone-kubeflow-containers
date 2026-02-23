@@ -108,6 +108,8 @@ RUN mamba install --quiet --yes -c conda-forge \
     'git+https://github.com/betatim/vscode-binder' \
     'jupyter-rsession-proxy==2.2.0' \
     'pyspark[ml]==3.5.5' \
+    'azure-storage-file-datalake' \
+    'azure-identity' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
     '@jupyterlab/translation-extension' \
@@ -137,12 +139,7 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
-# OneLake / ADLS Gen2 SDK for accessing Microsoft Fabric OneLake storage
-RUN pip install --no-cache-dir \
-    'azure-storage-file-datalake' \
-    'azure-identity' \
-    && fix-permissions $CONDA_DIR \
-    && fix-permissions /home/$NB_USER
+# OneLake helper module for accessing Microsoft Fabric OneLake storage
 COPY onelake_utils.py /opt/conda/lib/python3.13/site-packages/onelake_utils.py
 
 # Solarized Theme and Cell Execution Time
