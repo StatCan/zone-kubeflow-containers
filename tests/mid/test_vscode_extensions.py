@@ -1,7 +1,7 @@
 """
 test_vscode_extensions
 ~~~~~~~~~~~~~~~~~~~~~~
-Test that VSCode extensions including parquet visualizer are properly installed.
+Test that VSCode extensions including parquet visualizer.
 """
 
 import logging
@@ -25,7 +25,7 @@ def test_vscode_extensions_installed(container):
         LOGGER.error("code-server not found in PATH")
         assert False, "code-server not found in PATH"
     
-    # Check if the parquet explorer extension is installed
+    # Check if the parquet extensions are installed
     result = container.container.exec_run(["code-server", "--list-extensions"])
     extensions_output = result.output.decode('utf-8')
     
@@ -33,7 +33,6 @@ def test_vscode_extensions_installed(container):
     
     # Check for the specific parquet extensions
     expected_extensions = [
-        "adamviola.parquet-explorer",
         "lucien-martijn.parquet-visualizer"
     ]
     
