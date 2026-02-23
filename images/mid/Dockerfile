@@ -70,7 +70,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
-    's3fs' \
+    's3fs' \ 
     'fire' \
     'mkl' \
     'graphviz' \
@@ -108,8 +108,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'git+https://github.com/betatim/vscode-binder' \
     'jupyter-rsession-proxy==2.2.0' \
     'pyspark[ml]==3.5.5' \
-    && \
-    jupyter server extension enable --py jupyter_server_proxy \
+    && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
     '@jupyterlab/translation-extension' \
     '@jupyterlab/server-proxy' \
