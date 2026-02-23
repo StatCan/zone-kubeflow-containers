@@ -26,10 +26,13 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
 
 RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
+    # no -m dont want to create a user directory.
+    useradd -G sasstaff sas && \
     echo "jovyan:jovyan" | chpasswd
 
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
-COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:feb2026patch /usr/local/SASHome /usr/local/SASHome
+# change below to sas:sasstaff from jovyan
+COPY --chown=sas:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:feb2026patch /usr/local/SASHome /usr/local/SASHome
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
@@ -53,9 +56,6 @@ RUN chown root /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
     chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/elssrv && \
     chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasauth && \
     chmod 4755 /usr/local/SASHome/SASFoundation/9.4/utilities/bin/sasperm
-
-# NOTE WE MUST ALSO CREATE AND USE THE SAS USER SUCH THAT IT IS SAS:SASSTAFF!
-
 
 ENV SAS_HADOOP_JAR_PATH=/opt/hadoop
 
