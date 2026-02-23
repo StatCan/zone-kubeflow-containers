@@ -159,7 +159,15 @@ RUN sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh \
     && touch ${HOME}/.zsh-installed \
     && touch ${HOME}/.hushlogin
 
-ENV VISUAL="/usr/bin/nano"
+# Wrapper for nano to prevent segfault caused by ncurses library mismatch.
+# At runtime, conda activation sets LD_LIBRARY_PATH to include /opt/conda/lib,
+# which contains an incompatible ncurses. The wrapper strips LD_LIBRARY_PATH
+# so the system nano loads the correct system ncurses.
+# Placed in /usr/local/bin/ which takes precedence over /usr/bin/ in PATH.
+RUN printf '#!/bin/sh\nexec env -u LD_LIBRARY_PATH /usr/bin/nano "$@"\n' > /usr/local/bin/nano \
+    && chmod +x /usr/local/bin/nano
+
+ENV VISUAL="/usr/local/bin/nano"
 ENV EDITOR=${VISUAL}
 
 # ODBC drivers and Oracle client in one layer
@@ -201,6 +209,9 @@ RUN \
     && fix-permissions /home/$NB_USER
 
 # Oracle configuration
+# NOTE: LD_LIBRARY_PATH is required for SAS Oracle connections (sasor12 uses dlopen).
+# ldconfig alone is not sufficient for SAS. The nano wrapper (above) handles the
+# ncurses conflict this causes by stripping LD_LIBRARY_PATH for nano specifically.
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
 ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
 ENV TNS_ADMIN="${LD_LIBRARY_PATH}/network/admin"
