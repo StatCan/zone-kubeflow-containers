@@ -1,0 +1,38 @@
+#!/command/with-contenv bash
+
+# OneLake initialization script
+# Checks environment variables and writes status file.
+# Does NOT make network calls - keeps pod startup fast.
+# Auth is handled lazily by onelake_utils.py on first use.
+
+STATUS_FILE="/home/${NB_USER}/.onelake_status"
+
+# If ONELAKE_WORKSPACE is not set, skip silently
+if [ -z "${ONELAKE_WORKSPACE}" ]; then
+    echo "OneLake: ONELAKE_WORKSPACE not set, skipping."
+    # Write minimal status so the helper knows OneLake is not configured
+    cat > "${STATUS_FILE}" << EOF
+{"configured": false}
+EOF
+    chown "${NB_USER}:${NB_GID}" "${STATUS_FILE}" 2>/dev/null
+    exit 0
+fi
+
+# Write OneLake env vars to s6-env for use by services
+S6_ENV="/run/s6-env"
+echo "${ONELAKE_WORKSPACE}" > "${S6_ENV}/ONELAKE_WORKSPACE"
+echo "${ONELAKE_LAKEHOUSE:-}" > "${S6_ENV}/ONELAKE_LAKEHOUSE"
+
+# Make OneLake env vars available in R sessions
+echo "ONELAKE_WORKSPACE=${ONELAKE_WORKSPACE}" >> /opt/conda/lib/R/etc/Renviron
+if [ -n "${ONELAKE_LAKEHOUSE}" ]; then
+    echo "ONELAKE_LAKEHOUSE=${ONELAKE_LAKEHOUSE}" >> /opt/conda/lib/R/etc/Renviron
+fi
+
+# Write status file (JSON) for onelake_utils.py and user inspection
+cat > "${STATUS_FILE}" << EOF
+{"configured": true, "workspace": "${ONELAKE_WORKSPACE}", "lakehouse": "${ONELAKE_LAKEHOUSE:-}", "endpoint": "https://onelake.dfs.fabric.microsoft.com"}
+EOF
+chown "${NB_USER}:${NB_GID}" "${STATUS_FILE}" 2>/dev/null
+
+echo "OneLake: initialized for workspace '${ONELAKE_WORKSPACE}'"
