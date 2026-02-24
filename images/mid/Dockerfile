@@ -90,26 +90,11 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nb_conda_kernels' \
     'jupyterlab-lsp' \
     'jupyter-lsp' \
-    'r-arrow' \
-    'r-aws.s3' \
-    'r-base=4.5.1' \
-    'r-catools' \
-    'r-e1071' \
-    'r-hdf5r' \
-    'r-markdown' \
-    'r-odbc' \
-    'r-renv' \
-    'r-rodbc' \
-    'r-sf' \
-    'r-sparklyr' \
-    'r-tidyverse' \
     && pip install --no-cache-dir \
     'kubeflow-training' \
     'git+https://github.com/betatim/vscode-binder' \
     'jupyter-rsession-proxy==2.2.0' \
     'pyspark[ml]==3.5.5' \
-    'azure-storage-file-datalake' \
-    'azure-identity' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
     '@jupyterlab/translation-extension' \
@@ -136,6 +121,13 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
     && npm cache clean --force \
     && rm -rf /root/.npm \
     && clean-layer.sh \ 
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+# OneLake SDK for accessing Microsoft Fabric OneLake (ADLS Gen2) storage
+RUN pip install --no-cache-dir \
+    'azure-storage-file-datalake' \
+    'azure-identity' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
