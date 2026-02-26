@@ -9,12 +9,19 @@ Usage:
 
     onelake.info()              # Show connection status
     onelake.ls("/")             # List files at root
+    onelake.read("data.csv")    # Read a file
+    onelake.write("out.csv", d) # Write data
     onelake.download("data.csv", "local.csv")
     onelake.upload("local.csv", "data.csv")
+
+    # Switch workspace/lakehouse on the fly
+    onelake.connect(workspace="<guid>", lakehouse="<guid>")
+    onelake.ls("/")             # Now lists the new workspace
 """
 
 import json
 import os
+import re
 from pathlib import Path
 
 # Lazy imports - only loaded on first use to keep import fast
@@ -27,8 +34,8 @@ ONELAKE_ENDPOINT = "https://onelake.dfs.fabric.microsoft.com"
 # Messages in EN/FR
 _MSG = {
     "en": {
-        "no_workspace": "ONELAKE_WORKSPACE is not set. Contact your admin to enable OneLake for your namespace.",
-        "no_lakehouse": "ONELAKE_LAKEHOUSE is not set. Contact your admin to configure your lakehouse.",
+        "no_workspace": "ONELAKE_WORKSPACE is not set. Use onelake.connect(workspace='...', lakehouse='...') or contact your admin.",
+        "no_lakehouse": "ONELAKE_LAKEHOUSE is not set. Use onelake.connect(workspace='...', lakehouse='...') or contact your admin.",
         "auth_fail": "Authentication failed. Ensure your pod has valid credentials (Workload Identity or SPN).",
         "connected": "Connected",
         "not_configured": "Not configured",
@@ -37,10 +44,11 @@ _MSG = {
         "lakehouse": "Lakehouse",
         "endpoint": "Endpoint",
         "base_path": "Base path",
+        "switched": "Switched to workspace '{ws}', lakehouse '{lh}'",
     },
     "fr": {
-        "no_workspace": "ONELAKE_WORKSPACE n'est pas defini. Contactez votre admin pour activer OneLake.",
-        "no_lakehouse": "ONELAKE_LAKEHOUSE n'est pas defini. Contactez votre admin pour configurer votre lakehouse.",
+        "no_workspace": "ONELAKE_WORKSPACE n'est pas defini. Utilisez onelake.connect(workspace='...', lakehouse='...') ou contactez votre admin.",
+        "no_lakehouse": "ONELAKE_LAKEHOUSE n'est pas defini. Utilisez onelake.connect(workspace='...', lakehouse='...') ou contactez votre admin.",
         "auth_fail": "Echec d'authentification. Verifiez les identifiants du pod (Workload Identity ou SPN).",
         "connected": "Connecte",
         "not_configured": "Non configure",
@@ -49,6 +57,7 @@ _MSG = {
         "lakehouse": "Lakehouse",
         "endpoint": "Point de terminaison",
         "base_path": "Chemin de base",
+        "switched": "Bascule vers l'espace de travail '{ws}', lakehouse '{lh}'",
     },
 }
 
@@ -110,24 +119,65 @@ def _get_fs_client():
     return _fs_client
 
 
-def _build_path(path):
+def _is_guid(value):
+    """Check if a string looks like a GUID/UUID."""
+    return bool(re.match(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        value, re.IGNORECASE,
+    ))
+
+
+def _build_path(path, lakehouse=None):
     """Build the full OneLake path including lakehouse prefix.
 
     Users pass paths relative to their lakehouse Files directory.
-    e.g., "data.csv" becomes "<lakehouse>.Lakehouse/Files/data.csv"
+    With friendly names: "<name>.Lakehouse/Files/<path>"
+    With GUIDs:          "<guid>/Files/<path>"
     """
-    _, lakehouse = _get_config()
+    if not lakehouse:
+        _, lakehouse = _get_config()
     if not lakehouse:
         raise RuntimeError(_msg("no_lakehouse"))
 
     path = path.lstrip("/")
+    if _is_guid(lakehouse):
+        return f"{lakehouse}/Files/{path}"
     return f"{lakehouse}.Lakehouse/Files/{path}"
+
+
+def _strip_prefix(name, lakehouse=None):
+    """Strip the lakehouse/Files prefix from a path for clean display."""
+    if not lakehouse:
+        _, lakehouse = _get_config()
+    prefix = f"{lakehouse}/Files/" if _is_guid(lakehouse) else f"{lakehouse}.Lakehouse/Files/"
+    if name.startswith(prefix):
+        return name[len(prefix):]
+    return name
+
+
+def connect(workspace, lakehouse):
+    """Switch to a different workspace and lakehouse.
+
+    Args:
+        workspace: Workspace name or GUID.
+        lakehouse: Lakehouse name or GUID.
+
+    Usage:
+        onelake.connect("1dd0411c-...", "88dd60d0-...")
+        onelake.ls("/")  # now lists files in the new workspace
+    """
+    global _client, _fs_client
+    os.environ["ONELAKE_WORKSPACE"] = workspace
+    os.environ["ONELAKE_LAKEHOUSE"] = lakehouse
+    # Reset cached clients so they reconnect to the new workspace
+    _client = None
+    _fs_client = None
+    print(_msg("switched").format(ws=workspace, lh=lakehouse))
 
 
 def info():
     """Print OneLake connection status."""
     workspace, lakehouse = _get_config()
-    lang = _lang()
 
     status = _msg("connected") if (workspace and lakehouse) else _msg("not_configured")
 
@@ -136,34 +186,25 @@ def info():
     print(f"  {_msg('lakehouse')}: {lakehouse or 'N/A'}")
     print(f"  {_msg('endpoint')}: {ONELAKE_ENDPOINT}")
     if workspace and lakehouse:
-        print(f"  {_msg('base_path')}: {lakehouse}.Lakehouse/Files/")
+        base = f"{lakehouse}/Files/" if _is_guid(lakehouse) else f"{lakehouse}.Lakehouse/Files/"
+        print(f"  {_msg('base_path')}: {base}")
 
 
-def ls(path="/", workspace=None):
+def ls(path="/"):
     """List files and directories at the given path.
 
     Args:
         path: Path relative to the lakehouse Files directory. Default "/".
-        workspace: Optional workspace override for cross-workspace access.
 
     Returns:
         List of dicts with 'name', 'is_directory', and 'size' keys.
     """
     fs = _get_fs_client()
-    if workspace:
-        fs = _get_service_client().get_file_system_client(file_system=workspace)
-
     full_path = _build_path(path)
     results = []
     for item in fs.get_paths(path=full_path):
-        name = item.name
-        # Strip the lakehouse prefix for cleaner display
-        _, lh = _get_config()
-        prefix = f"{lh}.Lakehouse/Files/"
-        if name.startswith(prefix):
-            name = name[len(prefix):]
         results.append({
-            "name": name,
+            "name": _strip_prefix(item.name),
             "is_directory": item.is_directory,
             "size": getattr(item, "content_length", 0),
         })
