@@ -3,7 +3,7 @@ on:
   schedule:
     # Every wednesdays, at 2h30/3h30 am(EST/EDT)
     # running after the beta-auto-merge workflow to avoid overlap
-    - cron: "30 7 * * WED"
+    - cron: "30 7 * * MON"
 
 jobs:
   get-bi-weekly-schedule:
