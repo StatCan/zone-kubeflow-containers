@@ -32,7 +32,7 @@ RUN groupadd -g 1002 sasstaff && \
 
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
 # change below to sas:sasstaff from jovyan
-COPY --chown=sas:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:feb2026patchChmod /usr/local/SASHome /usr/local/SASHome
+COPY --chmod=775 --chown=sas:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:feb2026patchChmod /usr/local/SASHome /usr/local/SASHome
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
