@@ -16,19 +16,32 @@ RUN cd ${RESOURCES_PATH} && \
     tar xf /tmp/aocl-linux-aocc-${AOCL_VERSION}.tar -C ./ && \
     cd ./aocl-linux-aocc-${AOCL_VERSION} && \
     /bin/bash ./install.sh -t /opt/amd/aocl && \
-    cp setenv_aocl.sh ${AOCL_PATH} &&\
+    cp setenv_aocl.sh ${AOCL_PATH} && \
     rm /tmp/aocl-linux-aocc-${AOCL_VERSION}.tar
 
 # Install AMD AOCC
 ARG AOCC_VERSION=4.0.0
 ARG AOCC_SHA256=2729ec524cbc927618e479994330eeb72df5947e90cfcc49434009eee29bf7d4
 RUN cd ${RESOURCES_PATH} && \
-   wget --quiet https://download.amd.com/developer/eula/aocc-compiler/aocc-compiler-${AOCC_VERSION}.tar -O /tmp/aocc-compiler-${AOCC_VERSION}.tar && \
-   echo "${AOCC_SHA256} /tmp/aocc-compiler-${AOCC_VERSION}.tar" | sha256sum -c - && \
-   tar xf /tmp/aocc-compiler-${AOCC_VERSION}.tar -C ./ && \
-   cd ./aocc-compiler-${AOCC_VERSION} && \
-   /bin/bash ./install.sh && \
-   rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
+    wget --quiet https://download.amd.com/developer/eula/aocc-compiler/aocc-compiler-${AOCC_VERSION}.tar -O /tmp/aocc-compiler-${AOCC_VERSION}.tar && \
+    echo "${AOCC_SHA256} /tmp/aocc-compiler-${AOCC_VERSION}.tar" | sha256sum -c - && \
+    tar xf /tmp/aocc-compiler-${AOCC_VERSION}.tar -C ./ && \
+    cd ./aocc-compiler-${AOCC_VERSION} && \
+    /bin/bash ./install.sh && \
+    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
+
+# Install R packages with compatible geospatial libraries
+RUN mamba install --quiet --yes -c conda-forge \
+    'r-gt' \
+    'r-terra' \
+    'r-nloptr' \
+    'proj' \
+    'proj-data' \
+    'gdal' \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+ENV PROJ_LIB=${CONDA_DIR}/share/proj
+RUN echo "PROJ_LIB=${CONDA_DIR}/share/proj" >> /opt/conda/lib/R/etc/Renviron
 
 USER $NB_USER
-   
