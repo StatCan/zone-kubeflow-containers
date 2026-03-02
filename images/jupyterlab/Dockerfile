@@ -30,6 +30,12 @@ RUN cd ${RESOURCES_PATH} && \
    /bin/bash ./install.sh && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
+# Install Jest testing framework
+RUN npm install -g jest@29.7.0 && \
+    npm cache clean --force && \
+    rm -rf /root/.npm && \
+    fix-permissions $CONDA_DIR
+
 # Install DuckDB and parquet support
 RUN mamba install --quiet --yes -c conda-forge \
     'duckdb' \

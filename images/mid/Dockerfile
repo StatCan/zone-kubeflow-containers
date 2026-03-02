@@ -37,19 +37,18 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
-    # Manage extensions
-    code-server --install-extension ms-python.python@2025.4.0 && \
-    code-server --install-extension ms-python.debugpy@2025.4.0 && \
+    # Manage extensions - core extensions for GoC environment
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
-    code-server --install-extension quarto.quarto@1.113.0 && \
+    code-server --install-extension Posit.air-vscode@1.3.4 && \
+    code-server --install-extension Orta.vscode-jest@5.1.8 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
-    code-server --install-extension redhat.vscode-yaml@1.15.0 && \
-    code-server --install-extension ms-vscode.azurecli@0.6.0 && \
-    code-server --install-extension mblode.pretty-formatter@0.2.1 && \
-    code-server --install-extension cpptools-linux.vsix \
-    && rm cpptools-linux.vsix \
-    && apt-get clean \
+    code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
+    code-server --install-extension dvirtz.parquet-viewer@3.0.1 && \
+    wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix && \
+    code-server --install-extension cpptools-linux.vsix && \
+    rm cpptools-linux.vsix && \
+    apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && fix-permissions $CS_DEFAULT_HOME
 
