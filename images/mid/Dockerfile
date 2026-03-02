@@ -131,12 +131,8 @@ RUN pip install --no-cache-dir \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
-# Azure CLI for authentication and OneLake access (az login --use-device-code)
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # OneLake helper module for accessing Microsoft Fabric OneLake storage
+# Note: Azure CLI is already installed in the base image
 COPY onelake_utils.py /opt/conda/lib/python3.13/site-packages/onelake_utils.py
 
 # Solarized Theme and Cell Execution Time
