@@ -34,6 +34,7 @@ def test_vscode_extensions_installed(container):
     # Check for the specific parquet extensions
     expected_extensions = [
         "adamviola.parquet-explorer",
+        "lucien-martijn.parquet-visualizer",
     ]
 
     missing_extensions = []
