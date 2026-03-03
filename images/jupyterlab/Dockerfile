@@ -30,5 +30,33 @@ RUN cd ${RESOURCES_PATH} && \
    /bin/bash ./install.sh && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
+# Install Jest testing framework
+RUN npm install -g jest@29.7.0 && \
+    npm cache clean --force && \
+    rm -rf /root/.npm && \
+    fix-permissions $CONDA_DIR
+
+# Install DuckDB and parquet support
+RUN mamba install --quiet --yes -c conda-forge \
+    'duckdb' \
+    'duckdb-cli' \
+    'python-duckdb' \
+    && \
+    # Install DuckDB extensions for parquet visualizer (air-gapped support)
+    DUCK_BIN="/opt/conda/bin/duckdb" && \
+    DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
+    ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
+    mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
+    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
+    echo "SET extension_directory='/home/$NB_USER/.duckdb/extensions';" > /home/$NB_USER/.duckdbrc && \
+    echo "SET allow_unsigned_extensions=true;" >> /home/$NB_USER/.duckdbrc && \
+    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb /home/$NB_USER/.duckdbrc
+
+USER $NB_USER
+
+# Update HOME_TMP to include DuckDB config (created after mid's HOME_TMP copy)
+USER root
+RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
+    && chmod -R g=u "${HOME_TMP}"
 USER $NB_USER
    
