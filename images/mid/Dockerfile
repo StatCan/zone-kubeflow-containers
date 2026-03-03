@@ -41,7 +41,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension Posit.air-vscode@0.22.0 && \
-    code-server --install-extension Orta.vscode-jest@5.1.8 && \
+    code-server --install-extension Orta.vscode-jest@6.4.4 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
     code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
     code-server --install-extension dvirtz.parquet-viewer@3.0.1 && \
