@@ -38,7 +38,7 @@ jobs:
         ports:
           - 5000:5000
     env:
-      TRIVY_VERSION: "0.65.0"
+      TRIVY_VERSION: "0.69.3"
       TRIVY_DATABASES: '"ghcr.io/aquasecurity/trivy-db:2","public.ecr.aws/aquasecurity/trivy-db"'
       TRIVY_JAVA_DATABASES: '"ghcr.io/aquasecurity/trivy-java-db:1","public.ecr.aws/aquasecurity/trivy-java-db"'
       TRIVY_MAX_RETRIES: 5
@@ -81,19 +81,14 @@ jobs:
       # Scan image for vulnerabilities
       - name: Aqua Security Trivy image scan
         run: |
-          curl -sLO  https://github.com/aquasecurity/trivy/releases/download/v${{ env.TRIVY_VERSION }}/trivy_${{ env.TRIVY_VERSION }}_Linux-64bit.tar.gz \
-            && curl -LO https://github.com/aquasecurity/trivy/releases/download/v${{ env.TRIVY_VERSION }}/trivy_${{ env.TRIVY_VERSION }}_checksums.txt \
-            && grep "trivy_${{ env.TRIVY_VERSION }}_Linux-64bit.tar.gz" trivy_${{ env.TRIVY_VERSION }}_checksums.txt | sha256sum -c - \
-            && tar -xf trivy_${{ env.TRIVY_VERSION }}_Linux-64bit.tar.gz \
-            && chmod +x trivy \
-            && sudo mv ./trivy /usr/local/bin/trivy
-
           set +e
 
           for ((i=0; i<${{ env.TRIVY_MAX_RETRIES }}; i++)); do
             echo "Attempt $((i + 1)) of ${{ env.TRIVY_MAX_RETRIES }}..."
 
-            trivy image \
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasecurity/trivy:${{ env.TRIVY_VERSION }} image \
               --db-repository ${{ env.TRIVY_DATABASES }} \
               --java-db-repository ${{ env.TRIVY_JAVA_DATABASES }} \
               ${{ inputs.registry-name }}/${{ inputs.image }}:${{ inputs.tag }} \
