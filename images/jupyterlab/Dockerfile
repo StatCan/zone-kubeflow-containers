@@ -7,8 +7,11 @@ FROM $BASE_IMAGE
 USER root
 
 # Install VSCode extensions
+# Override EXTENSIONS_GALLERY from base image to use public marketplace during build
+ARG SERVICE_URL=https://extensions.coder.com/api
 ENV CS_DEFAULT_HOME=$HOME/.local/share/code-server
-RUN mkdir -p $CS_DEFAULT_HOME/Machine && \
+RUN unset EXTENSIONS_GALLERY && \
+    mkdir -p $CS_DEFAULT_HOME/Machine && \
     code-server --install-extension Posit.air-vscode@0.22.0 && \
     code-server --install-extension Orta.vscode-jest@6.4.4 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
