@@ -8,7 +8,7 @@ USER root
 
 # SAS
 # Install Quarto
-ENV QUARTO_VERSION=1.8.1
+ENV QUARTO_VERSION=1.8.26
 ARG QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz
 ARG QUARTO_CHECKSUM_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-checksums.txt
 
@@ -34,7 +34,7 @@ COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:updated /us
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
 # MinIO Client install
-COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
+COPY --from=minio/mc:RELEASE.2025-08-13T08-35-41Z /bin/mc /usr/local/bin/mc
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
