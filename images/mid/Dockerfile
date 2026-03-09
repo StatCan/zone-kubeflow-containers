@@ -38,7 +38,6 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
     # Manage extensions
-    wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix && \
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
