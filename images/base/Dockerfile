@@ -28,9 +28,6 @@ ARG KUBECTL_URL=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kub
 ARG AZCLI_URL=https://aka.ms/InstallAzureCLIDeb
 ARG OH_MY_ZSH_URL=https://raw.githubusercontent.com/loket/oh-my-zsh/feature/batch-mode/tools/install.sh
 ARG OH_MY_ZSH_SHA=22811faf34455a5aeaba6f6b36f2c79a0a454a74c8b4ea9c0760d1b2d7022b03
-ARG ARGO_CLI_VERSION=v3.7.6
-ARG ARGO_CLI_URL=https://github.com/argoproj/argo-workflows/releases/download/${ARGO_CLI_VERSION}/argo-linux-amd64.gz
-ARG ARGO_CLI_CHECKSUM_URL=https://github.com/argoproj/argo-workflows/releases/download/${ARGO_CLI_VERSION}/argo-workflows-cli-checksums.txt
 ARG GIT_CRED_MANAGER_VERSION=2.5.1
 ARG GIT_CRED_MANAGER_URL=https://github.com/git-ecosystem/git-credential-manager/releases/download/v${GIT_CRED_MANAGER_VERSION}/gcm-linux_amd64.${GIT_CRED_MANAGER_VERSION}.deb
 ARG GIT_CRED_MANAGER_SHA=03c7b174a6f90e1ae860980ba5fda4490f04e5b9aaa802e2d469e72ec5dae6a4
@@ -130,15 +127,6 @@ RUN \
     # zsh
     wget -q "${OH_MY_ZSH_URL}" -O /tmp/oh-my-zsh-install.sh \
     && echo "${OH_MY_ZSH_SHA} /tmp/oh-my-zsh-install.sh" | sha256sum -c \
-    && \
-    # argo cli
-    curl -sLO "${ARGO_CLI_URL}" \
-    && curl -LO "${ARGO_CLI_CHECKSUM_URL}" \
-    && grep argo-linux-amd64.gz argo-workflows-cli-checksums.txt | sha256sum -c - \
-    && gunzip argo-linux-amd64.gz \
-    && chmod +x argo-linux-amd64 \
-    && mv ./argo-linux-amd64 /usr/local/bin/argo \
-    && rm argo-workflows-cli-checksums.txt \
     && \
     # git credential manager
     wget -q "${GIT_CRED_MANAGER_URL}" -O ./gcm.deb \
