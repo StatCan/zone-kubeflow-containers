@@ -37,7 +37,8 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
     && mkdir -p $CS_DEFAULT_HOME/Machine \
     && \
-    # Manage extensions - core extensions for GoC environment
+    # Manage extensions
+    wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix && \
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
@@ -46,7 +47,6 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
-    wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix && \
     code-server --install-extension cpptools-linux.vsix && \
     rm cpptools-linux.vsix && \
     apt-get clean \

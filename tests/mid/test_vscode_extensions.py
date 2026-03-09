@@ -30,12 +30,18 @@ def test_vscode_extensions_installed(container):
     extensions_output = result.output.decode('utf-8')
     
     LOGGER.info(f"Installed extensions:\n{extensions_output}")
-    
-    # Check for the specific parquet extensions
+
+    # Check for expected VSCode extensions
     expected_extensions = [
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-ceintl.vscode-language-pack-fr",
+        "Posit.air-vscode",
         "adamviola.parquet-explorer",
         "lucien-martijn.parquet-visualizer",
-        "dvirtz.parquet-viewer"
+        "redhat.vscode-yaml",
+        "ms-vscode.azurecli",
+        "ms-vscode.cpptools"
     ]
     
     missing_extensions = []
@@ -44,8 +50,8 @@ def test_vscode_extensions_installed(container):
             missing_extensions.append(ext)
     
     if missing_extensions:
-        LOGGER.error(f"Missing expected parquet extensions: {missing_extensions}")
+        LOGGER.error(f"Missing expected VSCode extensions: {missing_extensions}")
         LOGGER.error(f"All extensions found: {extensions_output}")
-        assert False, f"Missing expected parquet extensions: {missing_extensions}"
-    
+        assert False, f"Missing expected VSCode extensions: {missing_extensions}"
+
     LOGGER.info("All expected VSCode extensions are installed successfully")
