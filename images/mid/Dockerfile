@@ -41,11 +41,12 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension ms-python.python@2025.4.0 && \
     code-server --install-extension ms-python.debugpy@2025.4.0 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
-    code-server --install-extension Posit.air-vscode@0.22.0 && \
+    code-server --install-extension REditorSupport.r@2.8.4 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
     code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
+    code-server --install-extension mblode.pretty-formatter@0.2.1 && \
     code-server --install-extension cpptools-linux.vsix && \
     rm cpptools-linux.vsix && \
     apt-get clean \
