@@ -106,7 +106,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
     'kubeflow-training' \
     'git+https://github.com/betatim/vscode-binder' \
-    'jupyter-rsession-proxy==2.2.0' \
     'pyspark[ml]==3.5.5' \
     && jupyter server extension enable --py jupyter_server_proxy \
     && jupyter labextension enable \
@@ -139,6 +138,12 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
 
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
+
+# Jupyter RStudio Proxy
+COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
+RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
+    && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
+    && pip install /opt/jupyter-custom-rstudio-proxy/
 
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.09.1-401
