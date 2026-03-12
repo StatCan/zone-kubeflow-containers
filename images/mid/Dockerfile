@@ -126,17 +126,14 @@ RUN mamba install --quiet --yes -c conda-forge \
     && fix-permissions /home/$NB_USER
 
 # Install DuckDB extensions for parquet visualizer (air-gapped support)
-# Copy configuration file first
-COPY .duckdbrc /tmp/.duckdbrc.template
+COPY --chown=${NB_USER}:${NB_GID} .duckdbrc /home/$NB_USER/.duckdbrc
 
 RUN DUCK_BIN="/opt/conda/bin/duckdb" && \
     DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
     ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
     mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
-    sed "s/\${NB_USER}/$NB_USER/g" /tmp/.duckdbrc.template > /home/$NB_USER/.duckdbrc && \
-    rm /tmp/.duckdbrc.template && \
     $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
-    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb /home/$NB_USER/.duckdbrc
+    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb
 
 # Install python, R, Julia and other useful language servers
 RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \

@@ -1,6 +1,6 @@
 -- DuckDB configuration file
 -- Sets the extension directory for air-gapped environments
-SET extension_directory='/home/${NB_USER}/.duckdb/extensions';
+SET extension_directory='/home/jovyan/.duckdb/extensions';
 
 -- Allow unsigned extensions for custom extension loading
 SET allow_unsigned_extensions=true;
