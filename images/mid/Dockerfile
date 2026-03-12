@@ -143,7 +143,7 @@ COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.j
 COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
-    && pip install /opt/jupyter-custom-rstudio-proxy/
+    && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/
 
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.09.1-401
