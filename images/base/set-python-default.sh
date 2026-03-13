@@ -24,23 +24,9 @@ if ! grep -q "/opt/conda/bin" /etc/environment 2>/dev/null; then
     echo "Updated /etc/environment to prioritize conda Python"
 fi
 
-# Method 2: Create update-alternatives entries for python3
-# This allows system-wide default selection
-if command -v update-alternatives &> /dev/null; then
-    # Install conda python3 as an alternative
-    if ! update-alternatives --list python3 2>/dev/null | grep -q "$CONDA_PYTHON"; then
-        update-alternatives --install /usr/bin/python3 python3 "$CONDA_PYTHON" 60 || {
-            # If install fails, try to set it directly
-            echo "Warning: Could not register conda python3 with update-alternatives"
-        }
-        echo "Registered conda Python with update-alternatives"
-    fi
-    
-    # Set conda python as the default (auto mode)
-    update-alternatives --set python3 "$CONDA_PYTHON" 2>/dev/null || {
-        echo "Note: update-alternatives --set failed, may need manual selection"
-    }
-fi
+# NOTE: We do NOT use update-alternatives for python3 to avoid breaking
+# system tools like add-apt-repository that require the system Python.
+# PATH-based switching (Methods 1 and 3) is sufficient for user sessions.
 
 # Method 3: Ensure /etc/profile.d script for shell sessions
 cat > /etc/profile.d/conda-python.sh << 'EOF'
