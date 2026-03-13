@@ -6,7 +6,7 @@ FROM $BASE_IMAGE
 
 USER root
 
-ENV PATH="/home/jovyan/.local/bin/:${PATH}"
+ENV PATH="/opt/conda/bin:/home/jovyan/.local/bin/:${PATH}"
 
 # we copy the contents of $HOME_TMP to $HOME on startup
 # this is to work around the fact that a PVC will be mounted to $HOME
@@ -96,6 +96,10 @@ COPY --chmod=755 suspend-server.sh adjust-server-resources.py ktutil-keytab /usr
 
 # add clean-layer script
 COPY --chmod=755 clean-layer.sh /usr/bin/clean-layer.sh
+
+# Set conda Python as the system default Python
+COPY --chmod=755 set-python-default.sh /usr/local/bin/set-python-default.sh
+RUN /usr/local/bin/set-python-default.sh
 
 # Combined tool installations with cleanup
 RUN \
