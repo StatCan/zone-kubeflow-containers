@@ -15,6 +15,12 @@ def test_python_path_priority(container):
     """Test that python command resolves to conda Python by default"""
     LOGGER.info("Testing Python path priority...")
 
+    # Start the container
+    container.run(
+        tty=True,
+        command=['start.sh', 'bash', '-c', 'sleep infinity']
+    )
+
     # Test 1: Check which python is used by default
     result = container.container.exec_run(["which", "python"])
     if result.exit_code == 0:
@@ -62,6 +68,12 @@ def test_python_path_priority(container):
 def test_python_imports_work(container):
     """Test that basic Python imports work correctly"""
     LOGGER.info("Testing Python imports...")
+
+    # Start the container
+    container.run(
+        tty=True,
+        command=['start.sh', 'bash', '-c', 'sleep infinity']
+    )
 
     # Test basic import
     result = container.container.exec_run([
