@@ -37,8 +37,9 @@ echo "$CONDA_PREFIX" > "$CONDA_ENV_PATH"
 export RETICULATE_PYTHON="${CONDA_PREFIX}/bin/python"
 # Prefer id -un (more robust), and EXPORT it
 
-# store the current path in database config
-sed -i "s|directory=.*|directory=/tmp/rstudio-server/${USER}_database|" "$CWD/database.conf"
+# Use user-specific database.conf in home directory instead of /opt
+DB_CONF_PATH="${HOME}/.rstudio/database.conf"
+sed -i "s|directory=.*|directory=/tmp/rstudio-server/${USER}_database|" "$DB_CONF_PATH"
 
 # Jupyter server-proxy serves the launcher under the fixed /rstudio route.
 BASE_PATH="${NB_PREFIX}/rstudio"
@@ -58,6 +59,6 @@ BASE_PATH="${NB_PREFIX}/rstudio"
   --rsession-ld-library-path="${CONDA_PREFIX}/lib" \
   --rsession-path="$CWD/rsession.sh" \
   --server-user "$USER" \
-  --database-config-file "$CWD/database.conf" \
+  --database-config-file "$DB_CONF_PATH" \
   --auth-timeout-minutes=10080 \
   $REVOCATION_LIST_PAR
