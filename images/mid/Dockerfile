@@ -141,6 +141,7 @@ COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.j
 
 # Jupyter RStudio Proxy
 COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
+COPY --chown=${NB_USER}:${NB_GID} customRStu/database.conf ${HOME}/.rstudio/database.conf \
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
     && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/
