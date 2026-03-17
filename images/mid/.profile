@@ -3,6 +3,7 @@ if [ -n "$BASH_VERSION" ]; then
         . "$HOME/.bashrc"
     fi
 fi
+
 # Persist the active conda env for RStudio Server in the user's home directory so that it can be reloaded on subsequent sessions.
 __persist_rstudio_conda_env() {
     local state_dir env_file env_path
@@ -19,6 +20,7 @@ __persist_rstudio_conda_env() {
     printf '%s\n' "$env_path" > "$env_file"
 }
 
+# If this is an interactive shell, ensure that the active conda env is persisted for RStudio Server.
 if [ -n "$PS1" ]; then
     case ";${PROMPT_COMMAND};" in
         *";__persist_rstudio_conda_env;"*) ;;
