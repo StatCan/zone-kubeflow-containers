@@ -14,8 +14,8 @@ def test_vscode_extensions_installed(container):
     """Test that VSCode extensions are properly installed in the container."""
     # Only run this test on images that should have code-server
     image_name = container.image_name.lower()
-    if 'base' in image_name or 'jupyterlab' in image_name:
-        pytest.skip("VSCode extensions not expected in base/jupyterlab images")
+    if 'base' in image_name:
+        pytest.skip("VSCode extensions not expected in base image")
     
     LOGGER.info("Testing VSCode extensions installation...")
     
