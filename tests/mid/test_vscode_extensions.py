@@ -1,7 +1,25 @@
 """
 test_vscode_extensions
 ~~~~~~~~~~~~~~~~~~~~~~
-Test that VSCode extensions including parquet visualizer.
+Test that VSCode (code-server) extensions are properly installed.
+
+This test verifies that all expected VSCode extensions are installed
+in the mid/jupyterlab images, including:
+- Python support (ms-python.python, ms-python.debugpy)
+- R support (REditorSupport.r)
+- Parquet visualizer (adamviola.parquet-explorer, lucien-martijn.parquet-visualizer)
+- Language packs (ms-ceintl.vscode-language-pack-fr)
+- Other productivity extensions (yaml, azurecli, cpptools, etc.)
+
+Example:
+
+    $ make test/mid
+
+    # [...]
+    # test/mid/test_vscode_extensions.py::test_vscode_extensions_installed
+    # ---------------------------------------------------------------------------------------------- live log call ----------------------------------------------------------------------------------------------
+    # 2026-03-17 10:00:00 [    INFO] Testing VSCode extensions installation... (test_vscode_extensions.py:22)
+    # 2026-03-17 10:00:02 [    INFO] All expected VSCode extensions are installed successfully (test_vscode_extensions.py:60)
 """
 
 import logging
@@ -11,7 +29,15 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.integration
 def test_vscode_extensions_installed(container):
-    """Test that VSCode extensions are properly installed in the container."""
+    """Test that all expected VSCode extensions are installed.
+    
+    Verifies that code-server is available and all required extensions
+    are installed, including Python, R, parquet visualizer, and
+    productivity extensions.
+    
+    The test is skipped for base images since VSCode is only expected
+    in mid/jupyterlab images.
+    """
     # Only run this test on images that should have code-server
     image_name = container.image_name.lower()
     if 'base' in image_name:

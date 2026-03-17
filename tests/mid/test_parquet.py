@@ -1,7 +1,26 @@
 """
 test_parquet
 ~~~~~~~~~~~~
-Test that parquet functionality works in the mid/jupyterlab images.
+Test that parquet file read/write functionality works correctly.
+
+This test verifies that the mid/jupyterlab images can:
+- Create a pandas DataFrame
+- Write it to a parquet file
+- Read the parquet file back
+- Verify data integrity after round-trip
+
+The test uses both pandas and pyarrow directly to ensure
+the underlying parquet libraries are properly configured.
+
+Example:
+
+    $ make test/mid
+
+    # [...]
+    # test/mid/test_parquet.py::test_parquet_functionality
+    # ---------------------------------------------------------------------------------------------- live log call ----------------------------------------------------------------------------------------------
+    # 2026-03-17 10:00:00 [    INFO] Testing parquet functionality... (test_parquet.py:22)
+    # 2026-03-17 10:00:05 [    INFO] Parquet functionality test passed successfully (test_parquet.py:75)
 """
 
 import logging
@@ -11,7 +30,14 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.integration
 def test_parquet_functionality(container):
-    """Test that parquet functionality works properly in the container."""
+    """Test that parquet file read/write works correctly.
+    
+    This test creates a DataFrame, writes it to parquet, reads it back,
+    and verifies data integrity. It tests both pandas and pyarrow interfaces.
+    
+    The test is skipped for base images since parquet support is only
+    expected in mid/jupyterlab images.
+    """
     # Only run this test on images that have parquet support
     # After refactoring, parquet is in jupyterlab (and mid if it inherits it)
     image_name = container.image_name.lower()
