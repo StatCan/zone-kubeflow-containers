@@ -13,23 +13,6 @@ COOKIE_KEY_PATH="/tmp/rstudio-server/${USER}_secure-cookie-key"
 rm -f "$COOKIE_KEY_PATH"
 mkdir -p "$(dirname "$COOKIE_KEY_PATH")"
 
-# Rserver >= version 1.3 requires the --auth-revocation-list-dir parameter
-# Try to determine version, but fail gracefully - modern versions support revocation list
-RSERVER_VERSION=$(/usr/lib/rstudio-server/bin/rserver --version 2>&1 | grep -oP '\d+\.\d+' | head -1)
-if [ -z "$RSERVER_VERSION" ]; then
-  # If version detection fails, assume modern version supports revocation list
-  REVOCATION_LIST_DIR="/tmp/rstudio-server/${USER}_revocation-list-dir"
-  mkdir -p "$REVOCATION_LIST_DIR"
-  REVOCATION_LIST_PAR="--auth-revocation-list-dir=$REVOCATION_LIST_DIR"
-elif [ "$(echo "$RSERVER_VERSION" | cut -d. -f1)" -ge 1 ] && [ "$(echo "$RSERVER_VERSION" | cut -d. -f2)" -ge 3 ];
-then
-  REVOCATION_LIST_DIR="/tmp/rstudio-server/${USER}_revocation-list-dir"
-  mkdir -p "$REVOCATION_LIST_DIR"
-  REVOCATION_LIST_PAR="--auth-revocation-list-dir=$REVOCATION_LIST_DIR"
-else
-  REVOCATION_LIST_PAR=""
-fi
-
 python -c 'import uuid; print(uuid.uuid4())' > "$COOKIE_KEY_PATH"
 chmod 600 "$COOKIE_KEY_PATH"
 
@@ -67,4 +50,3 @@ BASE_PATH="${NB_PREFIX}/rstudio"
   --server-user "$USER" \
   --database-config-file "$DB_CONF_PATH" \
   --auth-timeout-minutes=10080 \
-  $REVOCATION_LIST_PAR
