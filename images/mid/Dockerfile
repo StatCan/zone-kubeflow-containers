@@ -132,6 +132,7 @@ RUN DUCK_BIN="/opt/conda/bin/duckdb" && \
     DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
     ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
     mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
+    # duckdb extensions required by parquet visualizer:
     $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
     chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb
 
