@@ -9,7 +9,7 @@ set -euo pipefail
 
 CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 echo "cwd=$CWD"
-export USER="${NB_USER}"
+USER="${NB_USER}"
 RSTUDIO_STATE_DIR="${HOME}/.local/share/rstudio"
 RSTUDIO_CONDA_ENV_FILE="${RSTUDIO_STATE_DIR}/active_conda_env"
 
@@ -56,6 +56,7 @@ sed -i "s|directory=.*|directory=/tmp/rstudio-server/${USER}_database|" "$DB_CON
 # Jupyter server-proxy serves the launcher under the fixed /rstudio route.
 BASE_PATH="${NB_PREFIX}/rstudio"
 
+# Pin R and the loader path to the same target env before rsession starts.
 /usr/lib/rstudio-server/bin/rserver   --server-daemonize=0 \
   --auth-none=1 \
   --www-port="$1" \
@@ -67,10 +68,9 @@ BASE_PATH="${NB_PREFIX}/rstudio"
   --secure-cookie-key-file="$COOKIE_KEY_PATH" \
   --server-pid-file="/tmp/rstudio-server/${USER}_rstudio-server.pid" \
   --server-data-dir="/tmp/rstudio-server/${USER}_rstudio-server" \
-  # Pin R and the loader path to the same target env before rsession starts.
   --rsession-which-r="${TARGET_CONDA_ENV}/bin/R" \
   --rsession-ld-library-path="${TARGET_CONDA_ENV}/lib" \
   --rsession-path="$CWD/rsession.sh" \
   --server-user "$USER" \
   --database-config-file "$DB_CONF_PATH" \
-  --auth-timeout-minutes=10080 \
+  --auth-timeout-minutes=10080
