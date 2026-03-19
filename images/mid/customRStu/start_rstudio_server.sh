@@ -9,7 +9,7 @@ set -euo pipefail
 
 CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 echo "cwd=$CWD"
-USER="${NB_USER}"
+export USER="${NB_USER}"
 RSTUDIO_STATE_DIR="${HOME}/.local/share/rstudio"
 RSTUDIO_CONDA_ENV_FILE="${RSTUDIO_STATE_DIR}/active_conda_env"
 
