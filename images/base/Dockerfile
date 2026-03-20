@@ -97,7 +97,11 @@ COPY --chmod=755 suspend-server.sh adjust-server-resources.py ktutil-keytab /usr
 # add clean-layer script
 COPY --chmod=755 clean-layer.sh /usr/bin/clean-layer.sh
 
+<<<<<<< HEAD
 # Set conda Python as the system default Python
+=======
+# Set conda Python as the default for user sessions
+>>>>>>> ad5c2cd (fix: set conda Python as default for user sessions)
 COPY --chmod=755 set-python-default.sh /usr/local/bin/set-python-default.sh
 RUN /usr/local/bin/set-python-default.sh
 
