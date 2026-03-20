@@ -97,6 +97,10 @@ COPY --chmod=755 suspend-server.sh adjust-server-resources.py ktutil-keytab /usr
 # add clean-layer script
 COPY --chmod=755 clean-layer.sh /usr/bin/clean-layer.sh
 
+# Set conda Python as the default for user sessions
+COPY --chmod=755 set-python-default.sh /usr/local/bin/set-python-default.sh
+RUN /usr/local/bin/set-python-default.sh
+
 # Combined tool installations with cleanup
 RUN \
     # S6 Overlay
