@@ -1,7 +1,1 @@
-{
-    "python.languageServer": "Jedi",
-    "python.discovery.exclude": [
-        "/usr/bin/python*",
-        "/usr/local/bin/python*"
-    ]
-}
+{"python.languageServer": "Jedi"}
