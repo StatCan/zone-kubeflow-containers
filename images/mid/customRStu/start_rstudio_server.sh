@@ -12,6 +12,9 @@ echo "cwd=$CWD"
 export USER="${NB_USER}"
 RSTUDIO_STATE_DIR="${HOME}/.local/share/rstudio"
 RSTUDIO_CONDA_ENV_FILE="${RSTUDIO_STATE_DIR}/active_conda_env"
+RSTUDIO_RUNTIME_DIR="/tmp/rstudio-server"
+RSTUDIO_PID_FILE="${RSTUDIO_RUNTIME_DIR}/${USER}_rstudio-server.pid"
+RSTUDIO_DATA_DIR="${RSTUDIO_RUNTIME_DIR}/${USER}_rstudio-server"
 
 resolve_conda_env() {
   local candidate="${1:-}"
@@ -41,7 +44,7 @@ echo "## RStudio target env is >>"
 echo "$TARGET_CONDA_ENV"
 
 # set a user-specific secure cookie key
-COOKIE_KEY_PATH="/tmp/rstudio-server/${USER}_secure-cookie-key"
+COOKIE_KEY_PATH="${RSTUDIO_RUNTIME_DIR}/${USER}_secure-cookie-key"
 rm -f "$COOKIE_KEY_PATH"
 mkdir -p "$(dirname "$COOKIE_KEY_PATH")"
 
@@ -51,10 +54,14 @@ export RETICULATE_PYTHON="${TARGET_CONDA_ENV}/bin/python"
 
 # Use user-specific database.conf in home directory instead of /opt
 DB_CONF_PATH="${HOME}/.rstudio/database.conf"
-sed -i "s|directory=.*|directory=/tmp/rstudio-server/${USER}_database|" "$DB_CONF_PATH"
+sed -i "s|directory=.*|directory=${RSTUDIO_RUNTIME_DIR}/${USER}_database|" "$DB_CONF_PATH"
 
 # Jupyter server-proxy serves the launcher under the fixed /rstudio route.
 BASE_PATH="${NB_PREFIX}/rstudio"
+
+# Clear stale runtime state from a previously terminated RStudio server.
+rm -f "$RSTUDIO_PID_FILE"
+rm -rf "$RSTUDIO_DATA_DIR"
 
 # Pin R and the loader path to the same target env before rsession starts.
 /usr/lib/rstudio-server/bin/rserver   --server-daemonize=0 \
@@ -66,11 +73,23 @@ BASE_PATH="${NB_PREFIX}/rstudio"
   --www-enable-origin-check=1 \
   --www-same-site=lax \
   --secure-cookie-key-file="$COOKIE_KEY_PATH" \
-  --server-pid-file="/tmp/rstudio-server/${USER}_rstudio-server.pid" \
-  --server-data-dir="/tmp/rstudio-server/${USER}_rstudio-server" \
+  --server-pid-file="$RSTUDIO_PID_FILE" \
+  --server-data-dir="$RSTUDIO_DATA_DIR" \
   --rsession-which-r="${TARGET_CONDA_ENV}/bin/R" \
   --rsession-ld-library-path="${TARGET_CONDA_ENV}/lib" \
   --rsession-path="$CWD/rsession.sh" \
   --server-user "$USER" \
   --database-config-file "$DB_CONF_PATH" \
-  --auth-timeout-minutes=10080
+  --auth-timeout-minutes=10080 &
+
+RSTUDIO_PID=$!
+set +e
+wait "$RSTUDIO_PID"
+RSTUDIO_EXIT_CODE=$?
+set -e
+echo "RStudio server exited with status ${RSTUDIO_EXIT_CODE}"
+
+rm -f "$RSTUDIO_PID_FILE"
+rm -rf "$RSTUDIO_DATA_DIR"
+
+exit "$RSTUDIO_EXIT_CODE"
