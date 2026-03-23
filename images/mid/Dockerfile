@@ -131,6 +131,14 @@ RUN pip install --no-cache-dir \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
+# Install blobfuse2 for OneLake FUSE filesystem mount
+# Microsoft apt repo already configured in base image
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fuse3 blobfuse2 \
+    && echo "user_allow_other" >> /etc/fuse.conf \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # OneLake helper module for accessing Microsoft Fabric OneLake storage
 # Note: Azure CLI is already installed in the base image
 COPY onelake_utils.py /opt/conda/lib/python3.13/site-packages/onelake_utils.py

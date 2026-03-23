@@ -22,6 +22,7 @@ Usage:
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 
 # Lazy imports - only loaded on first use to keep import fast
@@ -30,6 +31,12 @@ _fs_client = None
 
 # OneLake DFS endpoint (ADLS Gen2 compatible)
 ONELAKE_ENDPOINT = "https://onelake.dfs.fabric.microsoft.com"
+
+# Persistent config file so connect() survives across processes
+_CONFIG_FILE = Path.home() / ".onelake_config"
+
+# FUSE mount path (set up by s6 init script 04-onelake-mount)
+MOUNT_PATH = Path.home() / "onelake"
 
 # Messages in EN/FR
 _MSG = {
@@ -45,6 +52,10 @@ _MSG = {
         "endpoint": "Endpoint",
         "base_path": "Base path",
         "switched": "Switched to workspace '{ws}', lakehouse '{lh}'",
+        "mount_status": "Mount",
+        "mounted": "Mounted at {path}",
+        "not_mounted": "Not mounted (using SDK)",
+        "mount_warning": "Note: ~/onelake/ mount is tied to boot-time config. SDK will use the new workspace.",
     },
     "fr": {
         "no_workspace": "ONELAKE_WORKSPACE n'est pas defini. Utilisez onelake.connect(workspace='...', lakehouse='...') ou contactez votre admin.",
@@ -58,6 +69,10 @@ _MSG = {
         "endpoint": "Point de terminaison",
         "base_path": "Chemin de base",
         "switched": "Bascule vers l'espace de travail '{ws}', lakehouse '{lh}'",
+        "mount_status": "Montage",
+        "mounted": "Monte a {path}",
+        "not_mounted": "Non monte (utilisation du SDK)",
+        "mount_warning": "Note: ~/onelake/ est lie a la config de demarrage. Le SDK utilisera le nouvel espace.",
     },
 }
 
@@ -74,9 +89,19 @@ def _msg(key):
 
 
 def _get_config():
-    """Read OneLake configuration from environment variables."""
+    """Read OneLake configuration from env vars, falling back to ~/.onelake_config."""
     workspace = os.environ.get("ONELAKE_WORKSPACE", "")
     lakehouse = os.environ.get("ONELAKE_LAKEHOUSE", "")
+    if workspace and lakehouse:
+        return workspace, lakehouse
+    # Fall back to saved config from a previous connect() call
+    if _CONFIG_FILE.exists():
+        try:
+            saved = json.loads(_CONFIG_FILE.read_text())
+            workspace = workspace or saved.get("workspace", "")
+            lakehouse = lakehouse or saved.get("lakehouse", "")
+        except (json.JSONDecodeError, OSError):
+            pass
     return workspace, lakehouse
 
 
@@ -127,6 +152,11 @@ def _is_guid(value):
     ))
 
 
+def _is_mounted():
+    """Check if OneLake is FUSE-mounted at ~/onelake/."""
+    return MOUNT_PATH.is_mount()
+
+
 def _build_path(path, lakehouse=None):
     """Build the full OneLake path including lakehouse prefix.
 
@@ -169,10 +199,20 @@ def connect(workspace, lakehouse):
     global _client, _fs_client
     os.environ["ONELAKE_WORKSPACE"] = workspace
     os.environ["ONELAKE_LAKEHOUSE"] = lakehouse
+    # Save to disk so config persists across terminal sessions
+    try:
+        _CONFIG_FILE.write_text(json.dumps({
+            "workspace": workspace,
+            "lakehouse": lakehouse,
+        }))
+    except OSError:
+        pass
     # Reset cached clients so they reconnect to the new workspace
     _client = None
     _fs_client = None
     print(_msg("switched").format(ws=workspace, lh=lakehouse))
+    if _is_mounted():
+        print(_msg("mount_warning"))
 
 
 def info():
@@ -188,6 +228,8 @@ def info():
     if workspace and lakehouse:
         base = f"{lakehouse}/Files/" if _is_guid(lakehouse) else f"{lakehouse}.Lakehouse/Files/"
         print(f"  {_msg('base_path')}: {base}")
+    mount = _msg("mounted").format(path=MOUNT_PATH) if _is_mounted() else _msg("not_mounted")
+    print(f"  {_msg('mount_status')}: {mount}")
 
 
 def ls(path="/"):
@@ -214,16 +256,28 @@ def ls(path="/"):
 def download(remote_path, local_path):
     """Download a file from OneLake to local filesystem.
 
+    Uses the local FUSE mount if available for faster downloads,
+    otherwise falls back to the SDK.
+
     Args:
         remote_path: Path in OneLake (relative to lakehouse Files/).
         local_path: Local destination path.
     """
+    remote_path = remote_path.lstrip("/")
+    local = Path(local_path)
+    local.parent.mkdir(parents=True, exist_ok=True)
+
+    # Fast path: copy from FUSE mount if available
+    if _is_mounted():
+        mount_file = MOUNT_PATH / remote_path
+        if mount_file.exists():
+            shutil.copy2(str(mount_file), str(local))
+            return
+
+    # Fallback: SDK
     fs = _get_fs_client()
     full_path = _build_path(remote_path)
     file_client = fs.get_file_client(full_path)
-
-    local = Path(local_path)
-    local.parent.mkdir(parents=True, exist_ok=True)
 
     with open(local, "wb") as f:
         data = file_client.download_file()
@@ -248,6 +302,9 @@ def upload(local_path, remote_path):
 def read(path, as_text=False):
     """Read a file from OneLake and return its contents.
 
+    Uses the local FUSE mount if available for faster reads,
+    otherwise falls back to the SDK.
+
     Args:
         path: Path in OneLake (relative to lakehouse Files/).
         as_text: If True, return as string. Otherwise return bytes.
@@ -255,6 +312,15 @@ def read(path, as_text=False):
     Returns:
         File contents as bytes or string.
     """
+    path = path.lstrip("/")
+    # Fast path: read from FUSE mount if available
+    if _is_mounted():
+        local_file = MOUNT_PATH / path
+        if local_file.exists():
+            data = local_file.read_bytes()
+            return data.decode("utf-8") if as_text else data
+
+    # Fallback: SDK
     fs = _get_fs_client()
     full_path = _build_path(path)
     file_client = fs.get_file_client(full_path)
