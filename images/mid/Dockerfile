@@ -89,19 +89,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     'nb_conda_kernels' \
     'jupyterlab-lsp' \
     'jupyter-lsp' \
-    'r-arrow' \
-    'r-aws.s3' \
-    'r-base=4.5.1' \
-    'r-catools' \
-    'r-e1071' \
-    'r-hdf5r' \
-    'r-markdown' \
-    'r-odbc' \
-    'r-renv' \
-    'r-rodbc' \
-    'r-sf' \
-    'r-sparklyr' \
-    'r-tidyverse' \
     && pip install --no-cache-dir \
     'kubeflow-training' \
     'git+https://github.com/betatim/vscode-binder' \
@@ -135,6 +122,25 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
     && clean-layer.sh \ 
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+# OneLake SDK for accessing Microsoft Fabric OneLake (ADLS Gen2) storage
+RUN pip install --no-cache-dir \
+    'azure-storage-file-datalake' \
+    'azure-identity' \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+# Install blobfuse2 for OneLake FUSE filesystem mount
+# Microsoft apt repo already configured in base image
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fuse3 blobfuse2 \
+    && echo "user_allow_other" >> /etc/fuse.conf \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# OneLake helper module for accessing Microsoft Fabric OneLake storage
+# Note: Azure CLI is already installed in the base image
+COPY onelake_utils.py /opt/conda/lib/python3.13/site-packages/onelake_utils.py
 
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json

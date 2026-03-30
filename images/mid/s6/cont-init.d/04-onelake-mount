@@ -1,0 +1,132 @@
+#!/command/with-contenv bash
+
+# OneLake blobfuse2 FUSE mount script
+# Mounts OneLake lakehouse Files directory at ~/onelake/
+# Runs after 03-onelake-init which validates env vars.
+# Soft-fails on all errors so the container always boots.
+
+MOUNT_POINT="/home/${NB_USER}/onelake"
+CACHE_DIR="/tmp/blobfuse2-cache"
+CONFIG_FILE="/tmp/blobfuse2-config.yaml"
+STATUS_FILE="/home/${NB_USER}/.onelake_status"
+
+CACHE_SIZE_MB="${ONELAKE_CACHE_SIZE_MB:-2048}"
+CACHE_TTL="${ONELAKE_CACHE_TTL:-300}"
+
+# --- Guard: skip if OneLake is not configured ---
+if [ -z "${ONELAKE_WORKSPACE}" ]; then
+    exit 0
+fi
+
+# --- Guard: skip if FUSE is not available ---
+if [ ! -e /dev/fuse ]; then
+    echo "OneLake mount: /dev/fuse not available, skipping FUSE mount (SDK still works)."
+    exit 0
+fi
+
+# --- Guard: skip if blobfuse2 is not installed ---
+if ! command -v blobfuse2 &>/dev/null; then
+    echo "OneLake mount: blobfuse2 not installed, skipping FUSE mount."
+    exit 0
+fi
+
+# --- Determine lakehouse path format ---
+LAKEHOUSE="${ONELAKE_LAKEHOUSE}"
+if [ -z "${LAKEHOUSE}" ]; then
+    echo "OneLake mount: ONELAKE_LAKEHOUSE not set, skipping FUSE mount."
+    exit 0
+fi
+
+# Check if lakehouse is a GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+if echo "${LAKEHOUSE}" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+    LAKEHOUSE_PATH="${LAKEHOUSE}"
+else
+    LAKEHOUSE_PATH="${LAKEHOUSE}.Lakehouse"
+fi
+
+# --- Detect authentication mode ---
+# Priority: Workload Identity > SPN > Azure CLI
+AUTH_SECTION=""
+if [ -n "${AZURE_CLIENT_ID}" ] && [ -n "${AZURE_TENANT_ID}" ] && [ -n "${AZURE_FEDERATED_TOKEN_FILE}" ]; then
+    # Workload Identity
+    AUTH_SECTION="  mode: spn
+  appid: ${AZURE_CLIENT_ID}
+  tenantid: ${AZURE_TENANT_ID}
+  oauth-token-path: ${AZURE_FEDERATED_TOKEN_FILE}"
+    echo "OneLake mount: using Workload Identity auth."
+elif [ -n "${AZURE_CLIENT_ID}" ] && [ -n "${AZURE_TENANT_ID}" ] && [ -n "${AZURE_CLIENT_SECRET}" ]; then
+    # Service Principal
+    AUTH_SECTION="  mode: spn
+  appid: ${AZURE_CLIENT_ID}
+  tenantid: ${AZURE_TENANT_ID}
+  clientsecret: ${AZURE_CLIENT_SECRET}"
+    echo "OneLake mount: using Service Principal auth."
+elif command -v az &>/dev/null && az account show &>/dev/null 2>&1; then
+    # Azure CLI
+    AUTH_SECTION="  mode: azcli"
+    echo "OneLake mount: using Azure CLI auth."
+else
+    echo "OneLake mount: no valid auth found, skipping FUSE mount."
+    exit 0
+fi
+
+# --- Create directories ---
+mkdir -p "${MOUNT_POINT}"
+mkdir -p "${CACHE_DIR}"
+
+# --- Generate blobfuse2 config ---
+cat > "${CONFIG_FILE}" << EOF
+allow-other: true
+
+logging:
+  type: syslog
+  level: log_err
+
+components:
+  - libfuse
+  - file_cache
+  - attr_cache
+  - azstorage
+
+libfuse:
+  attribute-expiration-sec: 120
+  entry-expiration-sec: 120
+  negative-entry-expiration-sec: 30
+
+file_cache:
+  path: ${CACHE_DIR}
+  timeout-sec: ${CACHE_TTL}
+  max-size-mb: ${CACHE_SIZE_MB}
+
+attr_cache:
+  timeout-sec: 120
+
+azstorage:
+  type: adls
+  endpoint: https://onelake.dfs.fabric.microsoft.com
+  container: ${ONELAKE_WORKSPACE}
+  subdirectory: /${LAKEHOUSE_PATH}/Files
+${AUTH_SECTION}
+EOF
+
+chmod 600 "${CONFIG_FILE}"
+
+# --- Mount ---
+if blobfuse2 "${MOUNT_POINT}" --config-file="${CONFIG_FILE}" 2>/tmp/blobfuse2-mount.log; then
+    # Verify mount
+    if mountpoint -q "${MOUNT_POINT}"; then
+        echo "OneLake mount: mounted at ${MOUNT_POINT}"
+        # Update status file with mount info
+        cat > "${STATUS_FILE}" << EOFSTATUS
+{"configured": true, "workspace": "${ONELAKE_WORKSPACE}", "lakehouse": "${LAKEHOUSE}", "endpoint": "https://onelake.dfs.fabric.microsoft.com", "mounted": true, "mount_path": "${MOUNT_POINT}"}
+EOFSTATUS
+        chown "${NB_USER}:${NB_GID}" "${STATUS_FILE}" 2>/dev/null
+    else
+        echo "OneLake mount: blobfuse2 ran but mount not verified."
+    fi
+else
+    echo "OneLake mount: blobfuse2 failed (see /tmp/blobfuse2-mount.log). SDK still works."
+    cat /tmp/blobfuse2-mount.log 2>/dev/null
+fi
+
+exit 0
