@@ -112,6 +112,42 @@ jobs:
 
   # Test the Images
 
+  base-test:
+    needs: [vars, base]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    with:
+      image: "base"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  mid-test:
+    needs: [vars, mid]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    with:
+      image: "mid"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  sas-kernel-test:
+    needs: [vars, sas-kernel]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    with:
+      image: "sas-kernel"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
   jupyterlab-cpu-test:
     needs: [vars, jupyterlab-cpu]
     uses: ./.github/workflows/docker-pull-test.yaml

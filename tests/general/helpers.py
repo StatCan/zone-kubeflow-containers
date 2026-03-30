@@ -100,12 +100,22 @@ class CondaPackageHelper:
     def _packages_from_json(env_export):
         """Extract packages and versions from the lines returned by the list of specifications"""
         # dependencies = filter(lambda x:  isinstance(x, str), json.loads(env_export).get("dependencies"))
-        s = env_export.strip()
-        start = s.find("{")
+        # Handle cases where stderr messages are mixed with JSON output
+        # Find the start and end of the actual JSON to handle stderr messages
+        start = env_export.find("{")
         if start == -1:
-            raise ValueError("No JSON object could be decoded: missing opening '{':", s)
-        env_export = s[start:]    
-        dependencies = json.loads(env_export).get("dependencies")
+            raise ValueError(
+                f"Could not find JSON in conda output: {env_export[:200]}..."
+            )
+
+        end = env_export.rfind("}")  # Find the last closing brace
+        if end == -1:
+            raise ValueError(
+                f"Could not find end of JSON in conda output: {env_export[-200:]}..."
+            )
+
+        json_content = env_export[start : end + 1]  # Include the closing brace
+        dependencies = json.loads(json_content).get("dependencies")
         # Filtering packages installed through pip in this case it's a dict {'pip': ['toree==0.3.0']}
         # Since we only manage packages installed through conda here
         dependencies = filter(lambda x: isinstance(x, str), dependencies)
