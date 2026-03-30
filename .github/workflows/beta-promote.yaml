@@ -1,4 +1,7 @@
 name: Promote Beta to Master
+permissions:
+  contents: read
+  pull-requests: write
 on:
   schedule:
     # Every wednesdays, at 2h30/3h30 am(EST/EDT)
