@@ -134,7 +134,7 @@ RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
     && clean-layer.sh \ 
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
-
+    
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
@@ -143,7 +143,10 @@ COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
 COPY --chown=${NB_USER}:${NB_GID} customRStu/database.conf ${HOME}/.rstudio/database.conf
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
+    && chmod 755 /opt/jupyter-custom-rstudio-proxy/rstudio-use-current-conda.sh \
     && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/
+
+COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-use-current-conda
 
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.09.1-401
