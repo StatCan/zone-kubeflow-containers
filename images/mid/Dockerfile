@@ -43,6 +43,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     code-server --install-extension Posit.air-vscode@0.22.0 && \
     code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 && \
     code-server --install-extension adamviola.parquet-explorer@1.2.1 && \
+    code-server --install-extension lucien-martijn.parquet-visualizer@0.31.1 && \
     code-server --install-extension redhat.vscode-yaml@1.15.0 && \
     code-server --install-extension ms-vscode.azurecli@0.6.0 && \
     code-server --install-extension mblode.pretty-formatter@0.2.1 && \
@@ -69,7 +70,7 @@ RUN mamba install --quiet --yes -c conda-forge \
     'pillow' \
     'pyyaml' \
     'joblib==1.2.0' \
-    's3fs' \ 
+    's3fs' \
     'fire' \
     'mkl' \
     'graphviz' \
@@ -102,6 +103,9 @@ RUN mamba install --quiet --yes -c conda-forge \
     'r-sf' \
     'r-sparklyr' \
     'r-tidyverse' \
+    'duckdb' \
+    'duckdb-cli' \
+    'python-duckdb' \
     && pip install --no-cache-dir \
     'kubeflow-training' \
     'git+https://github.com/betatim/vscode-binder' \
@@ -119,6 +123,17 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /home/$NB_USER/.node-gyp \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
+# Install DuckDB extensions for parquet visualizer (air-gapped support)
+COPY --chown=${NB_USER}:${NB_GID} .duckdbrc /home/$NB_USER/.duckdbrc
+
+RUN DUCK_BIN="/opt/conda/bin/duckdb" && \
+    DUCK_VER=$($DUCK_BIN --version | cut -d' ' -f1) && \
+    ABI_VER=v$(echo $DUCK_VER | cut -d'.' -f1-2).0 && \
+    mkdir -p /home/$NB_USER/.duckdb/extensions/${ABI_VER}/linux_amd64/ && \
+    # duckdb extensions required by parquet visualizer:
+    $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" && \
+    chown -R $NB_USER:$NB_GID /home/$NB_USER/.duckdb
 
 # Install python, R, Julia and other useful language servers
 RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
