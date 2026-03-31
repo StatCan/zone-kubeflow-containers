@@ -190,10 +190,6 @@ RUN wget -qO- https://pixi.sh/install.sh | sh \
 # Copy over pip config
 COPY --chown=${NB_USER}:${NB_GID} pip.conf /etc/pip.conf
 
-# Persist the active conda env for RStudio through system shell startup,
-# not the user's PVC-backed home directory.
-COPY --chmod=644 rstudio-conda-env.sh /etc/profile.d/rstudio-conda-env.sh
-
 #Copy over various files
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME}/
 
