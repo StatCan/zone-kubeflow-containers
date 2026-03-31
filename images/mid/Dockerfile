@@ -140,12 +140,16 @@ COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.j
 
 # Jupyter RStudio Proxy
 COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
+# Seed a default database.conf into the user home. If a PVC later hides this file,
+# start_rstudio_server.sh restores it from the template under /opt.
 COPY --chown=${NB_USER}:${NB_GID} customRStu/database.conf ${HOME}/.rstudio/database.conf
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rstudio-use-current-conda.sh \
     && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/
 
+# Terminal helper to save the current Conda env and stop any running RStudio
+# processes before relaunching from the Jupyter tile.
 COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-use-current-conda
 
 # install rstudio-server
