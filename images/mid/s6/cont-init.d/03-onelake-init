@@ -6,6 +6,14 @@
 # Auth is handled lazily by onelake_utils.py on first use.
 
 STATUS_FILE="/home/${NB_USER}/.onelake_status"
+CONFIG_PATH="/home/${NB_USER}/.onelake_config"
+
+# If env vars are absent, fall back to the user's persisted OneLake selection.
+if [ -z "${ONELAKE_WORKSPACE}" ] && [ -f "${CONFIG_PATH}" ]; then
+    ONELAKE_WORKSPACE=$(python3 -c "import json; print(json.load(open('${CONFIG_PATH}')).get('workspace',''))" 2>/dev/null)
+    ONELAKE_LAKEHOUSE=$(python3 -c "import json; print(json.load(open('${CONFIG_PATH}')).get('lakehouse',''))" 2>/dev/null)
+    export ONELAKE_WORKSPACE ONELAKE_LAKEHOUSE
+fi
 
 # If ONELAKE_WORKSPACE is not set, skip silently
 if [ -z "${ONELAKE_WORKSPACE}" ]; then

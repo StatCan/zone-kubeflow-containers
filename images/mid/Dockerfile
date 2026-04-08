@@ -142,6 +142,7 @@ RUN apt-get update \
 # OneLake helper module for accessing Microsoft Fabric OneLake storage
 # Note: Azure CLI is already installed in the base image
 COPY onelake_utils.py /opt/conda/lib/python3.13/site-packages/onelake_utils.py
+COPY --chmod=755 onelake-configure.py /usr/local/bin/onelake-configure
 
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json

@@ -13,6 +13,14 @@ STATUS_FILE="/home/${NB_USER}/.onelake_status"
 CACHE_SIZE_MB="${ONELAKE_CACHE_SIZE_MB:-2048}"
 CACHE_TTL="${ONELAKE_CACHE_TTL:-300}"
 
+# --- Load from ~/.onelake_config if env vars not set ---
+CONFIG_PATH="/home/${NB_USER}/.onelake_config"
+if [ -z "${ONELAKE_WORKSPACE}" ] && [ -f "${CONFIG_PATH}" ]; then
+    ONELAKE_WORKSPACE=$(python3 -c "import json; print(json.load(open('${CONFIG_PATH}')).get('workspace',''))" 2>/dev/null)
+    ONELAKE_LAKEHOUSE=$(python3 -c "import json; print(json.load(open('${CONFIG_PATH}')).get('lakehouse',''))" 2>/dev/null)
+    export ONELAKE_WORKSPACE ONELAKE_LAKEHOUSE
+fi
+
 # --- Guard: skip if OneLake is not configured ---
 if [ -z "${ONELAKE_WORKSPACE}" ]; then
     exit 0
@@ -103,6 +111,7 @@ attr_cache:
 
 azstorage:
   type: adls
+  account-name: onelake
   endpoint: https://onelake.dfs.fabric.microsoft.com
   container: ${ONELAKE_WORKSPACE}
   subdirectory: /${LAKEHOUSE_PATH}/Files

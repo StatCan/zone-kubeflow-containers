@@ -34,6 +34,7 @@ ONELAKE_ENDPOINT = "https://onelake.dfs.fabric.microsoft.com"
 
 # Persistent config file so connect() survives across processes
 _CONFIG_FILE = Path.home() / ".onelake_config"
+_STATUS_FILE = Path.home() / ".onelake_status"
 
 # FUSE mount path (set up by s6 init script 04-onelake-mount)
 MOUNT_PATH = Path.home() / "onelake"
@@ -204,6 +205,17 @@ def connect(workspace, lakehouse):
         _CONFIG_FILE.write_text(json.dumps({
             "workspace": workspace,
             "lakehouse": lakehouse,
+        }))
+    except OSError:
+        pass
+    try:
+        _STATUS_FILE.write_text(json.dumps({
+            "configured": True,
+            "workspace": workspace,
+            "lakehouse": lakehouse,
+            "endpoint": ONELAKE_ENDPOINT,
+            "mounted": _is_mounted(),
+            **({"mount_path": str(MOUNT_PATH)} if _is_mounted() else {}),
         }))
     except OSError:
         pass
