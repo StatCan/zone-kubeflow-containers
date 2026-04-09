@@ -85,6 +85,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         'pyspark[ml]==3.5.5' \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
+    && jupyter lab build --dev-build=False --minimize=False \
+    && jupyter lab clean \
     && npm i -g \
         'bash-language-server' \
         'dockerfile-language-server-nodejs' \
@@ -147,11 +149,18 @@ USER $NB_USER
 # Build the first-boot home skeleton as jovyan so user-writable content is created
 # from the same context that will later consume it on mounted storage.
 RUN install -d -m 0775 \
+    "${HOME_TMP}/.cache" \
+    "${HOME_TMP}/.cache/pip" \
     "${HOME_TMP}/.config/rstudio" \
+    "${HOME_TMP}/.config/pip" \
     "${HOME_TMP}/.gnupg" \
+    "${HOME_TMP}/.ipython" \
+    "${HOME_TMP}/.jupyter" \
     "${HOME_TMP}/.local/bin" \
+    "${HOME_TMP}/.local/share/rstudio" \
     "${HOME_TMP}/.local/share/code-server/Machine" \
     "${HOME_TMP}/.local/share/code-server/User" \
+    "${HOME_TMP}/.rstudio" \
     "${HOME_TMP}/workspace/.vscode" \
     "${HOME_TMP}/workspace/data" \
     "${HOME_TMP}/workspace/repositories" \
