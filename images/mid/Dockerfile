@@ -184,7 +184,8 @@ RUN install -d -m 0775 \
     && mkdir -p "${HOME_TMP}/.duckdb/extensions/${ABI_VER}/linux_amd64/" \
     && $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" \
     && chmod 700 "${HOME_TMP}/.gnupg" \
-    && chmod -R g=u "${HOME_TMP}"
+    && chmod -R g=u "${HOME_TMP}" \
+    && chmod 2775 "${HOME_TMP}/.cache"
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 
