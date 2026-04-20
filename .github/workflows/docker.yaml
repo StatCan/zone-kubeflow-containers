@@ -22,6 +22,11 @@ on:
       - "!tests/README.md"
       - "requirements-dev.txt"
 
+# Need to distinguish in this job between pushes to master (aka v2) and beta / pull requests
+# This is for the aim of having two different image repos, one for master and another for beta / prs
+# Example: We want a `base` and a `base-beta`. This will make it easy to script aggressive cleanup for 
+## the images pushed to `base-beta` without worrying about affecting `base`
+## `base` will still have a cleanup task, but it will be less aggressive.
 jobs:
   vars:
     runs-on: ubuntu-latest
