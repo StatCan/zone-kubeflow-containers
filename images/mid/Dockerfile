@@ -141,6 +141,10 @@ RUN echo >> /opt/conda/ssl/cacert.pem \
 
 ENV REQUESTS_CA_BUNDLE=/opt/conda/ssl/cacert.pem
 
+# Ensure the image home stays owned by jovyan:user before we drop privileges.
+RUN install -d -o "${NB_USER}" -g "${NB_GID}" -m 2775 "${HOME}/.cache" \
+    && fix-permissions "/home/${NB_USER}"
+
 # s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
 
@@ -216,9 +220,9 @@ COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME_TMP}/.local/s
 # https://jirab.statcan.ca/browse/ZPS-40
 COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME_TMP}/.local/bin/rm
 
-RUN install -d -m 2775 "${HOME}/.cache" "${HOME_TMP}/.cache" \
+RUN install -d -m 2775 "${HOME_TMP}/.cache" \
     && chmod -R g=u "${HOME_TMP}" \
     && chmod 700 "${HOME_TMP}/.gnupg" \
-    && chmod 2775 "${HOME}/.cache" "${HOME_TMP}/.cache"
+    && chmod 2775 "${HOME_TMP}/.cache"
 
 EXPOSE 8888
