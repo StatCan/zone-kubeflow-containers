@@ -182,10 +182,7 @@ RUN install -d -m 0775 \
     && DUCK_VER="$($DUCK_BIN --version | cut -d' ' -f1)" \
     && ABI_VER="v$(echo "$DUCK_VER" | sed 's/^v//' | cut -d'.' -f1-2).0" \
     && mkdir -p "${HOME_TMP}/.duckdb/extensions/${ABI_VER}/linux_amd64/" \
-    && $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" \
-    && chmod 700 "${HOME_TMP}/.gnupg" \
-    && chmod -R g=u "${HOME_TMP}" \
-    && chmod 2775 "${HOME_TMP}/.cache"
+    && $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;"
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 
@@ -203,9 +200,7 @@ RUN set -eu \
     && { \
         printf 'export GPG_TTY=$(tty)\n'; \
         printf 'eval "$(pixi completion --shell bash)"\n'; \
-    } >> "${HOME_TMP}/.bashrc" \
-    && chmod 700 "${HOME_TMP}/.gnupg" \
-    && chmod -R g=u "${HOME_TMP}"
+    } >> "${HOME_TMP}/.bashrc"
 
 # Copy over various files that should be restored into HOME on first boot.
 COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME_TMP}/
@@ -221,7 +216,9 @@ COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME_TMP}/.local/s
 # https://jirab.statcan.ca/browse/ZPS-40
 COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME_TMP}/.local/bin/rm
 
-RUN chmod 700 "${HOME_TMP}/.gnupg" \
-    && chmod -R g=u "${HOME_TMP}"
+RUN install -d -m 2775 "${HOME}/.cache" "${HOME_TMP}/.cache" \
+    && chmod -R g=u "${HOME_TMP}" \
+    && chmod 700 "${HOME_TMP}/.gnupg" \
+    && chmod 2775 "${HOME}/.cache" "${HOME_TMP}/.cache"
 
 EXPOSE 8888
