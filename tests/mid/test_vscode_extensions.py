@@ -25,6 +25,8 @@ Example:
 import logging
 import pytest
 
+from tests.general.wait_utils import wait_for_exec_success
+
 LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.integration
@@ -44,6 +46,21 @@ def test_vscode_extensions_installed(container):
         pytest.skip("VSCode extensions not expected in base image")
     
     LOGGER.info("Testing VSCode extensions installation...")
+
+    container.run()
+
+    success, output = wait_for_exec_success(
+        container=container,
+        command=["which", "code-server"],
+        timeout=30,
+        initial_delay=0.5,
+        max_delay=3.0
+    )
+
+    if not success:
+        raise AssertionError(
+            f"Container failed to be ready for execution within timeout. Output: {output}"
+        )
     
     # Check if code-server is available
     result = container.container.exec_run(["which", "code-server"])
