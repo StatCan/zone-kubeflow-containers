@@ -79,24 +79,9 @@ RUN mamba install --quiet --yes -c conda-forge \
         'duckdb-cli' \
         'python-duckdb' \
     && pip install --no-cache-dir \
-    'kubeflow-training' \
-    'git+https://github.com/betatim/vscode-binder' \
-    'pyspark[ml]==3.5.5' \
-    && jupyter server extension enable --py jupyter_server_proxy \
-    && jupyter labextension enable \
-    '@jupyterlab/translation-extension' \
-    '@jupyterlab/server-proxy' \
-    'nbdime-jupyterlab' \
-    && jupyter lab build \
-    && jupyter lab clean \
-    && clean-layer.sh \
-    && rm -rf /home/$NB_USER/.cache/yarn \
-    && rm -rf /home/$NB_USER/.node-gyp \
-    && fix-permissions $CONDA_DIR \
-    && fix-permissions /home/$NB_USER
-
-# Install python, R, Julia and other useful language servers
-RUN julia -e 'using Pkg; Pkg.add("LanguageServer")' \
+        'kubeflow-training' \
+        'git+https://github.com/betatim/vscode-binder' \
+        'pyspark[ml]==3.5.5' \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
