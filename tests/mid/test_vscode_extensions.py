@@ -78,7 +78,7 @@ def test_vscode_extensions_installed(container):
     expected_extensions = [
         "ms-python.python",
         "ms-python.debugpy",
-        "Posit.air-vscode",
+        "posit.air-vscode",
         "ms-ceintl.vscode-language-pack-fr",
         "adamviola.parquet-explorer",
         "lucien-martijn.parquet-visualizer",
