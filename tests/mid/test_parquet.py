@@ -26,6 +26,8 @@ Example:
 import logging
 import pytest
 
+from tests.general.wait_utils import wait_for_exec_success
+
 LOGGER = logging.getLogger(__name__)
 
 @pytest.mark.integration
@@ -45,6 +47,21 @@ def test_parquet_functionality(container):
         pytest.skip("Parquet functionality not expected in base image")
     
     LOGGER.info("Testing parquet functionality...")
+
+    container.run()
+
+    success, output = wait_for_exec_success(
+        container=container,
+        command=["python3", "--version"],
+        timeout=30,
+        initial_delay=0.5,
+        max_delay=3.0
+    )
+
+    if not success:
+        raise AssertionError(
+            f"Container failed to be ready for execution within timeout. Output: {output}"
+        )
     
     # Create a simple Python script to test parquet functionality
     test_script = '''
