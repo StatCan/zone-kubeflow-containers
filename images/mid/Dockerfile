@@ -81,7 +81,6 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
-        'jupyter-rsession-proxy==2.2.0' \
         'pyspark[ml]==3.5.5' \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
@@ -103,6 +102,20 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
+# Jupyter RStudio Proxy
+COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
+# Seed a default database.conf into the user home. If a PVC later hides this file,
+# start_rstudio_server.sh restores it from the template under /opt.
+COPY --chown=${NB_USER}:${NB_GID} customRStu/database.conf ${HOME}/.rstudio/database.conf
+RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
+    && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
+    && chmod 755 /opt/jupyter-custom-rstudio-proxy/rstudio-use-current-conda.sh \
+    && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/
+
+# Terminal helper to save the current Conda env and stop any running RStudio
+# processes before relaunching from the Jupyter tile.
+COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-use-current-conda
+
 # install rstudio-server
 ARG RSTUDIO_VERSION=2025.09.1-401
 ARG SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
@@ -119,8 +132,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Harden rstudio-server - copy config files
-# See: https://github.com/rstudio/rstudio/issues/14060 for rsession-ld-library-path
-COPY rserver.conf rsession.conf /etc/rstudio/
+COPY rsession.conf /etc/rstudio/
 
 COPY --chown=${NB_USER}:${NB_GID} rstudio-prefs.json ${HOME_TMP}/.config/rstudio/rstudio-prefs.json
 
