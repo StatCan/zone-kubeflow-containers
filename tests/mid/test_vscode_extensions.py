@@ -78,9 +78,8 @@ def test_vscode_extensions_installed(container):
     expected_extensions = [
         "ms-python.python",
         "ms-python.debugpy",
-        "REditorSupport.r",
+        "Posit.air-vscode",
         "ms-ceintl.vscode-language-pack-fr",
-        "quarto.quarto",
         "adamviola.parquet-explorer",
         "lucien-martijn.parquet-visualizer",
         "redhat.vscode-yaml",
