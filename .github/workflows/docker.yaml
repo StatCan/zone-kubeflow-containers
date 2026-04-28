@@ -22,6 +22,11 @@ on:
       - "!tests/README.md"
       - "requirements-dev.txt"
 
+# Need to distinguish in this job between pushes to master (aka v2) and beta / pull requests
+# This is for the aim of having two different image repos, one for master and another for beta / prs
+# Example: We want a `base` and a `base-beta`. This will make it easy to script aggressive cleanup for 
+## the images pushed to `base-beta` without worrying about affecting `base`
+## `base` will still have a cleanup task, but it will be less aggressive.
 jobs:
   vars:
     runs-on: ubuntu-latest
@@ -42,9 +47,22 @@ jobs:
   base:
     needs: [vars]
     uses: ./.github/workflows/docker-steps.yaml
+    # if we could use a conditional on this with itd be cool
+    # no else https://stackoverflow.com/questions/60916931/github-actions-does-the-if-have-an-else
+    if: ${{ branch-name == 'master' }}
     with:
       image: "base"
       directory: "base"
+      base-image: "quay.io/jupyter/datascience-notebook:2025-08-15"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "base-beta"
+      directory: "base-beta"
       base-image: "quay.io/jupyter/datascience-notebook:2025-08-15"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
