@@ -195,7 +195,7 @@ RUN set -eu \
     && for entry in "${HOME}"/* "${HOME}"/.[!.]* "${HOME}"/..?*; do \
         [ -e "${entry}" ] || continue; \
         case "$(basename "${entry}")" in \
-            .cache|.conda|.duckdb|.duckdbrc|.gnupg|.julia|.local|.mamba|.npm|.pixi|workspace) continue ;; \
+            .cache|.conda|.duckdb|.duckdbrc|.gnupg|.local|.mamba|.npm|.pixi|workspace) continue ;; \
         esac; \
         cp -r --update=none "${entry}" "${HOME_TMP}/"; \
     done \

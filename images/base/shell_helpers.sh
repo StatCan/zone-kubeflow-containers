@@ -21,7 +21,7 @@ Conda
 =====
 
 It's recommended that you use conda to create virtual environments and
-to install R, Python, or Julia packages.
+to install R, or Python packages
 
 Python
 =====
