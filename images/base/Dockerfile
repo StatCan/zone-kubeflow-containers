@@ -214,13 +214,15 @@ COPY dbConnection/sqlnet.ora ${TNS_ADMIN}/sqlnet.ora
 RUN chmod a+w ${TNS_ADMIN} \
     && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
-# Final cleanup
+# Final cleanup, uninstall julia
 RUN rm -rf /tmp/* /var/tmp/* \
     && find / -depth -name '*.pyc' -exec rm -rf '{}' + \
     && find / -depth -name '__pycache__' -exec rm -rfv '{}' + \
+    && rm -rf /etc/julia /usr/local/bin/julia /opt/julia* \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
+
 
 # s6 - copy scripts
 COPY --chown=${NB_USER}:${NB_GID} --chmod=755 s6/ /etc
