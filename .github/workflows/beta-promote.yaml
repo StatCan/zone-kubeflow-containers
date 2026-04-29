@@ -1,4 +1,7 @@
 name: Promote Beta to Master
+permissions:
+  contents: read
+  pull-requests: write
 on:
   schedule:
     # Every wednesdays, at 2h30/3h30 am(EST/EDT)
@@ -39,3 +42,52 @@ jobs:
         gh pr create --base master --title "chore: promote beta to master" \
           --body "Automatically generated PR to merge beta to master" \
           --label auto-deploy
+  
+  # Just run every Monday, as long as the is there. 
+  auto-promote-beta:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: "Promote BETA"
+      run: |
+        # Get list of PR numbers with label "approved for promotion"
+        # pr_list format is "1 24 43 11"
+        pr_list=$(gh pr list -l "approved for promotion" --json number --jq "[.[].number] | @sh")
+
+        for i in $pr_list
+        do
+            # for each PR, get their relevant info
+            prInfo=$(gh pr view $i --json baseRefName,mergeStateStatus,isDraft,mergeable,title,reviewDecision)
+            targetBranch=$(echo $prInfo | jq ".baseRefName")
+            mergeState=$(echo $prInfo | jq ".mergeStateStatus")
+            isDraft=$(echo $prInfo | jq ".isDraft")
+            isMergeable=$(echo $prInfo | jq ".mergeable")
+            title=$(echo $prInfo | jq ".title")
+            review=$(echo $prInfo | jq ".reviewDecision")
+
+            # if PR matches all our conditions, merge it
+            if [[ "$targetBranch" == '"master"'
+                && "$mergeState" == '"CLEAN"'
+                && $isDraft == false
+                && $isMergeable == '"MERGEABLE"'
+                && $review == '"APPROVED"' ]]; then
+                
+                echo "Merging PR #$i - $title"
+                gh pr merge $i
+            else
+                echo "NOT merging PR #$i - $title"
+                echo ""
+                echo "Target branch should be "beta": is $targetBranch"
+                echo "Merge state should be "CLEAN": is $mergeState"
+                echo "Should not be in draft. Is draft: $isDraft"
+                echo "Should be mergeable. Is mergeable: $isMergeable"
+                echo "Should be reviewed. Review is: $review"
+            fi
+            echo "----------------------------"
+        done
+
