@@ -17,11 +17,16 @@ def _execute_on_container(package_helper, command):
     LOGGER.debug(f"Running command [{command}] ...")
     return package_helper.running_container.exec_run(command)
 
+
+def _skip_if_no_rstudio(package_helper):
+    image_name = package_helper.running_container.image.tags[0].lower() if package_helper.running_container.image.tags else ""
+    if 'base' in image_name or 'mid' in image_name:
+        pytest.skip("RStudio not available in this image, skipping RStudio test")
+
+
 def test_rstudio(package_helper):
     # Skip this test for images that don't have rstudio-server
-    image_name = package_helper.running_container.image.tags[0].lower() if package_helper.running_container.image.tags else ""
-    if 'base' in image_name or 'jupyterlab' in image_name or 'mid' in image_name:
-        pytest.skip("RStudio not available in this image, skipping RStudio test")
+    _skip_if_no_rstudio(package_helper)
     
     result = _execute_on_container(package_helper, ["rstudio-server", "start"])
     LOGGER.info(f"starting up rstudio: {result}")
@@ -35,4 +40,14 @@ def test_rstudio(package_helper):
     result = _execute_on_container(package_helper, ["rstudio-server", "version"])
     LOGGER.info(f"rstudio version: {result}")
     assert(EXPECTED in result.output.decode("utf-8"))
+
+
+def test_custom_rstudio_proxy(package_helper):
+    _skip_if_no_rstudio(package_helper)
+
+    result = _execute_on_container(package_helper, ["python", "-c", "import jupyter_custom_rstudio_proxy"])
+    assert result.exit_code == 0, result.output.decode("utf-8")
+
+    result = _execute_on_container(package_helper, ["test", "-x", "/usr/local/bin/rstudio-use-current-conda"])
+    assert result.exit_code == 0, "rstudio-use-current-conda helper is missing or not executable"
  

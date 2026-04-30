@@ -6,7 +6,7 @@ FROM $BASE_IMAGE
 
 USER root
 
-# installs vscode server, python & conda packages, jupyter tooling, RStudio, and pixi
+# installs vscode server, Python/R packages, Jupyter tooling, language servers, and pixi
 
 # Install vscode
 ARG VSCODE_VERSION=4.99.4
@@ -102,42 +102,7 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-# Jupyter RStudio Proxy
-COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
-# Seed a default database.conf into the user home. If a PVC later hides this file,
-# start_rstudio_server.sh restores it from the template under /opt.
-COPY --chown=${NB_USER}:${NB_GID} customRStu/database.conf ${HOME}/.rstudio/database.conf
-RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
-    && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
-    && chmod 755 /opt/jupyter-custom-rstudio-proxy/rstudio-use-current-conda.sh \
-    && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/
-
-# Terminal helper to save the current Conda env and stop any running RStudio
-# processes before relaunching from the Jupyter tile.
-COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-use-current-conda
-
-# install rstudio-server
-ARG RSTUDIO_VERSION=2025.09.1-401
-ARG SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
-RUN apt-get update \
-    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
-    && echo "deb [signed-by=/etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg] https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/" > /etc/apt/sources.list.d/cran-r.list \
-    && apt-get update \
-    && curl --silent -L --fail "https://s3.amazonaws.com/rstudio-ide-build/server/jammy/amd64/rstudio-server-${RSTUDIO_VERSION}-amd64.deb" > /tmp/rstudio.deb \
-    && echo "${SHA256} /tmp/rstudio.deb" | sha256sum -c - \
-    && apt-get install --no-install-recommends -y /tmp/rstudio.deb \
-    && rm /tmp/rstudio.deb \
-    && rm -f /etc/apt/sources.list.d/cran-r.list /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Harden rstudio-server - copy config files
-COPY rsession.conf /etc/rstudio/
-
-COPY --chown=${NB_USER}:${NB_GID} rstudio-prefs.json ${HOME_TMP}/.config/rstudio/rstudio-prefs.json
-
-ENV PATH=$PATH:/usr/lib/rstudio-server/bin \
-    SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
+ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
 # Configure container startup
@@ -167,16 +132,13 @@ USER $NB_USER
 RUN install -d -m 0775 \
     "${HOME_TMP}/.cache" \
     "${HOME_TMP}/.cache/pip" \
-    "${HOME_TMP}/.config/rstudio" \
     "${HOME_TMP}/.config/pip" \
     "${HOME_TMP}/.gnupg" \
     "${HOME_TMP}/.ipython" \
     "${HOME_TMP}/.jupyter" \
     "${HOME_TMP}/.local/bin" \
-    "${HOME_TMP}/.local/share/rstudio" \
     "${HOME_TMP}/.local/share/code-server/Machine" \
     "${HOME_TMP}/.local/share/code-server/User" \
-    "${HOME_TMP}/.rstudio" \
     "${HOME_TMP}/workspace/.vscode" \
     "${HOME_TMP}/workspace/data" \
     "${HOME_TMP}/workspace/repositories" \
