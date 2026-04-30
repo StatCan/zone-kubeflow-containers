@@ -103,8 +103,8 @@ finally:
         os.unlink(temp_filename)
 '''
     
-    # Write the test script to the container and execute it
-    result = container.container.exec_run(["sh", "-c", f"python3 -c \"{test_script}\""])
+    # Execute directly to avoid shell quoting issues in the embedded script.
+    result = container.container.exec_run(["python3", "-c", test_script])
     
     if result.exit_code != 0:
         LOGGER.error(f"Parquet functionality test failed: {result.output.decode('utf-8')}")
