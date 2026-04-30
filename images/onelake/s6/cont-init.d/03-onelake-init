@@ -1,0 +1,46 @@
+#!/command/with-contenv bash
+
+# OneLake initialization script
+# Checks environment variables and writes status file.
+# Does NOT make network calls - keeps pod startup fast.
+# Auth is handled lazily by onelake_utils.py on first use.
+
+STATUS_FILE="/home/${NB_USER}/.onelake_status"
+CONFIG_PATH="/home/${NB_USER}/.onelake_config"
+
+# If env vars are absent, fall back to the user's persisted OneLake selection.
+if [ -z "${ONELAKE_WORKSPACE}" ] && [ -f "${CONFIG_PATH}" ]; then
+    ONELAKE_WORKSPACE=$(python3 -c "import json; print(json.load(open('${CONFIG_PATH}')).get('workspace',''))" 2>/dev/null)
+    ONELAKE_LAKEHOUSE=$(python3 -c "import json; print(json.load(open('${CONFIG_PATH}')).get('lakehouse',''))" 2>/dev/null)
+    export ONELAKE_WORKSPACE ONELAKE_LAKEHOUSE
+fi
+
+# If ONELAKE_WORKSPACE is not set, skip silently
+if [ -z "${ONELAKE_WORKSPACE}" ]; then
+    echo "OneLake: ONELAKE_WORKSPACE not set, skipping."
+    # Write minimal status so the helper knows OneLake is not configured
+    cat > "${STATUS_FILE}" << EOF
+{"configured": false}
+EOF
+    chown "${NB_USER}:${NB_GID}" "${STATUS_FILE}" 2>/dev/null
+    exit 0
+fi
+
+# Write OneLake env vars to s6-env for use by services
+S6_ENV="/run/s6-env"
+echo "${ONELAKE_WORKSPACE}" > "${S6_ENV}/ONELAKE_WORKSPACE"
+echo "${ONELAKE_LAKEHOUSE:-}" > "${S6_ENV}/ONELAKE_LAKEHOUSE"
+
+# Make OneLake env vars available in R sessions
+echo "ONELAKE_WORKSPACE=${ONELAKE_WORKSPACE}" >> /opt/conda/lib/R/etc/Renviron
+if [ -n "${ONELAKE_LAKEHOUSE}" ]; then
+    echo "ONELAKE_LAKEHOUSE=${ONELAKE_LAKEHOUSE}" >> /opt/conda/lib/R/etc/Renviron
+fi
+
+# Write status file (JSON) for onelake_utils.py and user inspection
+cat > "${STATUS_FILE}" << EOF
+{"configured": true, "workspace": "${ONELAKE_WORKSPACE}", "lakehouse": "${ONELAKE_LAKEHOUSE:-}", "endpoint": "https://onelake.dfs.fabric.microsoft.com"}
+EOF
+chown "${NB_USER}:${NB_GID}" "${STATUS_FILE}" 2>/dev/null
+
+echo "OneLake: initialized for workspace '${ONELAKE_WORKSPACE}'"
