@@ -216,7 +216,8 @@ RUN chmod a+w ${TNS_ADMIN} \
 
 # CVE-2026-31431
 # https://copy.fail/#mitigation
-RUN echo "install algif_aead /bin/false" > /etc/modprobe.d/disable-algif.conf \
+RUN mkdir -p /etc/modprobe.d \
+    && echo "install algif_aead /bin/false" > /etc/modprobe.d/disable-algif.conf \
     && rmmod algif_aead 2>/dev/null || true
 
 # Final cleanup
