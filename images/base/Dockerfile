@@ -214,6 +214,11 @@ COPY dbConnection/sqlnet.ora ${TNS_ADMIN}/sqlnet.ora
 RUN chmod a+w ${TNS_ADMIN} \
     && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
+# CVE-2026-31431
+# https://copy.fail/#mitigation
+RUN echo "install algif_aead /bin/false" > /etc/modprobe.d/disable-algif.conf \
+    && rmmod algif_aead 2>/dev/null || true
+
 # Final cleanup
 RUN rm -rf /tmp/* /var/tmp/* \
     && find / -depth -name '*.pyc' -exec rm -rf '{}' + \
