@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MOUNT_POINT="${HOME}/onelake"
+CONFIG_FILE="${HOME}/.onelake_config"
+STATUS_FILE="${HOME}/.onelake_status"
+
+workspace="${ONELAKE_WORKSPACE:-}"
+lakehouse="${ONELAKE_LAKEHOUSE:-}"
+
+if [ -z "${workspace}" ] || [ -z "${lakehouse}" ]; then
+    if [ -f "${CONFIG_FILE}" ]; then
+        workspace="${workspace:-$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}')).get('workspace',''))" 2>/dev/null)}"
+        lakehouse="${lakehouse:-$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}')).get('lakehouse',''))" 2>/dev/null)}"
+    fi
+fi
+
+if [ -z "${workspace}" ] || [ -z "${lakehouse}" ]; then
+    echo "OneLake workspace and lakehouse are required."
+    echo "Launch with OneLake checked, or run:"
+    echo "  onelake-configure <workspace> <lakehouse> --mount-now"
+    exit 1
+fi
+
+if ! command -v az >/dev/null 2>&1; then
+    echo "Azure CLI is not installed in this image."
+    exit 1
+fi
+
+if ! az account show >/dev/null 2>&1; then
+    echo "Signing in to Azure. Follow the device-code instructions below."
+    az login --use-device-code
+else
+    echo "Azure CLI is already signed in."
+fi
+
+export ONELAKE_WORKSPACE="${workspace}"
+export ONELAKE_LAKEHOUSE="${lakehouse}"
+
+python3 - <<PY
+import json
+import os
+from pathlib import Path
+
+config = Path("${CONFIG_FILE}")
+status = Path("${STATUS_FILE}")
+workspace = os.environ["ONELAKE_WORKSPACE"]
+lakehouse = os.environ["ONELAKE_LAKEHOUSE"]
+payload = {"workspace": workspace, "lakehouse": lakehouse}
+config.write_text(json.dumps(payload))
+status.write_text(json.dumps({
+    "configured": True,
+    "workspace": workspace,
+    "lakehouse": lakehouse,
+    "endpoint": "https://onelake.dfs.fabric.microsoft.com",
+    "mounted": False,
+    "mount_path": "${MOUNT_POINT}",
+}))
+PY
+
+echo "Mounting OneLake at ${MOUNT_POINT}..."
+bash /etc/cont-init.d/04-onelake-mount
+
+if mountpoint -q "${MOUNT_POINT}"; then
+    rm -f "${MOUNT_POINT}/_LOGIN_REQUIRED.txt" 2>/dev/null || true
+    echo "OneLake mounted at ${MOUNT_POINT}"
+else
+    echo "OneLake was not mounted. Check /tmp/blobfuse2-mount.log for details."
+    exit 1
+fi
