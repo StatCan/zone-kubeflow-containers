@@ -135,7 +135,7 @@ COPY --chmod=755 keep-alive.sh /usr/local/bin/
 # SSL Certs
 # https://jirab.statcan.ca/browse/ZONE-274?focusedId=3674862&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-3674862
 # Added cert from: https://jirab.statcan.ca/browse/ZONE-349
-COPY --from=k8scc01covidacr.azurecr.io/publiccerts:stc /home/certs/ /opt/conda/ssl/certs
+COPY --from=k8scc01covidacr.azurecr.io/publiccerts:stcthn /home/certs/ /opt/conda/ssl/certs
 RUN echo >> /opt/conda/ssl/cacert.pem \
     && cd /opt/conda/ssl/certs/ \
     && for file in *.crt; do (echo "# ${file}"; cat "${file}"; echo) >> /opt/conda/ssl/cacert.pem; done
