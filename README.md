@@ -48,7 +48,8 @@ graph TD
   upstream_nb["(upstream) datascience-notebook"]
   upstream_nb --> base
   base --> mid
-  mid --> sas_kernel
+  mid --> rstudio
+  rstudio --> sas_kernel
   upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
   sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
   sas_kernel --> sas
@@ -62,7 +63,8 @@ Image | Notes
 --- | ---
 [base](./images/base) | Base Image pulling from docker-stacks
 [mid](./images/mid) | Installs various tools on top of the base image
-[sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our mid image
+[rstudio](./images/rstudio) | Installs and configures RStudio Server and its Jupyter proxy
+[sas-kernel](./images/sas_kernel) | Installs the SAS runtime and kernel on top of the RStudio layer
 
 ### Zone Images
 
@@ -70,8 +72,8 @@ These are the final images from our build process and are intended to be used on
 
 Image | Notes | Installations
 --- | --- | ---
-[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
-[sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
+[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, RStudio, R, Python, Julia, Sas kernel
+[sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | RStudio, Sas Studios
 
 ## Usage
 
@@ -438,6 +440,7 @@ This was tested on Linux Ubuntu 20.04 virtual machine.
 │   ├── base                                # Common base of the images
 │   ├── jupyterlab                          # Jupyterlab specific Dockerfile
 │   ├── mid                                 # Common mid point for all images
+│   ├── rstudio                             # RStudio Server and proxy layer
 │   ├── sas                                 # SAS specific Dockerfile
 |   └── sas_kernel                          # Dockerfile for installation of sas_kernel
 │

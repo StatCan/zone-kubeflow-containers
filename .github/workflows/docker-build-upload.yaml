@@ -91,14 +91,11 @@ jobs:
           fi
 
           make bake/${{ inputs.image }} BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} \
-            TAGS="${tags}" DARGS="--set ${{ inputs.image }}.args.ACCOUNT_NAME=${{ secrets.SAS_SA_NAME }} \
+            TAGS="${tags}" DARGS="--push --set ${{ inputs.image }}.args.ACCOUNT_NAME=${{ secrets.SAS_SA_NAME }} \
             --set ${{ inputs.image }}.args.SRC_ACCOUNT_KEY=${{ secrets.SAS_SA_KEY_1 }}"
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
-
-      - name: Push image to registry (default pushes all tags)
-        run: make push/${{ inputs.image }} REPO=${{ inputs.registry-name }}
 
       # Free up space from build process (containerscan action will run out of space if we don't)
       - run: ./.github/scripts/cleanup_runner.sh
