@@ -37,22 +37,11 @@ RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
 # processes before relaunching from the Jupyter tile.
 COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-use-current-conda
 
-RUN install -d -o "${NB_USER}" -g "${NB_GID}" -m 0775 "${HOME}/.config/rstudio" \
-    && install -d -o "${NB_USER}" -g "${NB_GID}" -m 0775 "${HOME}/.local/share/rstudio" \
-    && install -d -o "${NB_USER}" -g "${NB_GID}" -m 0775 "${HOME}/.rstudio"
-
-# Seed built-in home defaults for non-PVC starts.
-COPY --chown=${NB_USER}:${NB_GID} customRStu/database.conf ${HOME}/.rstudio/database.conf
-RUN chmod -R g=u \
-    "${HOME}/.config/rstudio" \
-    "${HOME}/.local/share/rstudio" \
-    "${HOME}/.rstudio"
-
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 USER $NB_USER
 
-# Seed first-boot home defaults for PVC-backed starts.
+# Seed first-boot home defaults
 RUN install -d -m 0775 \
     "${HOME_TMP}/.config/rstudio" \
     "${HOME_TMP}/.local/share/rstudio" \
