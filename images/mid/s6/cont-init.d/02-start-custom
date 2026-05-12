@@ -40,20 +40,16 @@ default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactor
 EOF
 fi
 
-# if rprofile doesnt exist
+# Check if the file exists (using -f for file)
 if [ ! -f "/opt/conda/lib/R/etc/Rprofile.site" ]; then
-    echo "Creating rprofile"
+    echo "Creating Rprofile.site..."
 
-    # Get OS info
     UBUNTU_CODENAME=$(lsb_release -cs)
-
-    # Get the full version (e.g., 4.5.1) and strip everything after the second dot
-    FULL_R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))')
-    R_VERSION=$(echo $FULL_R_VERSION | cut -d. -f1,2)
-
-    # Validate we actually got a version string
-    if [ -z "$R_VERSION" ]; then
-        echo "Error: Failed to detect R version."
+    R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))' | cut -d. -f1,2)
+    
+    # Simple validation to prevent broken URLs
+    if [ -z "$R_VERSION" ] || [ -z "$UBUNTU_CODENAME" ]; then
+        echo "Error: Failed to detect environment variables for R profile."
         exit 1
     fi
 
@@ -68,6 +64,8 @@ local({
     options(repos = r)
 })
 EOF
+
+    echo "Rprofile.site created successfully."
 fi
 
 # Configure the language
