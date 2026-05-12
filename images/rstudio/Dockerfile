@@ -8,8 +8,8 @@ USER root
 
 # Install RStudio Server and keep the temporary CRAN apt source scoped to this
 # layer.
-ARG RSTUDIO_VERSION=2025.09.1-401
-ARG RSTUDIO_SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
+ARG RSTUDIO_VERSION=2026.04.0-526
+ARG RSTUDIO_SHA256=9618cb9478d85ae7a606a773a73f6ea4221d3d69dfc0aba8358ce87c924a353a
 RUN apt-get update \
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
     && echo "deb [signed-by=/etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg] https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/" > /etc/apt/sources.list.d/cran-r.list \
