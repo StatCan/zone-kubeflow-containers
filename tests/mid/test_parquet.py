@@ -41,7 +41,6 @@ def test_parquet_functionality(container):
     expected in mid/jupyterlab images.
     """
     # Only run this test on images that have parquet support
-    # After refactoring, parquet is in jupyterlab (and mid if it inherits it)
     image_name = container.image_name.lower()
     if 'base' in image_name:
         pytest.skip("Parquet functionality not expected in base image")
@@ -50,6 +49,7 @@ def test_parquet_functionality(container):
 
     container.run()
 
+    # Ensure container is ready for execution
     success, output = wait_for_exec_success(
         container=container,
         command=["python3", "--version"],
@@ -63,54 +63,48 @@ def test_parquet_functionality(container):
             f"Container failed to be ready for execution within timeout. Output: {output}"
         )
     
-    # Create a simple Python script to test parquet functionality
-    test_script = '''
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
-import tempfile
-import os
-
-# Create a simple DataFrame
-df = pd.DataFrame({
-    'column1': [1, 2, 3, 4],
-    'column2': ['A', 'B', 'C', 'D'],
-    'column3': [1.1, 2.2, 3.3, 4.4]
-})
-
-# Create a temporary file
-with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as tmp:
-    temp_filename = tmp.name
-
-try:
-    # Write DataFrame to parquet
-    df.to_parquet(temp_filename)
+    # Define the internal Python script
+    # We use a single variable to keep the Python code clean
+    test_script = (
+        "import pandas as pd\n"
+        "import pyarrow as pa\n"
+        "import pyarrow.parquet as pq\n"
+        "import tempfile\n"
+        "import os\n"
+        "\n"
+        "df = pd.DataFrame({\n"
+        "    'column1': [1, 2, 3, 4],\n"
+        "    'column2': ['A', 'B', 'C', 'D'],\n"
+        "    'column3': [1.1, 2.2, 3.3, 4.4]\n"
+        "})\n"
+        "\n"
+        "with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as tmp:\n"
+        "    temp_filename = tmp.name\n"
+        "\n"
+        "try:\n"
+        "    df.to_parquet(temp_filename)\n"
+        "    df_read = pd.read_parquet(temp_filename)\n"
+        "    assert df.equals(df_read), 'Original and read DataFrames are not equal!'\n"
+        "    table = pq.read_table(temp_filename)\n"
+        "    print('SUCCESS: Parquet functionality working correctly')\n"
+        "finally:\n"
+        "    if os.path.exists(temp_filename): os.unlink(temp_filename)"
+    )
     
-    # Read the parquet file back
-    df_read = pd.read_parquet(temp_filename)
+    # Execute via heredoc to prevent shell quoting issues
+    # cat << 'EOF' ensures that the content is treated as a literal string
+    command = [
+        "sh", "-c",
+        f"cat << 'EOF' > /tmp/test_parquet_probe.py\n{test_script}\nEOF\npython3 /tmp/test_parquet_probe.py"
+    ]
     
-    # Verify the data is the same
-    assert df.equals(df_read), "Original and read DataFrames are not equal!"
-    
-    # Test with PyArrow directly
-    table = pq.read_table(temp_filename)
-    
-    print("SUCCESS: Parquet functionality working correctly")
-    
-finally:
-    # Clean up the temporary file
-    if os.path.exists(temp_filename):
-        os.unlink(temp_filename)
-'''
-    
-    # Write the test script to the container and execute it
-    result = container.container.exec_run(["sh", "-c", f"python3 -c \"{test_script}\""])
+    result = container.container.exec_run(command)
+    output = result.output.decode('utf-8')
     
     if result.exit_code != 0:
-        LOGGER.error(f"Parquet functionality test failed: {result.output.decode('utf-8')}")
-        assert False, f"Parquet functionality test failed: {result.output.decode('utf-8')}"
+        LOGGER.error(f"Parquet functionality test failed: {output}")
+        assert False, f"Parquet functionality test failed with exit code {result.exit_code}: {output}"
     
-    output = result.output.decode('utf-8')
     if "SUCCESS: Parquet functionality working correctly" not in output:
         LOGGER.error(f"Unexpected output from parquet test: {output}")
         assert False, f"Parquet functionality test did not return expected success message: {output}"
