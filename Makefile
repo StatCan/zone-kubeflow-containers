@@ -101,16 +101,22 @@ test/%: NB_PREFIX?=$(DEFAULT_NB_PREFIX)
 test/%: check-test-prereqs # Run all generic and image-specific tests against an image
 	# End repo with exactly one trailing slash, unless it is empty
 	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
-	TESTS="$(TESTS_DIR)/general";\
-	SPECIFIC_TEST_DIR="$(TESTS_DIR)/$(notdir $@)";\
-	if [ ! -d "$${SPECIFIC_TEST_DIR}" ]; then\
-		echo "No specific tests found for $${SPECIFIC_TEST_DIR}.  Running only general tests";\
+	IMAGE="$(notdir $@)";\
+	if [ "$${IMAGE}" = "onelake" ]; then\
+		TESTS="$(TESTS_DIR)/onelake";\
+		echo "Running OneLake layer tests without generic notebook tests";\
 	else\
-		TESTS="$${TESTS} $${SPECIFIC_TEST_DIR}";\
-		echo "Found specific tests folder";\
+		TESTS="$(TESTS_DIR)/general";\
+		SPECIFIC_TEST_DIR="$(TESTS_DIR)/$${IMAGE}";\
+		if [ ! -d "$${SPECIFIC_TEST_DIR}" ]; then\
+			echo "No specific tests found for $${SPECIFIC_TEST_DIR}.  Running only general tests";\
+		else\
+			TESTS="$${TESTS} $${SPECIFIC_TEST_DIR}";\
+			echo "Found specific tests folder";\
+		fi;\
 	fi;\
 	echo "Running tests on folders '$${TESTS}'";\
-	IMAGE_NAME="$${REPO}$(notdir $@):$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest -m "not info" $${TESTS}
+	IMAGE_NAME="$${REPO}$${IMAGE}:$(TAG)" NB_PREFIX=$(DEFAULT_NB_PREFIX) $(PYTHON) -m pytest -m "not info" $${TESTS}
 
 test-smoke/%: REPO?=$(DEFAULT_REPO)
 test-smoke/%: TAG?=$(DEFAULT_TAG)
