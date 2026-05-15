@@ -1,0 +1,9 @@
+Package: zonetokenbroker
+Type: Package
+Title: Zone AuthService Token Helper
+Version: 0.1.0
+Authors@R: person("Statistics Canada", role = c("aut", "cre"), email = "statcan@example.invalid")
+Description: Thin R wrapper for the zone-token command line helper.
+License: file LICENSE
+Encoding: UTF-8
+RoxygenNote: 7.3.0

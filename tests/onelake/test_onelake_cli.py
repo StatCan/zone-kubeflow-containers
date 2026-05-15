@@ -4,6 +4,7 @@ from pathlib import Path
 
 def _load_cli(monkeypatch):
     root = Path(__file__).resolve().parents[2]
+    monkeypatch.syspath_prepend(str(root / "images" / "zone_token"))
     monkeypatch.syspath_prepend(str(root / "images" / "onelake"))
     module_path = root / "images" / "onelake" / "onelake_cli.py"
     spec = importlib.util.spec_from_file_location("test_onelake_cli_module", module_path)

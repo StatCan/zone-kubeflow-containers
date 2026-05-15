@@ -1,13 +1,16 @@
 import importlib.util
 import json
 import sys
+import time
 import types
 from pathlib import Path
 
 
 def _load_module(monkeypatch, config_path):
     monkeypatch.setenv("ONELAKE_CONFIG", str(config_path))
-    module_path = Path(__file__).resolve().parents[2] / "images" / "onelake" / "onelake_utils.py"
+    root = Path(__file__).resolve().parents[2]
+    monkeypatch.syspath_prepend(str(root / "images" / "zone_token"))
+    module_path = root / "images" / "onelake" / "onelake_utils.py"
     spec = importlib.util.spec_from_file_location("test_onelake_utils_module", module_path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -72,7 +75,7 @@ def test_broker_credential_uses_token_file(tmp_path, monkeypatch):
     token_file = tmp_path / "broker-token"
     token_file.write_text("session-token\n")
     calls = {}
-    expires_on = int(module.time.time()) + 3600
+    expires_on = int(time.time()) + 3600
 
     class Response:
         def raise_for_status(self):
@@ -126,6 +129,3 @@ def test_broker_credential_requires_https(tmp_path, monkeypatch):
         assert "must use https" in str(error)
     else:
         raise AssertionError("non-HTTPS broker URLs should fail closed")
-
-    assert module._allowed_broker_url("http://localhost:8080") is True
-    assert module._allowed_broker_url("http://localhost.example:8080") is False

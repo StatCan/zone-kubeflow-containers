@@ -1,15 +1,14 @@
 """API-backed OneLake helpers for Zone Kubeflow containers."""
 
-import base64
-import binascii
 import importlib
 import json
 import os
 import re
 import threading
-import time
 from pathlib import Path
-from urllib.parse import urlparse
+
+from zonetokenbroker import BrokerCredential as ZoneBrokerCredential
+from zonetokenbroker import token_expires_on
 
 ONELAKE_REGION = os.environ.get("ONELAKE_REGION", "canadacentral")
 ONELAKE_ENDPOINT = f"https://{ONELAKE_REGION}-onelake.dfs.fabric.microsoft.com"
@@ -28,75 +27,18 @@ _client_lock = threading.Lock()
 _fs_client_lock = threading.Lock()
 
 
-def _allowed_broker_url(broker_url):
-    parsed = urlparse(broker_url)
-    if parsed.scheme == "https":
-        return True
-    if os.environ.get("ONELAKE_ALLOW_INSECURE_BROKER", "").lower() in {"1", "true", "yes"}:
-        return parsed.scheme == "http"
-    return parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1", "::1"}
-
-
-def _join_url(base_url, path):
-    return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
-
-
-class BrokerCredential:
+class BrokerCredential(ZoneBrokerCredential):
     """Azure TokenCredential that retrieves delegated user tokens from the broker."""
 
-    _EXPIRY_BUFFER_SECONDS = 300
-
     def __init__(self, broker_url=None, token_file=None):
-        self.broker_url = (broker_url or os.environ.get("ONELAKE_BROKER_URL", "")).rstrip("/")
-        self.token_path = os.environ.get("ONELAKE_BROKER_TOKEN_PATH", BROKER_TOKEN_PATH)
-        self.token_file = token_file or os.environ.get("ONELAKE_BROKER_TOKEN_FILE", "")
-        self._cached_token = None
-        self._session = None
-        self._lock = threading.Lock()
-
-    def _get_session(self):
-        if self._session is None:
-            import requests
-
-            self._session = requests.Session()
-        return self._session
-
-    def get_token(self, *scopes, **_kwargs):
-        if not self.broker_url:
-            raise RuntimeError("ONELAKE_BROKER_URL is not set")
-        if not _allowed_broker_url(self.broker_url):
-            raise RuntimeError("ONELAKE_BROKER_URL must use https unless ONELAKE_ALLOW_INSECURE_BROKER is enabled")
-
-        from azure.core.credentials import AccessToken
-
-        with self._lock:
-            if self._cached_token:
-                token, expires_on = self._cached_token
-                if time.time() < expires_on - self._EXPIRY_BUFFER_SECONDS:
-                    return AccessToken(token, expires_on)
-
-            headers = {}
-            if self.token_file:
-                token = Path(self.token_file).read_text(encoding="utf-8").strip()
-                headers["Authorization"] = f"Bearer {token}"
-
-            response = self._get_session().get(
-                _join_url(self.broker_url, self.token_path),
-                params={"scope": " ".join(scopes or (TOKEN_SCOPE,))},
-                headers=headers,
-                timeout=30,
-            )
-            response.raise_for_status()
-            token, expires_on = _parse_broker_token_response(response)
-            ttl = expires_on - int(time.time())
-            if ttl < MIN_BROKER_TOKEN_TTL_SECONDS:
-                raise RuntimeError(
-                    f"Broker token response expires too soon; minimum TTL is {MIN_BROKER_TOKEN_TTL_SECONDS} seconds"
-                )
-
-            self._cached_token = (token, expires_on)
-
-            return AccessToken(token, expires_on)
+        super().__init__(
+            broker_url=broker_url if broker_url is not None else os.environ.get("ONELAKE_BROKER_URL", ""),
+            token_file=token_file or os.environ.get("ONELAKE_BROKER_TOKEN_FILE", ""),
+            token_path=os.environ.get("ONELAKE_BROKER_TOKEN_PATH", BROKER_TOKEN_PATH),
+            default_scope=TOKEN_SCOPE,
+            minimum_token_ttl_seconds=MIN_BROKER_TOKEN_TTL_SECONDS,
+            allow_insecure_broker=os.environ.get("ONELAKE_ALLOW_INSECURE_BROKER", ""),
+        )
 
 
 class ManualAccessTokenCredential:
@@ -109,7 +51,7 @@ class ManualAccessTokenCredential:
 
         from azure.core.credentials import AccessToken
 
-        return AccessToken(token, _token_expires_on(token))
+        return AccessToken(token, token_expires_on(token))
 
 
 def use_ephemeral_access_token(token):
@@ -141,51 +83,6 @@ def _read_manual_access_token():
         return Path(token_file).read_text(encoding="utf-8").strip()
 
     return ""
-
-
-def _token_expires_on(token):
-    parts = token.split(".")
-    if len(parts) >= 2:
-        try:
-            payload = parts[1] + "=" * (-len(parts[1]) % 4)
-            claims = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
-            if claims.get("exp"):
-                return int(claims["exp"])
-        except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError, ValueError):
-            pass
-    return int(time.time()) + 300
-
-
-def _parse_broker_token_response(response):
-    payload = None
-    try:
-        payload = response.json()
-    except ValueError:
-        pass
-
-    if isinstance(payload, dict):
-        if payload.get("error"):
-            description = payload.get("error_description") or payload["error"]
-            raise RuntimeError(f"Broker token request failed: {description}")
-        token_type = payload.get("token_type", "Bearer")
-        if token_type.lower() != "bearer":
-            raise RuntimeError("Broker returned unsupported token type")
-        token = payload.get("access_token") or payload.get("accessToken") or payload.get("token")
-        if not token:
-            raise RuntimeError("Broker token response is missing access_token")
-        expires_on = payload.get("expires_on") or payload.get("expiresOn")
-        if expires_on:
-            return token, int(expires_on)
-        expires_in = payload.get("expires_in") or payload.get("expiresIn")
-        if expires_in:
-            return token, int(time.time()) + int(expires_in)
-        return token, _token_expires_on(token)
-
-    text = getattr(response, "text", "").strip()
-    if not text:
-        raise RuntimeError("Broker token response is empty")
-    token = text.removeprefix("Bearer ").strip()
-    return token, _token_expires_on(token)
 
 
 def _is_guid(value):

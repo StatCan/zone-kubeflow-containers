@@ -16,7 +16,6 @@ COPY jupyter_server_config.d/onelake.json /tmp/onelake-jupyter-config.json
 RUN pip install --no-cache-dir \
         'azure-storage-file-datalake' \
         'jupyter-fs[fsspec]==1.1.2' \
-        'requests' \
     && python -c "from pathlib import Path; import shutil, sysconfig; purelib = Path(sysconfig.get_paths()['purelib']); [shutil.copyfile(f'/tmp/{name}', purelib / name) for name in ('onelake_utils.py', 'onelake_cli.py', 'onelake_fsspec.py', 'onelake_sitecustomize.py')]; (purelib / 'onelake_fsspec_register.pth').write_text('import onelake_sitecustomize\\n')" \
     && install -d -m 0755 /etc/jupyter/jupyter_server_config.d \
     && cp /tmp/onelake-jupyter-config.json /etc/jupyter/jupyter_server_config.d/onelake.json \

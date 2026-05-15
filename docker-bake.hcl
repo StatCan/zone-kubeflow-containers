@@ -6,9 +6,17 @@ target "base" {
     tags = ["base"]
 }
 
-target "onelake" {
+target "zone-token" {
     args = {
         BASE_IMAGE="base"
+    }
+    context = "./images/zone_token"
+    tags = ["zone-token"]
+}
+
+target "onelake" {
+    args = {
+        BASE_IMAGE="zone-token"
     }
     context = "./images/onelake"
     tags = ["onelake"]

@@ -52,14 +52,28 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  onelake:
+  zone-token:
     needs: [vars, base]
+    uses: ./.github/workflows/docker-steps.yaml
+    with:
+      image: "zone-token"
+      directory: "zone_token"
+      parent-image: "base"
+      parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  onelake:
+    needs: [vars, zone-token]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "onelake"
       directory: "onelake"
-      parent-image: "base"
-      parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
+      parent-image: "zone-token"
+      parent-image-is-diff: "${{ needs['zone-token'].outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -145,6 +159,18 @@ jobs:
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
       image: "base"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  zone-token-test:
+    needs: [vars, zone-token]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    with:
+      image: "zone-token"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:

@@ -102,7 +102,10 @@ test/%: check-test-prereqs # Run all generic and image-specific tests against an
 	# End repo with exactly one trailing slash, unless it is empty
 	REPO=$$(echo "$(REPO)" | sed 's:/*$$:/:' | sed 's:^\s*/*\s*$$::') ;\
 	IMAGE="$(notdir $@)";\
-	if [ "$${IMAGE}" = "onelake" ]; then\
+	if [ "$${IMAGE}" = "zone-token" ]; then\
+		TESTS="$(TESTS_DIR)/zone_token";\
+		echo "Running Zone token layer tests without generic notebook tests";\
+	elif [ "$${IMAGE}" = "onelake" ]; then\
 		TESTS="$(TESTS_DIR)/onelake";\
 		echo "Running OneLake layer tests without generic notebook tests";\
 	else\
