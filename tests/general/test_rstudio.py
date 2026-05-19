@@ -6,7 +6,7 @@ from helpers import CondaPackageHelper
 LOGGER = logging.getLogger(__name__)
 
 # Expected RStudio version string for validation
-EXPECTED = "2026.04.0+526 (Globemaster Allium) for Ubuntu Jammy"
+EXPECTED = "2025.09.1+401 (Cucumberleaf Sunflower) for Ubuntu Jammy"
 
 @pytest.fixture(scope="function")
 def package_helper(container):
