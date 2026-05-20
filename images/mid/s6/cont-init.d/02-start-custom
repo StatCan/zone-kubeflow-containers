@@ -40,22 +40,21 @@ default-channels = ["https://$serviceaccountname:$serviceaccounttoken@artifactor
 EOF
 fi
 
-# Check if the file exists (using -f for file)
-if [ ! -f "/opt/conda/lib/R/etc/Rprofile.site" ]; then
-    echo "Creating Rprofile.site..."
+echo "Configuring Rprofile.site..."
 
-    UBUNTU_CODENAME=$(lsb_release -cs)
-    R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))' | cut -d. -f1,2)
-    
-    # Simple validation to prevent broken URLs
-    if [ -z "$R_VERSION" ] || [ -z "$UBUNTU_CODENAME" ]; then
-        echo "Error: Failed to detect environment variables for R profile."
-        exit 1
-    fi
+UBUNTU_CODENAME=$(lsb_release -cs)
+R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))' | cut -d. -f1,2)
 
-    PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
+# Simple validation to prevent broken URLs
+if [ -z "$R_VERSION" ] || [ -z "$UBUNTU_CODENAME" ]; then
+    echo "Error: Failed to detect environment variables for R profile."
+    exit 1
+fi
 
-    cat > /opt/conda/lib/R/etc/Rprofile.site << EOF
+PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
+
+cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
+
 options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
 
 local({
@@ -65,8 +64,7 @@ local({
 })
 EOF
 
-    echo "Rprofile.site created successfully."
-fi
+echo "Rprofile.site updated successfully."
 
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
