@@ -55,8 +55,6 @@ PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.
 
 cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
 
-options(jupyter.plot_mimetypes = c('text/plain', 'image/png', 'image/jpeg', 'image/svg+xml', 'application/pdf'))
-
 local({
     r <- getOption("repos")
     r["ppm"] <- "$PPM_URL"
