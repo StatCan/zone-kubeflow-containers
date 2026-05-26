@@ -82,6 +82,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
         'pyspark[ml]==3.5.5' \
+        'banff' \
+        'banffprocessor' \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
