@@ -82,6 +82,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
         'pyspark[ml]==3.5.5' \
+        'banff' \
+        'banffprocessor' \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
@@ -111,7 +113,8 @@ COPY --chmod=755 keep-alive.sh /usr/local/bin/
 
 # SSL Certs
 # https://jirab.statcan.ca/browse/ZONE-274?focusedId=3674862&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-3674862
-COPY --from=k8scc01covidacr.azurecr.io/publiccerts:latest /home/certs/ /opt/conda/ssl/certs
+# Added cert from: https://jirab.statcan.ca/browse/ZONE-349
+COPY --from=k8scc01covidacr.azurecr.io/publiccerts:stcthn /home/certs/ /opt/conda/ssl/certs
 RUN echo >> /opt/conda/ssl/cacert.pem \
     && cd /opt/conda/ssl/certs/ \
     && for file in *.crt; do (echo "# ${file}"; cat "${file}"; echo) >> /opt/conda/ssl/cacert.pem; done
