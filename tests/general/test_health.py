@@ -42,13 +42,14 @@ def test_server_startup_time(container, http_client, url="http://localhost:8888"
 
     start_time = time.time()
     container.run()
+    startup_timeout = 60
 
     # Wait for server to respond to HTTP requests with exponential backoff
     success = wait_for_http_response(
         http_client=http_client,
         url=url_with_prefix,
         expected_status=200,
-        timeout=60,
+        timeout=startup_timeout,
         initial_delay=0.5,
         max_delay=3.0
     )
@@ -56,11 +57,10 @@ def test_server_startup_time(container, http_client, url="http://localhost:8888"
     if success:
         startup_time = time.time() - start_time
         LOGGER.info(f"Server started successfully in {startup_time:.2f} seconds")
-        assert startup_time < 60, f"Server took {startup_time:.2f}s to start (expected < 60s)"
     else:
         elapsed = time.time() - start_time
         error_msg = (
-            f"Server failed to respond within 60 seconds ({elapsed:.2f}s elapsed)"
+            f"Server failed to respond within {startup_timeout} seconds ({elapsed:.2f}s elapsed)"
         )
         raise AssertionError(error_msg)
 

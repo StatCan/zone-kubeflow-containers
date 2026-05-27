@@ -47,7 +47,8 @@ The relationship between the stages and the final product is as shown below.
 graph TD
   upstream_nb["(upstream) datascience-notebook"]
   upstream_nb --> base
-  base --> mid
+  base --> onelake
+  onelake --> mid
   mid --> rstudio
   rstudio --> sas_kernel
   upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
@@ -62,6 +63,7 @@ These images are chained together to perform the multi-staged build for our fina
 Image | Notes
 --- | ---
 [base](./images/base) | Base Image pulling from docker-stacks
+[onelake](./images/onelake) | Installs the API-backed OneLake client, CLI, R wrapper, and JupyterLab drive registration
 [mid](./images/mid) | Installs various tools on top of the base image
 [rstudio](./images/rstudio) | Installs and configures RStudio Server and its Jupyter proxy
 [sas-kernel](./images/sas_kernel) | Installs the SAS runtime and kernel on top of the RStudio layer
@@ -437,9 +439,10 @@ This was tested on Linux Ubuntu 20.04 virtual machine.
 │   └── post-build-hook.sh
 │
 ├── images                                  # Dockerfile and required resources for stage builds
-│   ├── base                                # Common base of the images
+│   ├── base                                # Common base of the images
 │   ├── jupyterlab                          # Jupyterlab specific Dockerfile
 │   ├── mid                                 # Common mid point for all images
+│   ├── onelake                             # API-backed OneLake client layer
 │   ├── rstudio                             # RStudio Server and proxy layer
 │   ├── sas                                 # SAS specific Dockerfile
 |   └── sas_kernel                          # Dockerfile for installation of sas_kernel
