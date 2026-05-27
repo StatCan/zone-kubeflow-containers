@@ -15,7 +15,7 @@ CONFIG_FILE = Path(os.environ.get("ONELAKE_CONFIG", str(Path.home() / ".onelake"
 MANAGED_ROOTS = ("Files", "Tables")
 
 _client = None
-_fs_client = None
+_fs_clients = {}
 _config_cache = None
 _client_lock = threading.Lock()
 _fs_client_lock = threading.Lock()
@@ -50,22 +50,120 @@ def _get_config():
     )
 
 
+def _clean_path(path="/"):
+    return _strip_onelake_url(path).replace("\\", "/").strip("/")
+
+
+def _connection(workspace, lakehouse):
+    workspace = str(workspace or "").strip()
+    lakehouse = str(lakehouse or "").strip()
+    if not workspace or not lakehouse:
+        return None
+    return {"workspace": workspace, "lakehouse": lakehouse}
+
+
+def _parse_connection(value):
+    if isinstance(value, dict):
+        return _connection(value.get("workspace"), value.get("lakehouse"))
+    if isinstance(value, str) and "/" in value:
+        workspace, lakehouse = value.split("/", 1)
+        return _connection(workspace, lakehouse)
+    return None
+
+
+def _read_env_connections():
+    raw = os.environ.get("ONELAKE_CONNECTIONS", "").strip()
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        parsed = [item.strip() for item in raw.split(";") if item.strip()]
+
+    if isinstance(parsed, dict) and "connections" in parsed:
+        parsed = parsed.get("connections", [])
+    elif isinstance(parsed, dict):
+        parsed = [parsed]
+    if not isinstance(parsed, list):
+        return []
+    return [conn for conn in (_parse_connection(item) for item in parsed) if conn]
+
+
+def connections():
+    """Return configured OneLake workspace/lakehouse pairs."""
+    saved = _read_saved_config()
+    configured = []
+
+    workspace, lakehouse = _get_config()
+    default = _connection(workspace, lakehouse)
+    if default:
+        configured.append(default)
+
+    configured.extend(_read_env_connections())
+    configured.extend(
+        conn for conn in (_parse_connection(item) for item in saved.get("connections", [])) if conn
+    )
+
+    seen = set()
+    unique = []
+    for conn in configured:
+        key = (conn["workspace"], conn["lakehouse"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(conn)
+    return unique
+
+
+def _default_connection():
+    workspace, lakehouse = _get_config()
+    default = _connection(workspace, lakehouse)
+    if default:
+        return default
+    configured = connections()
+    if len(configured) == 1:
+        return configured[0]
+    return None
+
+
 def connect(workspace, lakehouse):
     """Persist the default workspace and lakehouse selection."""
+    new_connection = _connection(workspace, lakehouse)
+    if not new_connection:
+        raise RuntimeError("workspace and lakehouse are required")
+
+    saved = _read_saved_config()
+    saved_connections = [
+        conn for conn in (_parse_connection(item) for item in saved.get("connections", [])) if conn
+    ]
+    merged = [new_connection, *saved_connections]
+    seen = set()
+    unique = []
+    for conn in merged:
+        key = (conn["workspace"], conn["lakehouse"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(conn)
+
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_FILE.write_text(
-        json.dumps({"workspace": workspace, "lakehouse": lakehouse}, indent=2) + "\n",
+        json.dumps({
+            "workspace": new_connection["workspace"],
+            "lakehouse": new_connection["lakehouse"],
+            "connections": unique,
+        }, indent=2) + "\n",
         encoding="utf-8",
     )
-    os.environ["ONELAKE_WORKSPACE"] = workspace
-    os.environ["ONELAKE_LAKEHOUSE"] = lakehouse
+    os.environ["ONELAKE_WORKSPACE"] = new_connection["workspace"]
+    os.environ["ONELAKE_LAKEHOUSE"] = new_connection["lakehouse"]
     reset_clients()
 
 
 def reset_clients():
-    global _client, _fs_client, _config_cache
+    global _client, _fs_clients, _config_cache
     _client = None
-    _fs_client = None
+    _fs_clients = {}
     _config_cache = None
 
 
@@ -85,7 +183,7 @@ def _strip_onelake_url(path):
 
 
 def _normalize_path(path="/"):
-    path = _strip_onelake_url(path).replace("\\", "/").strip("/")
+    path = _clean_path(path)
     if not path:
         return ""
     first, _, rest = path.partition("/")
@@ -101,6 +199,13 @@ def _require_file_path(path):
     return normalized
 
 
+def _require_directory_path(path):
+    normalized = _normalize_path(path)
+    if not normalized or normalized in MANAGED_ROOTS:
+        raise RuntimeError("OneLake directories must be inside Files/ or Tables/")
+    return normalized
+
+
 def _build_path(path, lakehouse=None):
     normalized = _normalize_path(path)
     if not normalized:
@@ -111,6 +216,42 @@ def _build_path(path, lakehouse=None):
 def _strip_prefix(name, lakehouse=None):
     prefix = f"{_lakehouse_prefix(lakehouse)}/"
     return name[len(prefix):] if name.startswith(prefix) else name
+
+
+def _connection_prefix(connection):
+    return f"{connection['workspace']}/{connection['lakehouse']}"
+
+
+def _match_connection(path):
+    parts = _clean_path(path).split("/")
+    if len(parts) < 2:
+        return None, ""
+    for conn in connections():
+        lakehouse_names = {conn["lakehouse"], _lakehouse_prefix(conn["lakehouse"])}
+        if parts[0] == conn["workspace"] and parts[1] in lakehouse_names:
+            return conn, "/".join(parts[2:])
+    return None, ""
+
+
+def _resolve_path(path="/"):
+    matched, remainder = _match_connection(path)
+    if matched:
+        return matched, _normalize_path(remainder), True
+
+    default = _default_connection()
+    if not default:
+        raise RuntimeError("OneLake workspace/lakehouse is not configured")
+    return default, _normalize_path(path), False
+
+
+def _display_name(connection, remote_name, qualified):
+    if not qualified:
+        return remote_name
+    return f"{_connection_prefix(connection)}/{remote_name}".rstrip("/")
+
+
+def _synthetic_entry(name):
+    return {"name": name, "is_directory": True, "size": 0}
 
 
 def _get_service_client():
@@ -128,19 +269,38 @@ def _get_service_client():
     return _client
 
 
-def _get_fs_client():
-    global _fs_client
+def _get_fs_client(workspace=None):
+    global _fs_clients
     with _fs_client_lock:
-        if _fs_client is None:
-            workspace, _lakehouse = _get_config()
-            if not workspace:
-                raise RuntimeError("ONELAKE_WORKSPACE is not set")
-            _fs_client = _get_service_client().get_file_system_client(file_system=workspace)
-    return _fs_client
+        if not workspace:
+            default = _default_connection()
+            if not default:
+                raise RuntimeError("OneLake workspace/lakehouse is not configured")
+            workspace = default["workspace"]
+        if workspace not in _fs_clients:
+            _fs_clients[workspace] = _get_service_client().get_file_system_client(file_system=workspace)
+    return _fs_clients[workspace]
 
 
-def _get_file_client(path):
-    return _get_fs_client().get_file_client(_build_path(_require_file_path(path)))
+def _get_file_client(path, connection=None):
+    if connection is None:
+        connection, remote_path, _qualified = _resolve_path(path)
+    else:
+        remote_path = _normalize_path(path)
+    remote_path = _require_file_path(remote_path)
+    return _get_fs_client(connection["workspace"]).get_file_client(
+        _build_path(remote_path, connection["lakehouse"])
+    )
+
+
+def _get_directory_client(path, connection=None):
+    if connection is None:
+        connection, remote_path, _qualified = _resolve_path(path)
+    else:
+        remote_path = _normalize_path(path)
+    return _get_fs_client(connection["workspace"]).get_directory_client(
+        _build_path(_require_directory_path(remote_path), connection["lakehouse"])
+    )
 
 
 def _read_range(path, start=0, length=None):
@@ -149,16 +309,18 @@ def _read_range(path, start=0, length=None):
 
 def status(live=False):
     """Return non-secret OneLake readiness state."""
-    workspace, lakehouse = _get_config()
+    configured = connections()
+    default = _default_connection()
+    workspace = default["workspace"] if default else ""
+    lakehouse = default["lakehouse"] if default else ""
     missing = []
-    if not workspace:
-        missing.append("ONELAKE_WORKSPACE or saved workspace")
-    if not lakehouse:
-        missing.append("ONELAKE_LAKEHOUSE or saved lakehouse")
+    if not configured:
+        missing.append("ONELAKE_WORKSPACE/ONELAKE_LAKEHOUSE, ONELAKE_CONNECTIONS, or saved config")
 
     current = {
         "workspace": workspace,
         "lakehouse": lakehouse,
+        "connections": configured,
         "endpoint": os.environ.get("ONELAKE_ENDPOINT", ONELAKE_ENDPOINT),
         "broker_url": os.environ.get("ONELAKE_BROKER_URL", zone_token_broker.DEFAULT_BROKER_URL),
         "token_storage": "memory",
@@ -170,7 +332,8 @@ def status(live=False):
             current["live"] = {"ok": False, "detail": "missing workspace/lakehouse configuration"}
         else:
             try:
-                entries = ls("Files")
+                live_root = "Files" if default else f"{_connection_prefix(configured[0])}/Files"
+                entries = ls(live_root)
                 current["live"] = {"ok": True, "detail": f"{len(entries)} entries under Files"}
             except Exception as error:
                 current["live"] = {"ok": False, "detail": f"{error.__class__.__name__}: {error}"}
@@ -179,21 +342,71 @@ def status(live=False):
 
 def ls(path="/"):
     """List OneLake files and directories."""
-    normalized = _normalize_path(path)
+    clean = _clean_path(path)
+    configured = connections()
+    if not clean:
+        if len(configured) > 1:
+            workspaces = []
+            seen = set()
+            for conn in configured:
+                if conn["workspace"] in seen:
+                    continue
+                seen.add(conn["workspace"])
+                workspaces.append(_synthetic_entry(conn["workspace"]))
+            return workspaces
+        return [_synthetic_entry("Files"), _synthetic_entry("Tables")]
+
+    workspace_matches = [conn for conn in configured if conn["workspace"] == clean]
+    if workspace_matches:
+        return [_synthetic_entry(_connection_prefix(conn)) for conn in workspace_matches]
+
+    connection, normalized, qualified = _resolve_path(path)
     if not normalized:
         return [
-            {"name": "Files", "is_directory": True, "size": 0},
-            {"name": "Tables", "is_directory": True, "size": 0},
+            _synthetic_entry(_display_name(connection, "Files", qualified)),
+            _synthetic_entry(_display_name(connection, "Tables", qualified)),
         ]
 
     results = []
-    for item in _get_fs_client().get_paths(path=_build_path(normalized), recursive=False):
+    fs_client = _get_fs_client(connection["workspace"])
+    for item in fs_client.get_paths(path=_build_path(normalized, connection["lakehouse"]), recursive=False):
+        remote_name = _strip_prefix(item.name, connection["lakehouse"]).rstrip("/")
         results.append({
-            "name": _strip_prefix(item.name).rstrip("/"),
+            "name": _display_name(connection, remote_name, qualified),
             "is_directory": bool(item.is_directory),
             "size": getattr(item, "content_length", 0) or 0,
         })
     return results
+
+
+def info(path):
+    """Return basic OneLake file or directory metadata."""
+    clean = _clean_path(path)
+    configured = connections()
+    if not clean:
+        return _synthetic_entry("")
+    if any(conn["workspace"] == clean for conn in configured):
+        return _synthetic_entry(clean)
+
+    connection, normalized, qualified = _resolve_path(path)
+    if not normalized:
+        return _synthetic_entry(_connection_prefix(connection) if qualified else "")
+    if normalized in MANAGED_ROOTS:
+        return _synthetic_entry(_display_name(connection, normalized, qualified))
+
+    try:
+        props = _get_file_client(normalized, connection).get_file_properties()
+    except Exception as error:
+        if error.__class__.__name__ == "ResourceNotFoundError":
+            raise FileNotFoundError(path)
+        raise
+
+    is_dir = dict(getattr(props, "metadata", None) or {}).get("hdi_isfolder") == "true"
+    return {
+        "name": _display_name(connection, normalized, qualified),
+        "is_directory": is_dir,
+        "size": 0 if is_dir else int(getattr(props, "size", 0) or 0),
+    }
 
 
 def read(path, text=False):
@@ -207,6 +420,33 @@ def write(path, data):
     if isinstance(data, str):
         data = data.encode("utf-8")
     _get_file_client(path).upload_data(data, overwrite=True)
+
+
+def mkdir(path):
+    """Create a OneLake directory inside Files/ or Tables/."""
+    _get_directory_client(path).create_directory()
+
+
+def rm(path):
+    """Delete a OneLake file or directory."""
+    current = info(path)
+    if current["is_directory"]:
+        _get_directory_client(path).delete_directory()
+    else:
+        _get_file_client(path).delete_file()
+
+
+def mv(old_path, new_path):
+    """Rename a OneLake file or directory within the same workspace."""
+    old_connection, old_remote, _old_qualified = _resolve_path(old_path)
+    new_connection, new_remote, _new_qualified = _resolve_path(new_path)
+    if old_connection["workspace"] != new_connection["workspace"]:
+        raise RuntimeError("OneLake rename cannot move files between workspaces")
+    target = f"{new_connection['workspace']}/{_build_path(new_remote, new_connection['lakehouse'])}"
+    if info(old_path)["is_directory"]:
+        _get_directory_client(old_remote, old_connection).rename_directory(target)
+    else:
+        _get_file_client(old_remote, old_connection).rename_file(target)
 
 
 class _BinaryUploadBuffer(io.BytesIO):
@@ -239,7 +479,8 @@ def open(path, mode="rb"):
         data = read(path, text="b" not in mode)
         return io.BytesIO(data) if "b" in mode else io.StringIO(data)
     if "w" in mode:
-        _require_file_path(path)
+        _connection, remote_path, _qualified = _resolve_path(path)
+        _require_file_path(remote_path)
         return _BinaryUploadBuffer(path) if "b" in mode else _TextUploadBuffer(path)
     raise ValueError(f"unsupported mode: {mode}")
 

@@ -89,19 +89,15 @@ class OneLakeFileSystem(AbstractFileSystem):
             if path == _MARKER:
                 return self._marker_info()
             raise FileNotFoundError(path)
-        if path in onelake.MANAGED_ROOTS:
-            return {"name": path, "type": "directory", "size": 0, "created": _now(), "mtime": _now()}
-
         try:
-            props = onelake._get_file_client(path).get_file_properties()
-        except ResourceNotFoundError:
+            item = onelake.info(path)
+        except (FileNotFoundError, ResourceNotFoundError):
             raise FileNotFoundError(path)
 
-        is_dir = dict(getattr(props, "metadata", None) or {}).get("hdi_isfolder") == "true"
         return {
-            "name": path,
-            "type": "directory" if is_dir else "file",
-            "size": 0 if is_dir else int(getattr(props, "size", 0) or 0),
+            "name": item["name"].rstrip("/"),
+            "type": "directory" if item["is_directory"] else "file",
+            "size": item["size"],
             "created": _now(),
             "mtime": _now(),
         }
@@ -159,3 +155,17 @@ class OneLakeFileSystem(AbstractFileSystem):
         if not isinstance(path, str):
             raise ValueError("path must be a string")
         self.pipe_file(path, value, **kwargs)
+
+    def mkdir(self, path, create_parents=True, **_kwargs):
+        onelake.mkdir(_clean(self._strip_protocol(path)))
+
+    def makedirs(self, path, exist_ok=False):
+        if exist_ok and self.exists(path):
+            return
+        self.mkdir(path)
+
+    def rm(self, path, recursive=False, **_kwargs):
+        onelake.rm(_clean(self._strip_protocol(path)))
+
+    def mv(self, path1, path2, **_kwargs):
+        onelake.mv(_clean(self._strip_protocol(path1)), _clean(self._strip_protocol(path2)))

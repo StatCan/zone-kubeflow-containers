@@ -123,17 +123,35 @@ OneLake/
   Tables/
 ```
 
+With multiple configured workspace/lakehouse pairs, the same JupyterLab drive
+generates workspace and lakehouse folders:
+
+```text
+OneLake/
+  WorkspaceA/
+    LakeA/
+      Files/
+      Tables/
+  WorkspaceB/
+    LakeB/
+      Files/
+      Tables/
+```
+
 Rules:
 
 - `/` lists `Files` and `Tables`.
 - `Files/...` maps to the lakehouse `Files` folder.
 - `Tables/...` maps to the lakehouse `Tables` folder.
 - A bare path defaults to `Files/...`.
+- `Workspace/Lakehouse/Files/...` and `Workspace/Lakehouse/Tables/...` select
+  a configured workspace/lakehouse pair.
 - Workspace and lakehouse can be names or GUIDs.
 - Existing shortcuts appear wherever OneLake exposes them as folders.
 
 Writes must target a file inside `Files/` or `Tables/`. The synthetic root,
-`Files`, and `Tables` are not writable targets.
+`Files`, and `Tables` are not writable targets. JupyterLab saves overwrite the
+same remote files that `onelake.write` would update.
 
 ## File Map
 
@@ -172,8 +190,9 @@ base -> onelake -> mid -> rstudio -> sas-kernel -> jupyterlab-cpu/sas
 `onelake.py`
 
 - Loads and saves non-secret workspace/lakehouse config.
-- Normalizes `/`, `Files/...`, `Tables/...`, and bare paths.
-- Creates Azure Data Lake clients.
+- Normalizes `/`, `Files/...`, `Tables/...`, qualified workspace/lakehouse
+  paths, and bare paths.
+- Creates Azure Data Lake clients per workspace.
 - Provides `connect`, `status`, `ls`, `open`, `read`, `write`, `download`, and
   `upload`.
 
