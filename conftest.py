@@ -38,7 +38,27 @@ def image_name():
     image_name = os.getenv(IMAGE_NAME_ENV_VAR)
     LOGGER.debug(f"Found image_name {image_name} in env variable {IMAGE_NAME_ENV_VAR}")
     if image_name is None or len(image_name) == 0:
-        raise ValueError(f"Image name not found in environment variable {IMAGE_NAME_ENV_VAR}.  Did you forget to set it?")
+        error_message = (
+            f"\n{'='*80}\n"
+            f"ERROR: Image name not found in environment variable {IMAGE_NAME_ENV_VAR}\n"
+            f"{'='*80}\n\n"
+            f"To run tests, you need to:\n"
+            f"  1. Build an image first:\n"
+            f"     make bake/base\n"
+            f"     make bake/jupyterlab-cpu\n"
+            f"     make bake/sas\n\n"
+            f"  2. Run tests for that image:\n"
+            f"     make test/base\n"
+            f"     make test/jupyterlab-cpu\n"
+            f"     make test/sas\n\n"
+            f"  3. Or test all images at once:\n"
+            f"     make test\n\n"
+            f"Quick help:\n"
+            f"  make help-test          - Show detailed test help\n"
+            f"  make test-list          - List available images\n"
+            f"{'='*80}\n"
+        )
+        raise ValueError(error_message)
     return image_name
 
 
@@ -113,6 +133,30 @@ class TrackedContainer(object):
     def get_cmd(self):
         image = self.docker_client.images.get(self.image_name)
         return image.attrs['Config']['Cmd']
+
+
+@pytest.fixture(scope='function', autouse=True)
+def cleanup_containers(docker_client):
+    """Autouse fixture to ensure all containers are cleaned up after each test.
+    
+    This fixture runs automatically for every test and ensures that any containers
+    created during testing are properly removed, even if the test fails. This prevents
+    port conflicts and resource leaks.
+    """
+    yield
+    # Cleanup after test
+    try:
+        containers = docker_client.containers.list(all=True)
+        for container in containers:
+            # Only remove containers that appear to be test containers (running or exited recently)
+            if container.status in ['exited', 'running']:
+                try:
+                    LOGGER.debug(f"Cleaning up container {container.short_id}")
+                    container.remove(force=True)
+                except docker.errors.APIError as e:
+                    LOGGER.warning(f"Failed to remove container {container.short_id}: {e}")
+    except Exception as e:
+        LOGGER.error(f"Error during container cleanup: {e}")
 
 
 @pytest.fixture(scope='function')

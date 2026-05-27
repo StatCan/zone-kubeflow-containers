@@ -108,7 +108,8 @@ Image | Notes
 --- | ---
 [base](./images/base) | Base Image pulling from docker-stacks
 [mid](./images/mid) | Installs various tools on top of the base image
-[sas-kernel](./images/sas_kernel) | Installs the SAS kernel on our mid image
+[rstudio](./images/rstudio) | Installs and configures RStudio Server and its Jupyter proxy
+[sas-kernel](./images/sas_kernel) | Installs the SAS runtime and kernel on top of the RStudio layer
 
 ### Zone Images
 
@@ -116,8 +117,8 @@ These are the final images from our build process and are intended to be used on
 
 Image | Notes | Installations
 --- | --- | ---
-[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, R, Python, Julia, Sas kernel
-[sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | Sas Studios
+[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, RStudio, R, Python, Julia, Sas kernel
+[sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | RStudio, Sas Studios
 
 ### Overview of Images
 

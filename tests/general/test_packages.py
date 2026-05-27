@@ -16,6 +16,12 @@ This module checks dynmamically, through the `CondaPackageHelper`, only the spec
 This means that it does not check dependencies. This choice is a tradeoff to cover the main requirements while achieving reasonable test duration.
 However it could be easily changed (or completed) to cover also dependencies `package_helper.installed_packages()` instead of `package_helper.specified_packages()`.
 
+Packages can be excluded from testing by adding them to the EXCLUDED_PACKAGES list.
+This is necessary for:
+- Binary packages (tini, python, hdf5, etc.)
+- Jupyterlab extensions that aren't importable as Python modules
+- Packages with complex import structures (e.g., duckdb packages)
+
 Example:
 
     $ make test/datascience-notebook
@@ -107,7 +113,9 @@ EXCLUDED_PACKAGES = [
     # pytables is the package but we import tables
     "tables",
     "pytables",
-    "pkg-config"
+    "pkg-config",
+    "python-duckdb",
+    "duckdb-cli",
 ]
 
 

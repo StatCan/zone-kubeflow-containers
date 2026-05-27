@@ -6,5 +6,8 @@
             "lineNumbers": false,
             "lineWrap": false
         }
+    },
+    "@jupyterlab/filebrowser-extension:browser": {
+        "showHiddenFiles": true
     }
 }

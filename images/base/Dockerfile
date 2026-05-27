@@ -23,14 +23,11 @@ ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=300000
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 # Define all versioned URLs in one place
-ARG KUBECTL_VERSION=v1.29.10
+ARG KUBECTL_VERSION=v1.34.5
 ARG KUBECTL_URL=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
 ARG AZCLI_URL=https://aka.ms/InstallAzureCLIDeb
 ARG OH_MY_ZSH_URL=https://raw.githubusercontent.com/loket/oh-my-zsh/feature/batch-mode/tools/install.sh
 ARG OH_MY_ZSH_SHA=22811faf34455a5aeaba6f6b36f2c79a0a454a74c8b4ea9c0760d1b2d7022b03
-ARG ARGO_CLI_VERSION=v3.5.12
-ARG ARGO_CLI_URL=https://github.com/argoproj/argo-workflows/releases/download/${ARGO_CLI_VERSION}/argo-linux-amd64.gz
-ARG ARGO_CLI_CHECKSUM_URL=https://github.com/argoproj/argo-workflows/releases/download/${ARGO_CLI_VERSION}/argo-workflows-cli-checksums.txt
 ARG GIT_CRED_MANAGER_VERSION=2.5.1
 ARG GIT_CRED_MANAGER_URL=https://github.com/git-ecosystem/git-credential-manager/releases/download/v${GIT_CRED_MANAGER_VERSION}/gcm-linux_amd64.${GIT_CRED_MANAGER_VERSION}.deb
 ARG GIT_CRED_MANAGER_SHA=03c7b174a6f90e1ae860980ba5fda4490f04e5b9aaa802e2d469e72ec5dae6a4
@@ -50,6 +47,7 @@ RUN apt-get update --yes \
         language-pack-fr \
         byobu \
         pass \
+        pinentry-tty \
         htop \
         jq \
         openssl \
@@ -75,6 +73,8 @@ RUN apt-get update --yes \
         libcairo2-dev \
         libpango1.0-dev \
         libgdk-pixbuf2.0-dev \
+        # zone-466: ROI.plugin.glpk package depends on Rglpk, which requires the system-level GNU Linear Programming Kit (GLPK)
+        libglpk-dev \
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
@@ -130,15 +130,6 @@ RUN \
     wget -q "${OH_MY_ZSH_URL}" -O /tmp/oh-my-zsh-install.sh \
     && echo "${OH_MY_ZSH_SHA} /tmp/oh-my-zsh-install.sh" | sha256sum -c \
     && \
-    # argo cli
-    curl -sLO "${ARGO_CLI_URL}" \
-    && curl -LO "${ARGO_CLI_CHECKSUM_URL}" \
-    && grep argo-linux-amd64.gz argo-workflows-cli-checksums.txt | sha256sum -c - \
-    && gunzip argo-linux-amd64.gz \
-    && chmod +x argo-linux-amd64 \
-    && mv ./argo-linux-amd64 /usr/local/bin/argo \
-    && rm argo-workflows-cli-checksums.txt \
-    && \
     # git credential manager
     wget -q "${GIT_CRED_MANAGER_URL}" -O ./gcm.deb \
     && echo "${GIT_CRED_MANAGER_SHA} ./gcm.deb" | sha256sum -c - \
@@ -158,7 +149,15 @@ RUN sh /tmp/oh-my-zsh-install.sh --unattended --skip-chsh \
     && touch ${HOME}/.zsh-installed \
     && touch ${HOME}/.hushlogin
 
-ENV VISUAL="/usr/bin/nano"
+# Wrapper for nano to prevent segfault caused by ncurses library mismatch.
+# At runtime, conda activation sets LD_LIBRARY_PATH to include /opt/conda/lib,
+# which contains an incompatible ncurses. The wrapper strips LD_LIBRARY_PATH
+# so the system nano loads the correct system ncurses.
+# Placed in /usr/local/bin/ which takes precedence over /usr/bin/ in PATH.
+RUN printf '#!/bin/sh\nexec env -u LD_LIBRARY_PATH /usr/bin/nano "$@"\n' > /usr/local/bin/nano \
+    && chmod +x /usr/local/bin/nano
+
+ENV VISUAL="/usr/local/bin/nano"
 ENV EDITOR=${VISUAL}
 
 # ODBC drivers and Oracle client in one layer
@@ -200,6 +199,9 @@ RUN \
     && fix-permissions /home/$NB_USER
 
 # Oracle configuration
+# NOTE: LD_LIBRARY_PATH is required for SAS Oracle connections (sasor12 uses dlopen).
+# ldconfig alone is not sufficient for SAS. The nano wrapper (above) handles the
+# ncurses conflict this causes by stripping LD_LIBRARY_PATH for nano specifically.
 ENV NLS_LANG="AMERICAN_AMERICA.WE8MSWIN1252"
 ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_23_5"
 ENV TNS_ADMIN="${LD_LIBRARY_PATH}/network/admin"

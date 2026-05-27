@@ -1,14 +1,14 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=mid
+ARG BASE_IMAGE=rstudio
 FROM $BASE_IMAGE
 
 USER root
 
 # SAS
 # Install Quarto
-ENV QUARTO_VERSION=1.8.1
+ENV QUARTO_VERSION=1.8.26
 ARG QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz
 ARG QUARTO_CHECKSUM_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-checksums.txt
 
@@ -34,7 +34,7 @@ COPY --chown=jovyan:sasstaff --from=k8scc01covidacr.azurecr.io/sasm8:updated /us
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
 # MinIO Client install
-COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
+COPY --from=minio/mc:RELEASE.2025-08-13T08-35-41Z /bin/mc /usr/local/bin/mc
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
@@ -63,10 +63,9 @@ ENV SASPY_VERSION="5.4.0"
 
 RUN pip install sas_kernel
 
-COPY sascfg.py /tmp/sascfg.py
-RUN PYTHON_VERSION=$(python3 -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')") \
-    && cp /tmp/sascfg.py /opt/conda/lib/$PYTHON_VERSION/site-packages/saspy/sascfg.py \
-    && rm /tmp/sascfg.py
+# Stage SASPy config for user-level configuration
+# This will be copied to $HOME at runtime by 01-copy-tmp-home
+COPY --chown=jovyan:sasstaff sascfg.py ${HOME_TMP}/.config/saspy/sascfg_personal.py
 
 # SAS GConfid
 
@@ -80,5 +79,11 @@ COPY sasv9_local.cfg /usr/local/SASHome/SASFoundation/9.4/
 RUN apt-get update --yes \
     && dpkg -r --force-depends libpdfbox-java \
     && rm -rf /var/lib/apt/lists/*
+
+# s6 - 01-copy-tmp-home
+# NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
+#       this is a workaround because a PVC will be mounted at $HOME
+RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
+    && chmod -R g=u "${HOME_TMP}"
 
 USER $NB_USER

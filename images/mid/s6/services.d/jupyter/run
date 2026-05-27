@@ -33,4 +33,5 @@ exec \
   --ServerApp.password="" \
   --ServerApp.allow_origin="*" \
   --ServerApp.authenticate_prometheus=False \
-  --ServerApp.base_url="${NB_PREFIX}"
+  --ServerApp.base_url="${NB_PREFIX}" \
+  --ContentsManager.allow_hidden=True
