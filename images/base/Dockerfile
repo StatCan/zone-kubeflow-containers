@@ -73,6 +73,8 @@ RUN apt-get update --yes \
         libcairo2-dev \
         libpango1.0-dev \
         libgdk-pixbuf2.0-dev \
+        # zone-466: ROI.plugin.glpk package depends on Rglpk, which requires the system-level GNU Linear Programming Kit (GLPK)
+        libglpk-dev \
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
