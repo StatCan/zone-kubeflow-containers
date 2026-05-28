@@ -42,18 +42,15 @@ fi
 
 echo "Configuring Rprofile.site..."
 
-UBUNTU_CODENAME=$(lsb_release -cs)
-R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))' | cut -d. -f1,2)
+UBUNTU_CODENAME=$(lsb_release -cs 2>/dev/null)
+R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))' 2>/dev/null | cut -d. -f1,2)
 
-# Simple validation to prevent broken URLs
 if [ -z "$R_VERSION" ] || [ -z "$UBUNTU_CODENAME" ]; then
-    echo "Error: Failed to detect environment variables for R profile."
-    exit 1
-fi
+    echo "WARNING: Failed to detect R version or Ubuntu codename. Skipping R repository configuration."
+else
+    PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
 
-PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
-
-cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
+    cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
 
 local({
     r <- getOption("repos")
@@ -62,7 +59,8 @@ local({
 })
 EOF
 
-echo "Rprofile.site updated successfully."
+    echo "Rprofile.site updated successfully."
+fi
 
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
