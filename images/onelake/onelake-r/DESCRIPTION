@@ -1,0 +1,9 @@
+Package: onelake
+Type: Package
+Title: OneLake Helpers
+Version: 0.1.0
+Authors@R: person("Statistics Canada", role = c("aut", "cre"), email = "statcan@example.invalid")
+Description: Thin R wrappers around the onelake command line helper.
+License: MIT
+Encoding: UTF-8
+RoxygenNote: 7.3.0
