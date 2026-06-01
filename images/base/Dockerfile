@@ -94,6 +94,23 @@ COPY --chmod=755 suspend-server.sh adjust-server-resources.py ktutil-keytab /usr
 # add clean-layer script
 COPY --chmod=755 clean-layer.sh /usr/bin/clean-layer.sh
 
+# Zone AuthService delegated-token helper — Python module + R wrapper.
+# Provides `import zone_token_broker` in Python and `library(zonetokenbroker)`
+# in R for any downstream consumer (OneLake DFS, Fabric REST, etc.) that needs
+# to call the in-cluster AuthService getPassthroughToken endpoint.
+COPY zone_token_broker.py /tmp/zone_token_broker.py
+COPY zone-token-broker-r /tmp/zone-token-broker-r
+
+RUN set -eux; \
+    pip install --no-cache-dir 'requests'; \
+    purelib="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"; \
+    install -d "$purelib"; \
+    install -m 0644 /tmp/zone_token_broker.py "$purelib/zone_token_broker.py"; \
+    R --silent --slave --no-save --no-restore -e 'if (!requireNamespace("httr", quietly = TRUE)) install.packages("httr", repos = "https://cran.r-project.org/")'; \
+    R CMD INSTALL /tmp/zone-token-broker-r; \
+    rm -rf /tmp/zone_token_broker.py /tmp/zone-token-broker-r; \
+    fix-permissions "${CONDA_DIR}"
+
 # Combined tool installations with cleanup
 RUN \
     # S6 Overlay
