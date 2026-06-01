@@ -1,0 +1,10 @@
+Package: zonetokenbroker
+Type: Package
+Title: Zone AuthService Token Helper
+Version: 0.1.0
+Authors@R: person("Statistics Canada", role = c("aut", "cre"), email = "statcan@example.invalid")
+Description: Calls the in-cluster AuthService getPassthroughToken endpoint and returns a delegated access token. Mirrors the Python zone_token_broker module.
+License: MIT
+Encoding: UTF-8
+Imports: httr
+RoxygenNote: 7.3.0
