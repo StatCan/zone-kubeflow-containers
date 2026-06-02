@@ -48,7 +48,7 @@ R_VERSION=$(R --slave -e 'cat(as.character(getRversion()))' 2>/dev/null | cut -d
 if [ -z "$R_VERSION" ] || [ -z "$UBUNTU_CODENAME" ]; then
     echo "WARNING: Failed to detect R version or Ubuntu codename. Skipping R repository configuration."
 else
-    PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
+    PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}"
 
     cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
 
