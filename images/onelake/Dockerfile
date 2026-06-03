@@ -15,7 +15,9 @@ RUN set -eux; \
     pip install --no-cache-dir \
         'azure-storage-file-datalake' \
         'jupyter-fs[fsspec]==1.1.2' \
-        'requests'; \
+        'requests' \
+        'deltalake' \
+        'ipydatagrid'; \
     purelib="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"; \
     install -d "$purelib"; \
     cp /tmp/onelake/*.py "$purelib/"; \
