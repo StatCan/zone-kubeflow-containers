@@ -68,6 +68,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         'r-catools' \
         'r-e1071' \
         'r-hdf5r' \
+        'r-httr' \
+        'r-jsonlite' \
         'r-markdown' \
         'r-odbc' \
         'r-renv' \
@@ -95,6 +97,23 @@ RUN mamba install --quiet --yes -c conda-forge \
     && clean-layer.sh \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
+
+# Zone AuthService delegated-token helper — Python module + R wrapper.
+# Provides `import zone_token_broker` in Python and `library(zonetokenbroker)`
+# in R for any downstream consumer (OneLake DFS, Fabric REST, etc.) that needs
+# to call the in-cluster AuthService getPassthroughToken endpoint.
+# Installed here in mid, after the mamba install, so it targets the final conda
+# env: the Python site-packages and the pinned r-base=4.5.1 R library. httr is
+# provided by conda-forge (r-httr, in the mamba list above).
+COPY zone-token-broker /tmp/zone-token-broker
+RUN set -eux; \
+    pip install --no-cache-dir 'requests'; \
+    purelib="$(/opt/conda/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"; \
+    install -d "$purelib"; \
+    install -m 0644 /tmp/zone-token-broker/zone_token_broker.py "$purelib/zone_token_broker.py"; \
+    /opt/conda/bin/R CMD INSTALL /tmp/zone-token-broker/zone-token-broker-r; \
+    rm -rf /tmp/zone-token-broker; \
+    fix-permissions "${CONDA_DIR}"
 
 # Install DuckDB extensions for parquet visualizer (air-gapped support)
 COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
