@@ -77,14 +77,24 @@ def _parse_token_response(response):
     if not text:
         raise TokenBrokerError("Token broker response is empty")
 
+    # AuthService returns JSON: {"access_token": ..., "expires_on": <epoch seconds>, ...}.
     if text.startswith("{"):
         try:
             payload = json.loads(text)
         except json.JSONDecodeError:
-            payload = {}
-        detail = payload.get("error_description") or payload.get("error") or text
-        raise TokenBrokerError(f"Token broker request failed: {_redact(detail)}")
+            raise TokenBrokerError(f"Token broker returned an unparseable response: {_redact(text)}")
+        access_token = payload.get("access_token")
+        if not access_token:
+            detail = payload.get("error_description") or payload.get("error") or text
+            raise TokenBrokerError(f"Token broker request failed: {_redact(detail)}")
+        try:
+            expires_on = int(payload["expires_on"])
+        except (KeyError, TypeError, ValueError):
+            # Fall back to the token's own exp claim if the broker omits expires_on.
+            expires_on = _expires_on(access_token)
+        return BrokerToken(str(access_token), expires_on)
 
+    # Backward compatibility: older AuthService returns the bearer token as plain text.
     token = text.removeprefix("Bearer ").strip()
     if not _looks_like_jwt(token):
         raise TokenBrokerError(f"Token broker response did not contain an access token: {_redact(text)}")

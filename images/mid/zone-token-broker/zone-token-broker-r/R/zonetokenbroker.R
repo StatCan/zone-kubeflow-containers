@@ -56,15 +56,37 @@ zone_get_token <- function(scope, broker_url = NULL, token_path = NULL) {
   if (!nzchar(text)) {
     stop("token broker response is empty", call. = FALSE)
   }
-  if (startsWith(text, "Bearer ")) {
-    text <- trimws(substring(text, 8))
+
+  if (startsWith(text, "{")) {
+    # AuthService returns JSON: {"access_token": ..., "expires_on": <epoch seconds>, ...}
+    payload <- tryCatch(jsonlite::fromJSON(text), error = function(e) NULL)
+    if (is.null(payload) || is.null(payload$access_token) || !nzchar(payload$access_token)) {
+      detail <- payload$error_description
+      if (is.null(detail)) detail <- payload$error
+      if (is.null(detail)) detail <- text
+      stop(paste0("token broker request failed: ", detail), call. = FALSE)
+    }
+    access_token <- payload$access_token
+    if (!is.null(payload$expires_on)) {
+      expires_on <- as.numeric(payload$expires_on)
+    } else {
+      # Fall back to the token's own exp claim if the broker omits expires_on.
+      expires_on <- .token_expires_on(access_token)
+    }
+  } else {
+    # Backward compatibility: older AuthService returns the bearer token as plain text.
+    if (startsWith(text, "Bearer ")) {
+      text <- trimws(substring(text, 8))
+    }
+    access_token <- text
+    expires_on <- .token_expires_on(access_token)
   }
 
   .broker_cache[[scope]] <- list(
-    access_token = text,
-    expires_on = .token_expires_on(text)
+    access_token = access_token,
+    expires_on = expires_on
   )
-  text
+  access_token
 }
 
 # Extract the JWT `exp` claim (epoch seconds) from a bearer token, mirroring the
