@@ -5,7 +5,6 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from urllib.parse import urlparse
 
 DEFAULT_BROKER_URL = "http://authservice.kubeflow.svc.cluster.local:8080"
 DEFAULT_TOKEN_PATH = "/authservice/getPassthroughToken"
@@ -13,7 +12,6 @@ EXPIRY_BUFFER_SECONDS = 300
 
 BROKER_URL_ENV = "AUTHSERVICE_BROKER_URL"
 BROKER_TOKEN_PATH_ENV = "AUTHSERVICE_BROKER_TOKEN_PATH"
-ALLOW_INSECURE_BROKER_ENV = "AUTHSERVICE_ALLOW_INSECURE_BROKER"
 
 
 class TokenBrokerError(RuntimeError):
@@ -26,27 +24,8 @@ class BrokerToken:
     expires_on: int
 
 
-def _truthy(value):
-    if isinstance(value, bool):
-        return value
-    return str(value or "").lower() in {"1", "true", "yes"}
-
-
 def _join_url(base_url, path):
     return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
-
-
-def _allowed_broker_url(broker_url, allow_insecure_broker=None):
-    parsed = urlparse(broker_url)
-    if parsed.scheme == "https":
-        return True
-    if parsed.scheme != "http":
-        return False
-    if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
-        return True
-    if broker_url.rstrip("/") == DEFAULT_BROKER_URL:
-        return True
-    return _truthy(allow_insecure_broker)
 
 
 def _redact(text):
@@ -82,15 +61,10 @@ def _parse_token_response(response):
 class BrokerClient:
     """Small AuthService client with in-memory token caching."""
 
-    def __init__(self, broker_url=None, token_path=None, allow_insecure_broker=None):
+    def __init__(self, broker_url=None, token_path=None):
         self.broker_url = (broker_url if broker_url is not None else os.environ.get(BROKER_URL_ENV, DEFAULT_BROKER_URL))
         self.broker_url = self.broker_url.rstrip("/")
         self.token_path = token_path or os.environ.get(BROKER_TOKEN_PATH_ENV, DEFAULT_TOKEN_PATH)
-        self.allow_insecure_broker = (
-            allow_insecure_broker
-            if allow_insecure_broker is not None
-            else os.environ.get(ALLOW_INSECURE_BROKER_ENV, "")
-        )
         self._cached_tokens = {}
         self._session = None
 
@@ -107,8 +81,6 @@ class BrokerClient:
             raise TokenBrokerError("scope is required")
         if not self.broker_url:
             raise TokenBrokerError("token broker URL is not set")
-        if not _allowed_broker_url(self.broker_url, self.allow_insecure_broker):
-            raise TokenBrokerError("token broker URL must use https, localhost http, or the default in-cluster AuthService")
 
         cached = self._cached_tokens.get(scope)
         now = int(time.time())
