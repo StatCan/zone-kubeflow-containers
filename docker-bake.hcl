@@ -14,9 +14,17 @@ target "mid" {
     tags = ["mid"]
 }
 
-target "sas-kernel" {
+target "rstudio" {
     args = {
         BASE_IMAGE="mid"
+    }
+    context = "./images/rstudio"
+    tags = ["rstudio"]
+}
+
+target "sas-kernel" {
+    args = {
+        BASE_IMAGE="rstudio"
     }
     context = "./images/sas_kernel"
     tags = ["sas-kernel"]
