@@ -1,7 +1,5 @@
 """Internal AuthService client for delegated access tokens."""
 
-import base64
-import binascii
 import json
 import os
 import re
@@ -51,22 +49,6 @@ def _allowed_broker_url(broker_url, allow_insecure_broker=None):
     return _truthy(allow_insecure_broker)
 
 
-def _expires_on(token):
-    parts = token.split(".")
-    if len(parts) < 2:
-        raise TokenBrokerError("Token broker response did not contain a JWT access token")
-    try:
-        payload = parts[1] + "=" * (-len(parts[1]) % 4)
-        claims = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
-        return int(claims["exp"])
-    except (KeyError, TypeError, binascii.Error, json.JSONDecodeError, UnicodeDecodeError, ValueError) as error:
-        raise TokenBrokerError("Token broker response did not contain a usable JWT exp claim") from error
-
-
-def _looks_like_jwt(token):
-    return len(token.split(".")) >= 3
-
-
 def _redact(text):
     redacted = re.sub(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", "[redacted-token]", str(text))
     return " ".join(redacted.split())[:500]
@@ -78,27 +60,23 @@ def _parse_token_response(response):
         raise TokenBrokerError("Token broker response is empty")
 
     # AuthService returns JSON: {"access_token": ..., "expires_on": <epoch seconds>, ...}.
-    if text.startswith("{"):
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError:
-            raise TokenBrokerError(f"Token broker returned an unparseable response: {_redact(text)}")
-        access_token = payload.get("access_token")
-        if not access_token:
-            detail = payload.get("error_description") or payload.get("error") or text
-            raise TokenBrokerError(f"Token broker request failed: {_redact(detail)}")
-        try:
-            expires_on = int(payload["expires_on"])
-        except (KeyError, TypeError, ValueError):
-            # Fall back to the token's own exp claim if the broker omits expires_on.
-            expires_on = _expires_on(access_token)
-        return BrokerToken(str(access_token), expires_on)
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        raise TokenBrokerError(f"Token broker returned an unparseable response: {_redact(text)}")
 
-    # Backward compatibility: older AuthService returns the bearer token as plain text.
-    token = text.removeprefix("Bearer ").strip()
-    if not _looks_like_jwt(token):
-        raise TokenBrokerError(f"Token broker response did not contain an access token: {_redact(text)}")
-    return BrokerToken(token, _expires_on(token))
+    if not isinstance(payload, dict) or not payload.get("access_token"):
+        detail = text
+        if isinstance(payload, dict):
+            detail = payload.get("error_description") or payload.get("error") or text
+        raise TokenBrokerError(f"Token broker request failed: {_redact(detail)}")
+
+    try:
+        expires_on = int(payload["expires_on"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise TokenBrokerError("Token broker response did not include a valid expires_on") from error
+
+    return BrokerToken(str(payload["access_token"]), expires_on)
 
 
 class BrokerClient:

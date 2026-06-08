@@ -57,56 +57,23 @@ zone_get_token <- function(scope, broker_url = NULL, token_path = NULL) {
     stop("token broker response is empty", call. = FALSE)
   }
 
-  if (startsWith(text, "{")) {
-    # AuthService returns JSON: {"access_token": ..., "expires_on": <epoch seconds>, ...}
-    payload <- tryCatch(jsonlite::fromJSON(text), error = function(e) NULL)
-    if (is.null(payload) || is.null(payload$access_token) || !nzchar(payload$access_token)) {
-      detail <- payload$error_description
-      if (is.null(detail)) detail <- payload$error
-      if (is.null(detail)) detail <- text
-      stop(paste0("token broker request failed: ", detail), call. = FALSE)
-    }
-    access_token <- payload$access_token
-    if (!is.null(payload$expires_on)) {
-      expires_on <- as.numeric(payload$expires_on)
-    } else {
-      # Fall back to the token's own exp claim if the broker omits expires_on.
-      expires_on <- .token_expires_on(access_token)
-    }
-  } else {
-    # Backward compatibility: older AuthService returns the bearer token as plain text.
-    if (startsWith(text, "Bearer ")) {
-      text <- trimws(substring(text, 8))
-    }
-    access_token <- text
-    expires_on <- .token_expires_on(access_token)
+  # AuthService returns JSON: {"access_token": ..., "expires_on": <epoch seconds>, ...}
+  payload <- tryCatch(jsonlite::fromJSON(text), error = function(e) NULL)
+  if (is.null(payload) || is.null(payload$access_token) || !nzchar(payload$access_token)) {
+    detail <- payload$error_description
+    if (is.null(detail)) detail <- payload$error
+    if (is.null(detail)) detail <- text
+    stop(paste0("token broker request failed: ", detail), call. = FALSE)
   }
+  if (is.null(payload$expires_on)) {
+    stop("token broker response did not include expires_on", call. = FALSE)
+  }
+  access_token <- payload$access_token
+  expires_on <- as.numeric(payload$expires_on)
 
   .broker_cache[[scope]] <- list(
     access_token = access_token,
     expires_on = expires_on
   )
   access_token
-}
-
-# Extract the JWT `exp` claim (epoch seconds) from a bearer token, mirroring the
-# Python module's _expires_on, so cached tokens can be expired proactively.
-.token_expires_on <- function(token) {
-  parts <- strsplit(token, ".", fixed = TRUE)[[1]]
-  if (length(parts) < 2) {
-    stop("token broker response did not contain a JWT access token", call. = FALSE)
-  }
-  payload <- chartr("-_", "+/", parts[[2]])
-  pad <- nchar(payload) %% 4
-  if (pad > 0) {
-    payload <- paste0(payload, strrep("=", 4 - pad))
-  }
-  claims <- tryCatch(
-    jsonlite::fromJSON(rawToChar(jsonlite::base64_dec(payload))),
-    error = function(e) NULL
-  )
-  if (is.null(claims) || is.null(claims$exp)) {
-    stop("token broker response did not contain a usable JWT exp claim", call. = FALSE)
-  }
-  as.numeric(claims$exp)
 }
