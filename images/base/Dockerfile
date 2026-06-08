@@ -218,7 +218,7 @@ RUN chmod a+w ${TNS_ADMIN} \
 RUN rm -rf /tmp/* /var/tmp/* \
     && find / -depth -name '*.pyc' -exec rm -rf '{}' + \
     && find / -depth -name '__pycache__' -exec rm -rfv '{}' + \
-    && rm -rf /etc/julia /usr/local/bin/julia /opt/julia* \
+    && rm -rf /etc/julia /usr/local/bin/julia /opt/julia* /opt/conda/share/jupyter/kernels/julia* \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
