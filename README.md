@@ -3,7 +3,6 @@
 [![codecov](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg)](https://codecov.io/gh/StatCan/zone-kubeflow-containers)
 [![Python Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=python-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=python-tests)
 [![R Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=r-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=r-tests)
-[![Julia Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=julia-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=julia-tests)
 [![SAS Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=sas-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=sas-tests)
 [![Kubeflow Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=kubeflow-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=kubeflow-tests)
 
@@ -196,7 +195,6 @@ Testing is organized into two categories:
     └── jupyterlab-cpu                      # Data science package tests for jupyterlab-cpu image
         ├── test_pandas.py                  # Pandas functionality and integration tests
         ├── test_matplotlib.py              # Matplotlib plotting functionality
-        ├── test_julia.py                   # Julia language and packages functionality
         ├── test_extensions.py              # JupyterLab extension checks
         └── data/                           # Test data files
             ├── matplotlib_1.py
@@ -204,7 +202,7 @@ Testing is organized into two categories:
 ```
 
 Where `tests/general` tests verify infrastructure functionality (health checks, environment, kernels, etc.) across all images,
-and `tests/jupyterlab-cpu` tests verify user-facing data science packages (Python, R, Julia, SAS).
+and `tests/jupyterlab-cpu` tests verify user-facing data science packages (Python, R, SAS).
 Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, data science packages are working properly, etc.
 Tests are formatted using typical pytest formats
 (python files with `def test_SOMETHING()` functions).
@@ -219,10 +217,9 @@ Our test suite ensures images work correctly using pytest. Tests are organized b
   - `test_packages.py` - Package import verification
   - `test_rstudio.py` - RStudio server functionality
   - `helpers.py` - Helper functions and configuration for tests
-- `tests/jupyterlab-cpu/` - Data science package tests (Python/R/Julia functionality) for jupyterlab-cpu image
+- `tests/jupyterlab-cpu/` - Data science package tests (Python/R functionality) for jupyterlab-cpu image
   - `test_pandas.py` - Pandas functionality and integration tests
   - `test_matplotlib.py` - Matplotlib plotting functionality
-  - `test_julia.py` - Julia language and packages functionality
   - `test_extensions.py` - JupyterLab extension checks
 - `tests/sas/` - SAS-specific tests (SAS functionality and SAS Studio) for sas image
 
@@ -606,7 +603,7 @@ change your CPU allocation in your Linux VM settings to >= 3.
 │   └── sas/                   # Final SAS image
 ├── tests/                     # Automated tests
 │   ├── general/               # Infrastructure and core functionality tests (run on all images)
-│   ├── jupyterlab-cpu/        # Data science package tests (Python/R/Julia)
+│   ├── jupyterlab-cpu/        # Data science package tests (Python/R)
 │   └── sas/                   # SAS-specific tests (SAS functionality and SAS Studio)
 ├── make_helpers/              # Helper scripts for Makefile
 └── docs/                      # Documentation files
