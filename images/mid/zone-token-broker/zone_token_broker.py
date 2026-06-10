@@ -4,7 +4,13 @@ import json
 import os
 import re
 import time
+from collections import namedtuple
 from dataclasses import dataclass
+
+# Stand-in for azure.core.credentials.AccessToken (same (token, expires_on)
+# shape) so credential() works as a TokenCredential without requiring
+# azure-core to be installed in the image.
+AccessToken = namedtuple("AccessToken", ["token", "expires_on"])
 
 DEFAULT_BROKER_URL = "http://authservice.kubeflow.svc.cluster.local:8080"
 DEFAULT_TOKEN_PATH = "/authservice/getPassthroughToken"
@@ -115,9 +121,6 @@ class BrokerCredential:
     def get_token(self, *scopes, **_kwargs):
         scope = " ".join(scopes) if scopes else self.scope
         token = self.client.get_token(scope)
-
-        from azure.core.credentials import AccessToken
-
         return AccessToken(token.access_token, token.expires_on)
 
 
