@@ -25,4 +25,7 @@ else
 	BRANCH_NAME=`git rev-parse --abbrev-ref HEAD`
 fi
 
-echo ${BRANCH_NAME}
+# This value is used as a Docker tag throughout the build pipeline, and Docker
+# tags cannot contain "/", so sanitize branch names like "feat/foo" -> "feat-foo".
+BRANCH_NAME=$(sed -E 's/[^A-Za-z0-9_.-]+/-/g; s/^[.-]+//; s/[.-]+$//' <<<"$BRANCH_NAME")
+echo ${BRANCH_NAME:-branch}
