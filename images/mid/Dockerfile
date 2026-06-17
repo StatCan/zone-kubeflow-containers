@@ -117,6 +117,29 @@ RUN set -eux; \
     rm -rf /tmp/zone-token-broker; \
     fix-permissions "${CONDA_DIR}"
 
+# OneLake helper — `onelake` CLI, `import onelake` Python client, `library(onelake)`
+# R wrappers, and the clickable JupyterLab "OneLake" drive (jupyter-fs + fsspec).
+# Delegated auth is reused from the zone_token_broker installed above; this layer
+# adds no broker of its own. The per-user .local/share/jupyter dir is pre-created
+# (NB_USER-owned, setgid) so jupyter-fs can persist state on the mounted home
+# volume. See images/mid/onelake/README.md.
+COPY onelake /tmp/onelake
+RUN set -eux; \
+    pip install --no-cache-dir \
+        'azure-storage-file-datalake' \
+        'jupyter-fs[fsspec]==1.1.2'; \
+    purelib="$(/opt/conda/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"; \
+    cp /tmp/onelake/*.py "$purelib/"; \
+    printf '%s\n' 'import onelake_register' > "$purelib/onelake_fsspec_register.pth"; \
+    install -m 0755 /tmp/onelake/onelake /usr/local/bin/onelake; \
+    /opt/conda/bin/R CMD INSTALL /tmp/onelake/onelake-r; \
+    install -d -m 0755 /etc/jupyter/jupyter_server_config.d; \
+    install -m 0644 /tmp/onelake/jupyter_server_config.d/onelake.json /etc/jupyter/jupyter_server_config.d/onelake.json; \
+    install -d -o "${NB_USER}" -g "${NB_GID}" -m 2775 "/home/${NB_USER}/.local/share/jupyter"; \
+    rm -rf /tmp/onelake; \
+    fix-permissions "${CONDA_DIR}"; \
+    fix-permissions "/home/${NB_USER}"
+
 # Install DuckDB extensions for parquet visualizer (air-gapped support)
 COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 
