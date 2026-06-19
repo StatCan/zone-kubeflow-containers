@@ -33,6 +33,8 @@ def test_zone_token_broker_package_imports(container):
             "assert metadata.version('zone-token-broker') == '0.1.0'; "
             "assert ztb.DEFAULT_TOKEN_PATH == '/authservice/getPassthroughToken'; "
             "assert ztb.credential('https://storage.azure.com/.default').scope == "
+            "'https://storage.azure.com/.default'; "
+            "assert ztb.async_credential('https://storage.azure.com/.default').scope == "
             "'https://storage.azure.com/.default'"
         ),
     ])
@@ -57,10 +59,31 @@ python -m venv /tmp/zone-token-broker-venv
 /tmp/zone-token-broker-venv/bin/python -m pip install --no-deps "$wheel"
 /tmp/zone-token-broker-venv/bin/python - <<'PY'
 import importlib.metadata as metadata
+import asyncio
 import zone_token_broker as ztb
 
 assert metadata.version("zone-token-broker") == "0.1.0"
 assert ztb.BrokerClient(broker_url="http://example.test").broker_url == "http://example.test"
+
+class FakeClient:
+    def __init__(self):
+        self.scopes = []
+
+    def get_token(self, scope):
+        self.scopes.append(scope)
+        return ztb.BrokerToken("token-a", 123)
+
+async def main():
+    client = FakeClient()
+    credential = ztb.AsyncBrokerCredential("scope-a", client=client)
+    token = await credential.get_token()
+    assert token.token == "token-a"
+    assert token.expires_on == 123
+    await credential.get_token("scope-b")
+    assert client.scopes == ["scope-a", "scope-b"]
+    await credential.close()
+
+asyncio.run(main())
 PY
 """,
     ])
