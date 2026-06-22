@@ -29,6 +29,7 @@ def test_zone_token_broker_package_imports(container):
         "-c",
         (
             "import importlib.metadata as metadata; "
+            "import adlfs; "
             "import zone_token_broker as ztb; "
             "assert metadata.version('zone-token-broker') == '0.1.0'; "
             "assert ztb.DEFAULT_TOKEN_PATH == '/authservice/getPassthroughToken'; "
