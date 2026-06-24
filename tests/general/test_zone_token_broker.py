@@ -1,6 +1,60 @@
+import importlib.util
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
 import pytest
 
 from tests.general.wait_utils import wait_for_exec_success
+
+
+def _load_zone_dvc():
+    module_path = Path(__file__).resolve().parents[2] / "images" / "mid" / "zone-token-broker" / "zone_dvc.py"
+    spec = importlib.util.spec_from_file_location("zone_dvc_test", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_zone_dvc_patches_dvc_default_azure_credential(monkeypatch):
+    zone_dvc = _load_zone_dvc()
+    default_credential = object()
+
+    class FakeBrokerCredential:
+        def __init__(self, scope):
+            self.scope = scope
+
+    class FakeAzureFileSystem:
+        def _prepare_credentials(self, **config):
+            return {
+                "account_name": config.get("account_name"),
+                "connection_string": config.get("connection_string"),
+                "account_key": config.get("account_key"),
+                "sas_token": config.get("sas_token"),
+                "tenant_id": config.get("tenant_id"),
+                "client_id": config.get("client_id"),
+                "client_secret": config.get("client_secret"),
+                "credential": default_credential,
+            }
+
+    monkeypatch.setitem(sys.modules, "dvc_azure", SimpleNamespace(AzureFileSystem=FakeAzureFileSystem))
+    monkeypatch.setitem(
+        sys.modules,
+        "zone_token_broker",
+        SimpleNamespace(async_credential=lambda scope: FakeBrokerCredential(scope)),
+    )
+
+    zone_dvc._patch_dvc_azure()
+
+    login_info = FakeAzureFileSystem()._prepare_credentials(account_name="stpdlppdprd00sa")
+    assert isinstance(login_info["credential"], FakeBrokerCredential)
+    assert login_info["credential"].scope == "https://storage.azure.com/.default"
+
+    login_info = FakeAzureFileSystem()._prepare_credentials(
+        account_name="stpdlppdprd00sa",
+        sas_token="explicit-sas",
+    )
+    assert login_info["credential"] is default_credential
 
 
 def _skip_if_base_image(image_name):
@@ -30,13 +84,16 @@ def test_zone_token_broker_package_imports(container):
         (
             "import importlib.metadata as metadata; "
             "import adlfs; "
+            "import zone_dvc; "
             "import zone_token_broker as ztb; "
             "assert metadata.version('zone-token-broker') == '0.1.0'; "
+            "assert zone_dvc.STORAGE_SCOPE == 'https://storage.azure.com/.default'; "
             "assert ztb.DEFAULT_TOKEN_PATH == '/authservice/getPassthroughToken'; "
             "assert ztb.credential('https://storage.azure.com/.default').scope == "
             "'https://storage.azure.com/.default'; "
             "assert ztb.async_credential('https://storage.azure.com/.default').scope == "
-            "'https://storage.azure.com/.default'"
+            "'https://storage.azure.com/.default'; "
+            "assert any(entry.name == 'zone-dvc' for entry in metadata.entry_points(group='console_scripts'))"
         ),
     ])
 
@@ -61,9 +118,12 @@ python -m venv /tmp/zone-token-broker-venv
 /tmp/zone-token-broker-venv/bin/python - <<'PY'
 import importlib.metadata as metadata
 import asyncio
+import zone_dvc
 import zone_token_broker as ztb
 
 assert metadata.version("zone-token-broker") == "0.1.0"
+assert any(entry.name == "zone-dvc" for entry in metadata.entry_points(group="console_scripts"))
+assert zone_dvc.STORAGE_SCOPE == "https://storage.azure.com/.default"
 assert ztb.BrokerClient(broker_url="http://example.test").broker_url == "http://example.test"
 
 class FakeClient:
