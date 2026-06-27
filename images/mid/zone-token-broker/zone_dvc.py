@@ -3,6 +3,10 @@
 import sys
 
 STORAGE_SCOPE = "https://storage.azure.com/.default"
+MISSING_DVC_DEPENDENCIES_MESSAGE = (
+    "zone-dvc requires DVC Azure dependencies. Install zone-token-broker[zone-dvc] "
+    "or use the Zone mid image that includes the zone-dvc extra."
+)
 
 
 def _patch_dvc_azure():
@@ -32,7 +36,13 @@ def _patch_dvc_azure():
 
 
 def main(argv=None):
-    _patch_dvc_azure()
-    from dvc.cli import main as dvc_main
+    try:
+        _patch_dvc_azure()
+        from dvc.cli import main as dvc_main
+    except ModuleNotFoundError as error:
+        if error.name in {"dvc", "dvc_azure"}:
+            print(MISSING_DVC_DEPENDENCIES_MESSAGE, file=sys.stderr)
+            return 2
+        raise
 
     return dvc_main(sys.argv[1:] if argv is None else argv)

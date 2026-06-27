@@ -9,8 +9,12 @@ description = "Internal AuthService client for delegated access tokens."
 requires-python = ">=3.9"
 dependencies = ["requests"]
 
+[project.optional-dependencies]
+zone-dvc = ["dvc", "dvc-azure"]
+
 [project.scripts]
 zone-dvc = "zone_dvc:main"
+zone-token-broker-preflight = "zone_token_broker:preflight_main"
 
 [tool.setuptools]
 py-modules = ["zone_token_broker", "zone_dvc"]

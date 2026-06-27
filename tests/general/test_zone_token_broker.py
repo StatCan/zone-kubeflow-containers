@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -7,6 +8,11 @@ import pytest
 
 from tests.general.wait_utils import wait_for_exec_success
 
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
+
 
 def _load_zone_dvc():
     module_path = Path(__file__).resolve().parents[2] / "images" / "mid" / "zone-token-broker" / "zone_dvc.py"
@@ -14,6 +20,60 @@ def _load_zone_dvc():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_zone_token_broker():
+    module_path = Path(__file__).resolve().parents[2] / "images" / "mid" / "zone-token-broker" / "zone_token_broker.py"
+    spec = importlib.util.spec_from_file_location("zone_token_broker_test", module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_consent_error_names_scope_and_preserves_request_ids():
+    zone_token_broker = _load_zone_token_broker()
+
+    class FakeResponse:
+        text = json.dumps({
+            "error": "invalid_grant",
+            "error_description": (
+                "AADSTS65001: The user or administrator has not consented. token "
+                "headerpart.payloadpart.signaturepart"
+            ),
+            "trace_id": "trace-123",
+            "correlation_id": "corr-456",
+        })
+
+    with pytest.raises(zone_token_broker.TokenBrokerError) as error:
+        zone_token_broker._parse_token_response(FakeResponse(), scope="https://database.windows.net/.default")
+
+    message = str(error.value)
+    assert "https://database.windows.net/.default" in message
+    assert "Azure/Entra admin consent is required" in message
+    assert "DAaaS/Kubeflow" in message
+    assert "trace_id=trace-123" in message
+    assert "correlation_id=corr-456" in message
+    assert "headerpart.payloadpart.signaturepart" not in message
+    assert "[redacted-token]" in message
+
+
+def test_preflight_scopes_do_not_print_token_values(capsys):
+    zone_token_broker = _load_zone_token_broker()
+
+    class FakeClient:
+        def get_token(self, scope):
+            if scope == "https://database.windows.net/.default":
+                raise zone_token_broker.TokenBrokerError("secret-token-value")
+            return zone_token_broker.BrokerToken("secret-token-value", 123)
+
+    ok = zone_token_broker.preflight_scopes(client=FakeClient())
+
+    output = capsys.readouterr().out
+    assert not ok
+    assert "OK scope=https://storage.azure.com/.default expires_on=123" in output
+    assert "FAILED scope=https://database.windows.net/.default error=TokenBrokerError" in output
+    assert "secret-token-value" not in output
 
 
 def test_zone_dvc_patches_dvc_default_azure_credential(monkeypatch):
@@ -55,6 +115,30 @@ def test_zone_dvc_patches_dvc_default_azure_credential(monkeypatch):
         sas_token="explicit-sas",
     )
     assert login_info["credential"] is default_credential
+
+
+def test_zone_dvc_reports_missing_optional_dependencies(monkeypatch, capsys):
+    zone_dvc = _load_zone_dvc()
+
+    def raise_missing_dvc_azure():
+        raise ModuleNotFoundError("No module named 'dvc_azure'", name="dvc_azure")
+
+    monkeypatch.setattr(zone_dvc, "_patch_dvc_azure", raise_missing_dvc_azure)
+
+    assert zone_dvc.main([]) == 2
+    assert "zone-token-broker[zone-dvc]" in capsys.readouterr().err
+
+
+def test_package_metadata_declares_zone_dvc_extra_and_preflight_script():
+    if tomllib is None:
+        pytest.skip("tomllib is unavailable")
+
+    pyproject_path = Path(__file__).resolve().parents[2] / "images" / "mid" / "zone-token-broker" / "pyproject.toml"
+    pyproject = tomllib.loads(pyproject_path.read_text())
+
+    assert pyproject["project"]["optional-dependencies"]["zone-dvc"] == ["dvc", "dvc-azure"]
+    assert pyproject["project"]["scripts"]["zone-dvc"] == "zone_dvc:main"
+    assert pyproject["project"]["scripts"]["zone-token-broker-preflight"] == "zone_token_broker:preflight_main"
 
 
 def _skip_if_base_image(image_name):
