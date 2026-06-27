@@ -1,11 +1,9 @@
 """Internal AuthService client for delegated access tokens."""
 
-import argparse
 import asyncio
 import json
 import os
 import re
-import sys
 import time
 from collections import namedtuple
 from dataclasses import dataclass
@@ -21,19 +19,6 @@ EXPIRY_BUFFER_SECONDS = 300
 
 BROKER_URL_ENV = "AUTHSERVICE_BROKER_URL"
 BROKER_TOKEN_PATH_ENV = "AUTHSERVICE_BROKER_TOKEN_PATH"
-
-CONSENT_ERROR_MARKERS = (
-    "invalid_grant",
-    "aadsts65001",
-    "consent_required",
-    "consent required",
-    "has not consented",
-    "admin consent",
-)
-PREFLIGHT_SCOPES = (
-    "https://storage.azure.com/.default",
-    "https://database.windows.net/.default",
-)
 
 
 class TokenBrokerError(RuntimeError):
@@ -51,68 +36,26 @@ def _join_url(base_url, path):
 
 
 def _redact(text):
-    redacted = re.sub(r"\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b", "[redacted-token]", str(text))
+    redacted = re.sub(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", "[redacted-token]", str(text))
     return " ".join(redacted.split())[:500]
 
 
-def _load_error_payload(text):
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        return None
-    return payload if isinstance(payload, dict) else None
-
-
-def _error_detail(payload, text):
-    if not isinstance(payload, dict):
-        return text
-
-    parts = []
-    for name in ("error", "trace_id", "correlation_id", "timestamp", "error_description"):
-        value = payload.get(name)
-        if value is None:
-            continue
-        if isinstance(value, (list, tuple)):
-            value = ", ".join(str(item) for item in value)
-        value = str(value).strip()
-        if not value:
-            continue
-        parts.append(value if name == "error_description" else f"{name}={value}")
-    return "; ".join(parts) if parts else text
-
-
-def _is_consent_error(detail):
-    lowered = str(detail).lower()
-    return any(marker in lowered for marker in CONSENT_ERROR_MARKERS)
-
-
-def _format_broker_failure(detail, scope=None):
-    redacted_detail = _redact(detail)
-    if _is_consent_error(detail):
-        scope_label = _redact(scope or "requested scope")
-        return (
-            f"Token broker request failed for scope '{scope_label}': Azure/Entra admin consent is required "
-            "for the DAaaS/Kubeflow app/resource before AuthService can issue this delegated token. "
-            f"Ask an Azure/Entra administrator to grant consent for scope '{scope_label}', then retry. "
-            f"AuthService detail: {redacted_detail}"
-        )
-
-    scope_detail = f" for scope '{_redact(scope)}'" if scope else ""
-    return f"Token broker request failed{scope_detail}: {redacted_detail}"
-
-
-def _parse_token_response(response, scope=None):
+def _parse_token_response(response):
     text = getattr(response, "text", "").strip()
     if not text:
         raise TokenBrokerError("Token broker response is empty")
 
     # AuthService returns JSON: {"access_token": ..., "expires_on": <epoch seconds>, ...}.
-    payload = _load_error_payload(text)
-    if payload is None:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
         raise TokenBrokerError(f"Token broker returned an unparseable response: {_redact(text)}")
 
     if not isinstance(payload, dict) or not payload.get("access_token"):
-        raise TokenBrokerError(_format_broker_failure(_error_detail(payload, text), scope=scope))
+        detail = text
+        if isinstance(payload, dict):
+            detail = payload.get("error_description") or payload.get("error") or text
+        raise TokenBrokerError(f"Token broker request failed: {_redact(detail)}")
 
     try:
         expires_on = int(payload["expires_on"])
@@ -159,13 +102,12 @@ class BrokerClient:
         try:
             response.raise_for_status()
         except Exception as error:
-            text = getattr(response, "text", "")
-            detail = _error_detail(_load_error_payload(text), text)
+            detail = _redact(getattr(response, "text", ""))
             if detail:
-                raise TokenBrokerError(_format_broker_failure(detail, scope=scope)) from error
+                raise TokenBrokerError(f"Token broker request failed: {detail}") from error
             raise TokenBrokerError(f"Token broker request failed: {error}") from error
 
-        token = _parse_token_response(response, scope=scope)
+        token = _parse_token_response(response)
         self._cached_tokens[scope] = token
         return token
 
@@ -215,26 +157,3 @@ def credential(scope):
 
 def async_credential(scope):
     return AsyncBrokerCredential(scope=scope)
-
-
-def preflight_scopes(scopes=None, client=None, output=None):
-    """Check broker access for scopes without printing token values."""
-    client = client or BrokerClient()
-    output = output or sys.stdout
-    ok = True
-    for scope in scopes or PREFLIGHT_SCOPES:
-        try:
-            token = client.get_token(scope)
-        except Exception as error:
-            print(f"FAILED scope={scope} error={error.__class__.__name__}", file=output)
-            ok = False
-        else:
-            print(f"OK scope={scope} expires_on={token.expires_on}", file=output)
-    return ok
-
-
-def preflight_main(argv=None):
-    parser = argparse.ArgumentParser(description="Preflight Zone AuthService token broker scopes without printing tokens.")
-    parser.add_argument("scopes", nargs="*", default=list(PREFLIGHT_SCOPES), help="Scopes to check.")
-    args = parser.parse_args(argv)
-    return 0 if preflight_scopes(args.scopes) else 1
