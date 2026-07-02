@@ -87,3 +87,19 @@ fallback link fully clickable.
 `zone-browser --selftest` (used by `tests/mid/test_zone_browser.py`) starts
 Chromium and the viewer, probes the viewer page and the `/open` navigation
 API, and shuts everything down.
+
+## Rebuilding the labextension
+
+`labextension/dist-labext/` is the prebuilt output that the Dockerfile
+installs (committed so the image build needs no node/webpack step). After
+changing `labextension/lib/index.js`, rebuild it in any environment with
+`jupyterlab` and node available:
+
+```bash
+cd images/mid/zone-browser/labextension
+jlpm install
+# builder CLI name differs across JupyterLab 4.x:
+CORE_PATH="$(python -c 'import jupyterlab, os; print(os.path.join(os.path.dirname(jupyterlab.__file__), "staging"))')"
+node_modules/.bin/build-labextension --core-path "$CORE_PATH" .   # or: jupyter-builder build --core-path ...
+# output lands in dist-labext/ (configured in package.json); commit it
+```

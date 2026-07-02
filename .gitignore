@@ -10,4 +10,5 @@ node_modules
 package-lock.json
 package.json
 # the zone-browser labextension is a real (tiny) node project
+!images/mid/zone-browser/labextension/**/package.json
 !images/mid/zone-browser/labextension/package.json

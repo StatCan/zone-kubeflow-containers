@@ -163,27 +163,16 @@ json.dump(cfg, open(path, 'w'), indent=2)" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /root/.cache /root/.npm
 
-# Build the zone-browser-autoopen labextension: when a sign-in starts
+# Install the zone-browser-autoopen labextension: when a sign-in starts
 # (az login -> zone-browser -> viewer /open), the viewer bridge broadcasts on
 # its /events websocket and this extension opens the Zone Browser tab in
 # JupyterLab automatically -- no printed links for users to click (a link
 # would open in their local browser, which is what this flow avoids).
-# The builder CLI name and calling convention changed across JupyterLab 4.x,
-# hence the two invocation forms.
-COPY zone-browser/labextension /tmp/zone-browser-labextension
-RUN cd /tmp/zone-browser-labextension \
-    && jlpm install \
-    && CORE_PATH="$(python -c 'import jupyterlab, os; print(os.path.join(os.path.dirname(jupyterlab.__file__), "staging"))')" \
-    && if [ -e node_modules/.bin/jupyter-builder ]; then \
-           node_modules/.bin/jupyter-builder build --core-path "$CORE_PATH" .; \
-       else \
-           node_modules/.bin/build-labextension --core-path "$CORE_PATH" .; \
-       fi \
-    && mkdir -p /opt/conda/share/jupyter/labextensions \
-    && cp -r dist-labext /opt/conda/share/jupyter/labextensions/zone-browser-autoopen \
-    && cd / \
-    && rm -rf /tmp/zone-browser-labextension /root/.yarn /root/.cache /root/.npm \
-    && fix-permissions /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
+# dist-labext is a prebuilt federated extension (~25 KB of static JS, built
+# from labextension/lib -- see zone-browser/README.md to rebuild); shipping
+# it prebuilt keeps jlpm/webpack and the npm registry out of the image build.
+COPY zone-browser/labextension/dist-labext /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
+RUN fix-permissions /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
 
 # Install DuckDB extensions for parquet visualizer (air-gapped support)
 COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
