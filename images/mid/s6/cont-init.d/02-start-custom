@@ -49,12 +49,14 @@ if [ -z "$R_VERSION" ] || [ -z "$UBUNTU_CODENAME" ]; then
     echo "WARNING: Failed to detect R version or Ubuntu codename. Skipping R repository configuration."
 else
     PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
+    CRAN_LOCAL_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/cran-local"
 
     cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
 
 local({
     r <- getOption("repos")
     r["ppm"] <- "$PPM_URL"
+    r["cran-local"] <- "$CRAN_LOCAL_URL"
     options(repos = r)
 })
 EOF
