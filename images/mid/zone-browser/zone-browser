@@ -1,0 +1,290 @@
+#!/bin/bash
+#
+# zone-browser -- drive the secure browser that runs INSIDE this notebook pod.
+#
+# A headless Chromium (the Playwright build bundled under /opt/ms-playwright)
+# runs inside the pod. Its screen appears as a tab INSIDE JupyterLab -- the
+# "Zone Browser" Launcher tile, backed by zone-browser-viewer.py over the
+# Chrome DevTools Protocol. There is no X server and no VNC. Interactive
+# Entra ID sign-in (`az login`, azure-identity, R AzureAuth, ...) happens
+# entirely in the pod's Chromium on the pod's network -- never in the user's
+# local browser.
+#
+# The image sets BROWSER=/usr/local/bin/zone-browser, so Python's webbrowser
+# module (used by az/MSAL/azure-identity) invokes this script automatically.
+#
+# Usage:
+#   zone-browser <url>        show <url> in the in-pod browser
+#   zone-browser              show https://microsoft.com/devicelogin
+#   zone-browser --status     report what is running
+#   zone-browser --stop       stop the in-pod browser
+#   zone-browser --ensure     start Chromium if needed (used by the viewer)
+#   zone-browser --serve <p>  run the viewer bridge in the foreground on port
+#                             <p>; jupyter-server-proxy entry point that backs
+#                             the "Zone Browser" JupyterLab tile
+#   zone-browser --selftest   start, probe and stop everything (CI)
+#
+# Tunables (set before first use):
+#   ZONE_BROWSER_CDP_PORT     Chromium DevTools port       (default 9222)
+#   ZONE_BROWSER_SIZE         browser window size          (default 1440,900)
+#   ZONE_BROWSER_TTL_MINUTES  idle minutes before shutdown (default 15)
+#   ZONE_BROWSER_CHROMIUM     path to a chromium binary    (default: bundled)
+#   ZONE_EXTERNAL_URL         https://<zone host>, used to print a clickable link
+
+set -u
+
+SELF="$(readlink -f "$0")"
+VIEWER="${ZONE_BROWSER_VIEWER:-/usr/local/bin/zone-browser-viewer.py}"
+CDP_PORT="${ZONE_BROWSER_CDP_PORT:-9222}"
+WINDOW_SIZE="${ZONE_BROWSER_SIZE:-1440,900}"
+TTL_MINUTES="${ZONE_BROWSER_TTL_MINUTES:-15}"
+RUN_DIR="/tmp/zone-browser-$(id -u)"
+export ZONE_BROWSER_RUN_DIR="$RUN_DIR"
+export ZONE_BROWSER_BIN="$SELF"
+export ZONE_BROWSER_CDP="http://127.0.0.1:${CDP_PORT}"
+
+mkdir -p "$RUN_DIR"
+chmod 700 "$RUN_DIR"
+
+usage() {
+    sed -n '2,37s/^# \{0,1\}//p' "$SELF"
+}
+
+find_chromium() {
+    if [ -n "${ZONE_BROWSER_CHROMIUM:-}" ]; then
+        echo "$ZONE_BROWSER_CHROMIUM"
+        return
+    fi
+    ls -1d /opt/ms-playwright/chromium-*/chrome-linux/chrome 2>/dev/null | sort -V | tail -1
+}
+
+pid_alive() { # pid_alive <name>
+    local pid_file="$RUN_DIR/$1.pid"
+    [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null
+}
+
+start_daemon() { # start_daemon <name> <cmd...>
+    local name="$1"
+    shift
+    setsid "$@" </dev/null >>"$RUN_DIR/$name.log" 2>&1 &
+    echo $! >"$RUN_DIR/$name.pid"
+}
+
+wait_for() { # wait_for <description> <probe command...>, ~15s budget
+    local what="$1"
+    shift
+    for _ in $(seq 1 75); do
+        "$@" 2>/dev/null && return 0
+        sleep 0.2
+    done
+    echo "zone-browser: timed out waiting for $what (see $RUN_DIR/*.log)" >&2
+    return 1
+}
+
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
+seed_nss_certs() {
+    # Chromium trusts ~/.pki/nssdb, not REQUESTS_CA_BUNDLE; import the same
+    # StatCan certificates the image adds for python so intercepted TLS works.
+    command -v certutil >/dev/null 2>&1 || return 0
+    local db="$HOME/.pki/nssdb" crt
+    mkdir -p "$db"
+    [ -f "$db/cert9.db" ] || certutil -d "sql:$db" -N --empty-password 2>/dev/null
+    for crt in /opt/conda/ssl/certs/*.crt; do
+        [ -e "$crt" ] || break
+        certutil -d "sql:$db" -A -t "C,," -n "zone-$(basename "$crt")" -i "$crt" 2>/dev/null
+    done
+    return 0
+}
+
+ensure_chromium() {
+    exec 9>"$RUN_DIR/lock"
+    flock 9
+    if ! pid_alive chromium; then
+        local chrome
+        chrome="$(find_chromium)"
+        if [ -z "$chrome" ] || [ ! -x "$chrome" ]; then
+            echo "zone-browser: bundled Chromium not found under /opt/ms-playwright" >&2
+            echo "zone-browser: set ZONE_BROWSER_CHROMIUM to a chromium binary" >&2
+            return 1
+        fi
+        start_daemon chromium "$chrome" \
+            --headless=new \
+            --remote-debugging-port="$CDP_PORT" \
+            --remote-allow-origins='*' \
+            --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --no-first-run --no-default-browser-check \
+            --password-store=basic \
+            --user-data-dir="$RUN_DIR/profile" \
+            --window-size="$WINDOW_SIZE" \
+            about:blank
+        wait_for "Chromium DevTools on port ${CDP_PORT}" port_open "$CDP_PORT" || return 1
+    fi
+    flock -u 9
+    return 0
+}
+
+start_watchdog() {
+    # Shut everything down once nothing has used the browser for TTL_MINUTES,
+    # so an idle Chromium does not hold memory until pod restart. The viewer
+    # refreshes last-used while a Zone Browser tab is actually being used.
+    pid_alive watchdog && return 0
+    start_daemon watchdog bash -c '
+        while true; do
+            sleep 60
+            last=$(stat -c %Y "'"$RUN_DIR"'/last-used" 2>/dev/null || echo 0)
+            if [ $(( $(date +%s) - last )) -ge '"$((TTL_MINUTES * 60))"' ]; then
+                exec "'"$SELF"'" --stop
+            fi
+        done'
+}
+
+do_stop() {
+    local name pid
+    for name in watchdog viewer chromium; do
+        if [ -f "$RUN_DIR/$name.pid" ]; then
+            pid="$(cat "$RUN_DIR/$name.pid")"
+            # the watchdog reaches here via `exec $SELF --stop`: never kill self.
+            # Daemons are setsid group leaders, so signal the whole group to
+            # take their children (e.g. the watchdog's sleep) down with them.
+            [ "$pid" != "$$" ] && { kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null; }
+            rm -f "$RUN_DIR/$name.pid"
+        fi
+    done
+    rm -f "$RUN_DIR/viewer.port"
+    echo "zone-browser: stopped."
+    return 0
+}
+
+link_path() {
+    local prefix="${NB_PREFIX:-}"
+    prefix="${prefix%/}"
+    echo "${prefix}/zone-browser/"
+}
+
+print_link() {
+    local page link
+    page="$(link_path)"
+    link="$page"
+    [ -n "${ZONE_EXTERNAL_URL:-}" ] && link="${ZONE_EXTERNAL_URL%/}${page}"
+    cat <<EOF
+
+============================================================================
+ The sign-in page is open in the Zone's secure browser -- a Chromium that
+ runs INSIDE this workspace, not on your device.
+
+ See it in JupyterLab: click the blue "+" (Launcher) and open the
+ "Zone Browser" tile. It opens as a tab beside your terminal; if that tab
+ is already open, the page is already showing there.
+
+ Direct link (same in-workspace browser):
+   ${link}
+
+ The browser shuts down by itself after ${TTL_MINUTES} idle minutes;
+ run 'zone-browser --stop' to close it sooner.
+============================================================================
+
+EOF
+}
+
+do_status() {
+    local name
+    for name in chromium viewer watchdog; do
+        if pid_alive "$name"; then
+            echo "$name: running (pid $(cat "$RUN_DIR/$name.pid"))"
+        else
+            echo "$name: not running"
+        fi
+    done
+    [ -f "$RUN_DIR/viewer.port" ] && echo "viewer port: $(cat "$RUN_DIR/viewer.port")"
+    pid_alive chromium && print_link
+    return 0
+}
+
+do_serve() {
+    # jupyter-server-proxy entry point: run the CDP viewer bridge in the
+    # FOREGROUND on the port jupyter-server-proxy assigned. This backs the
+    # "Zone Browser" Launcher tile that renders the in-pod Chromium as a tab
+    # inside JupyterLab.
+    local port="${1:-}"
+    case "$port" in
+    '' | *[!0-9]*)
+        echo "usage: zone-browser --serve <port>" >&2
+        return 2
+        ;;
+    esac
+    seed_nss_certs
+    ensure_chromium || return 1
+    touch "$RUN_DIR/last-used"
+    start_watchdog
+    echo $$ >"$RUN_DIR/viewer.pid"
+    echo "$port" >"$RUN_DIR/viewer.port"
+    exec python3 "$VIEWER" --serve "$port"
+}
+
+do_ensure() {
+    seed_nss_certs
+    ensure_chromium
+}
+
+do_selftest() {
+    local chrome test_port=6089
+    chrome="$(find_chromium)"
+    if [ -z "$chrome" ] || [ ! -x "$chrome" ]; then
+        echo "zone-browser selftest: FAIL (bundled Chromium not found)" >&2
+        return 1
+    fi
+    "$chrome" --version || return 1
+    do_ensure || return 1
+    setsid "$SELF" --serve "$test_port" </dev/null >>"$RUN_DIR/viewer.log" 2>&1 &
+    if ! wait_for "viewer on port ${test_port}" port_open "$test_port"; then
+        do_stop
+        return 1
+    fi
+    if ! curl -fsS "http://127.0.0.1:${test_port}/" | grep -q "Zone Browser"; then
+        echo "zone-browser selftest: FAIL (viewer page not served)" >&2
+        do_stop
+        return 1
+    fi
+    if ! curl -fsS -X POST --data-urlencode "url=about:blank" \
+        "http://127.0.0.1:${test_port}/open" >/dev/null; then
+        echo "zone-browser selftest: FAIL (viewer cannot drive Chromium)" >&2
+        do_stop
+        return 1
+    fi
+    do_stop
+    echo "zone-browser selftest: OK"
+    return 0
+}
+
+open_url() {
+    local url="$1" vport=""
+    seed_nss_certs
+    ensure_chromium || return 1
+    touch "$RUN_DIR/last-used"
+    # Prefer the viewer bridge (a Zone Browser tab may be attached and will
+    # show the navigation live); fall back to a one-shot DevTools call.
+    [ -f "$RUN_DIR/viewer.port" ] && vport="$(cat "$RUN_DIR/viewer.port")"
+    if [ -z "$vport" ] || ! curl -fsS -m 5 -X POST --data-urlencode "url=$url" \
+        "http://127.0.0.1:${vport}/open" >/dev/null 2>&1; then
+        python3 "$VIEWER" --navigate "$url" || return 1
+    fi
+    start_watchdog
+    print_link
+    return 0
+}
+
+case "${1:-}" in
+    --stop) do_stop ;;
+    --status) do_status ;;
+    --ensure) do_ensure ;;
+    --serve) do_serve "${2:-}" ;;
+    --selftest) do_selftest ;;
+    --help | -h) usage ;;
+    -*)
+        echo "zone-browser: unknown option: $1" >&2
+        usage >&2
+        exit 2
+        ;;
+    *) open_url "${1:-https://microsoft.com/devicelogin}" ;;
+esac

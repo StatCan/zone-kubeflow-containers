@@ -1,0 +1,15 @@
+{
+  "ServerProxy": {
+    "servers": {
+      "zone-browser": {
+        "command": ["/usr/local/bin/zone-browser", "--serve", "{port}"],
+        "timeout": 60,
+        "new_browser_tab": false,
+        "launcher_entry": {
+          "enabled": true,
+          "title": "Zone Browser"
+        }
+      }
+    }
+  }
+}
