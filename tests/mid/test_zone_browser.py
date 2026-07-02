@@ -73,6 +73,15 @@ def test_zone_browser_stack(container):
         f"zone-browser server-proxy config missing: {result.output}"
     )
 
+    # The auto-open labextension must be built and installed (opens the Zone
+    # Browser tab in JupyterLab when a sign-in starts)
+    result = container.container.exec_run(
+        ["ls", "/opt/conda/share/jupyter/labextensions/zone-browser-autoopen/static"]
+    )
+    assert result.exit_code == 0 and b"remoteEntry" in result.output, (
+        f"zone-browser-autoopen labextension not installed: {result.output}"
+    )
+
     # Starts headless Chromium + the CDP viewer, probes the viewer page and
     # the /open navigation API, then stops everything.
     result = container.container.exec_run(["zone-browser", "--selftest"])

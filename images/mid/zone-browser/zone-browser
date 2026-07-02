@@ -125,16 +125,21 @@ ensure_chromium() {
 }
 
 start_watchdog() {
-    # Shut everything down once nothing has used the browser for TTL_MINUTES,
-    # so an idle Chromium does not hold memory until pod restart. The viewer
+    # Stop Chromium once nothing has used it for TTL_MINUTES, so an idle
+    # browser does not hold memory until pod restart. The viewer bridge stays
+    # up (jupyter-server-proxy owns it, and Lab frontends hold its /events
+    # channel open) and restarts Chromium on the next use. The viewer
     # refreshes last-used while a Zone Browser tab is actually being used.
     pid_alive watchdog && return 0
     start_daemon watchdog bash -c '
         while true; do
             sleep 60
+            pid_file="'"$RUN_DIR"'/chromium.pid"
+            [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null || continue
             last=$(stat -c %Y "'"$RUN_DIR"'/last-used" 2>/dev/null || echo 0)
             if [ $(( $(date +%s) - last )) -ge '"$((TTL_MINUTES * 60))"' ]; then
-                exec "'"$SELF"'" --stop
+                kill -- "-$(cat "$pid_file")" 2>/dev/null || kill "$(cat "$pid_file")" 2>/dev/null
+                rm -f "$pid_file"
             fi
         done'
 }
@@ -162,23 +167,18 @@ link_path() {
     echo "${prefix}/zone-browser/"
 }
 
-print_link() {
-    local page link
-    page="$(link_path)"
-    link="$page"
-    [ -n "${ZONE_EXTERNAL_URL:-}" ] && link="${ZONE_EXTERNAL_URL%/}${page}"
+print_banner() {
+    # Deliberately contains no URL: a printed link would be opened by the
+    # user's local browser, which is exactly what this flow avoids.
     cat <<EOF
 
 ============================================================================
- The sign-in page is open in the Zone's secure browser -- a Chromium that
- runs INSIDE this workspace, not on your device.
+ The sign-in page is opening in the Zone's secure browser -- a Chromium
+ that runs INSIDE this workspace, not on your device.
 
- See it in JupyterLab: click the blue "+" (Launcher) and open the
- "Zone Browser" tile. It opens as a tab beside your terminal; if that tab
- is already open, the page is already showing there.
-
- Direct link (same in-workspace browser):
-   ${link}
+ In JupyterLab, a "Zone Browser" tab opens automatically next to this one.
+ If it does not appear, click the blue "+" (Launcher) and open the
+ "Zone Browser" tile.
 
  The browser shuts down by itself after ${TTL_MINUTES} idle minutes;
  run 'zone-browser --stop' to close it sooner.
@@ -188,7 +188,7 @@ EOF
 }
 
 do_status() {
-    local name
+    local name page
     for name in chromium viewer watchdog; do
         if pid_alive "$name"; then
             echo "$name: running (pid $(cat "$RUN_DIR/$name.pid"))"
@@ -197,7 +197,9 @@ do_status() {
         fi
     done
     [ -f "$RUN_DIR/viewer.port" ] && echo "viewer port: $(cat "$RUN_DIR/viewer.port")"
-    pid_alive chromium && print_link
+    page="$(link_path)"
+    [ -n "${ZONE_EXTERNAL_URL:-}" ] && page="${ZONE_EXTERNAL_URL%/}${page}"
+    echo "viewer path: ${page}"
     return 0
 }
 
@@ -213,10 +215,9 @@ do_serve() {
         return 2
         ;;
     esac
-    seed_nss_certs
-    ensure_chromium || return 1
-    touch "$RUN_DIR/last-used"
-    start_watchdog
+    # Chromium is NOT started here: Lab frontends hold the bridge's /events
+    # channel open all session, so the bridge must stay cheap. The viewer
+    # starts Chromium on demand (zone-browser --ensure).
     echo $$ >"$RUN_DIR/viewer.pid"
     echo "$port" >"$RUN_DIR/viewer.port"
     exec python3 "$VIEWER" --serve "$port"
@@ -224,7 +225,10 @@ do_serve() {
 
 do_ensure() {
     seed_nss_certs
-    ensure_chromium
+    ensure_chromium || return 1
+    touch "$RUN_DIR/last-used"
+    start_watchdog
+    return 0
 }
 
 do_selftest() {
@@ -259,18 +263,16 @@ do_selftest() {
 
 open_url() {
     local url="$1" vport=""
-    seed_nss_certs
-    ensure_chromium || return 1
-    touch "$RUN_DIR/last-used"
-    # Prefer the viewer bridge (a Zone Browser tab may be attached and will
-    # show the navigation live); fall back to a one-shot DevTools call.
+    do_ensure || return 1
+    # Prefer the viewer bridge: it tells every JupyterLab frontend to open
+    # the Zone Browser tab (/events) and navigates the shared Chromium so an
+    # attached tab updates live. Fall back to a one-shot DevTools call.
     [ -f "$RUN_DIR/viewer.port" ] && vport="$(cat "$RUN_DIR/viewer.port")"
     if [ -z "$vport" ] || ! curl -fsS -m 5 -X POST --data-urlencode "url=$url" \
         "http://127.0.0.1:${vport}/open" >/dev/null 2>&1; then
         python3 "$VIEWER" --navigate "$url" || return 1
     fi
-    start_watchdog
-    print_link
+    print_banner
     return 0
 }
 

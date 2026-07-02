@@ -15,10 +15,9 @@ browser on your device.
    az login
    ```
 
-2. Click the blue **+** (Launcher) and open the **Zone Browser** tile — it
-   opens as a tab beside your terminal, already showing the Microsoft
-   sign-in page. (If you already have a Zone Browser tab open, the page is
-   already there.)
+2. A **Zone Browser** tab opens automatically beside your terminal, showing
+   the Microsoft sign-in page. (If it does not appear, click the blue **+**
+   (Launcher) and open the **Zone Browser** tile.)
 
 3. Sign in (including MFA) in that tab. Your terminal finishes logging in on
    its own.

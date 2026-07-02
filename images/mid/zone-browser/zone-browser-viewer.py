@@ -152,6 +152,38 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         UPSTREAM.clients.discard(self)
 
 
+EVENT_CLIENTS = set()
+
+
+def broadcast_open():
+    """Tell every JupyterLab frontend to open (or focus) the Zone Browser tab."""
+    for client in list(EVENT_CLIENTS):
+        try:
+            client.write_message('{"type": "open"}')
+        except tornado.websocket.WebSocketClosedError:
+            EVENT_CLIENTS.discard(client)
+
+
+class EventsHandler(tornado.websocket.WebSocketHandler):
+    """Held open by the zone-browser-autoopen labextension in each Lab tab.
+
+    Deliberately does NOT touch the Chromium upstream: Lab frontends connect
+    at startup, and the browser must only start when something needs it.
+    """
+
+    def check_origin(self, origin):
+        return True
+
+    def open(self):
+        EVENT_CLIENTS.add(self)
+
+    def on_message(self, message):
+        pass
+
+    def on_close(self):
+        EVENT_CLIENTS.discard(self)
+
+
 class OpenHandler(tornado.web.RequestHandler):
     """POST /open (url=...) -- used by the zone-browser CLI, e.g. az login."""
 
@@ -160,6 +192,7 @@ class OpenHandler(tornado.web.RequestHandler):
         if not url:
             raise tornado.web.HTTPError(400, "missing url")
         touch_last_used()
+        broadcast_open()
         await UPSTREAM.command("Page.navigate", {"url": url})
         self.write("ok")
 
@@ -264,12 +297,19 @@ VIEWER_HTML = r"""<!doctype html>
     lock.innerHTML = /^https:/.test(u) ? "&#128274;" : "&#9888;&#65039;";
   }
 
-  ws.onopen = function () {
-    send("Page.enable");
+  function refreshUrl() {
     send("Page.getNavigationHistory", {}, function (res) {
       if (res && res.entries && res.entries[res.currentIndex])
         setUrl(res.entries[res.currentIndex].url);
     });
+  }
+
+  ws.onopen = function () {
+    send("Page.enable");
+    refreshUrl();
+    // the CLI may have navigated just before this viewer attached
+    setTimeout(refreshUrl, 1500);
+    setTimeout(refreshUrl, 4000);
     fit();
     view.focus();
   };
@@ -289,6 +329,9 @@ VIEWER_HTML = r"""<!doctype html>
       send("Page.screencastFrameAck", { sessionId: m.params.sessionId });
     } else if (m.method === "Page.frameNavigated") {
       if (!m.params.frame.parentId) setUrl(m.params.frame.url);
+    } else if (m.method === "Page.loadEventFired" ||
+               m.method === "Page.navigatedWithinDocument") {
+      refreshUrl();
     } else if (m.method === "Page.javascriptDialogOpening") {
       send("Page.handleJavaScriptDialog", { accept: true });
     } else if (m.method === "ZoneBrowser.browserGone") {
@@ -419,6 +462,7 @@ def serve(port):
             (r"/", RootHandler),
             (r"/index\.html", RootHandler),
             (r"/ws", WSHandler),
+            (r"/events", EventsHandler),
             (r"/open", OpenHandler),
             (r"/healthz", HealthHandler),
         ],

@@ -34,6 +34,15 @@ az login (MSAL) ── http://localhost:<random> redirect, same pod netns
 2. `zone-browser <url>` starts the headless Chromium if needed and points it
    at the URL — via the running viewer bridge (`POST /open`) so an open Zone
    Browser tab updates live, else via a one-shot DevTools call.
+2b. The `zone-browser-autoopen` labextension (built from `labextension/` at
+   image build) holds the bridge's `/events` websocket from every JupyterLab
+   frontend; on the bridge's `{"type": "open"}` broadcast it opens/focuses
+   the Zone Browser tab in the main area automatically. The printed banner
+   therefore contains **no URL** — a clickable link would open in the user's
+   local browser, which is exactly what this flow avoids. Because frontends
+   hold `/events` open all session, `--serve` must stay cheap: Chromium is
+   only started on demand (`zone-browser --ensure`), and the idle watchdog
+   stops Chromium but leaves the bridge running.
 3. The "Zone Browser" Launcher tile is a jupyter-server-proxy named server
    (`zone-browser --serve {port}`, registered in
    `/opt/conda/etc/jupyter/jupyter_server_config.json` — the traitlets must
