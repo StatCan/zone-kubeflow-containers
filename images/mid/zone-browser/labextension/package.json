@@ -1,0 +1,22 @@
+{
+  "name": "zone-browser-autoopen",
+  "version": "0.1.0",
+  "description": "Auto-opens the Zone Browser tab in JupyterLab when an in-pod sign-in starts (az login etc.)",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.js"
+  ],
+  "dependencies": {
+    "@jupyterlab/application": "^4.0.0",
+    "@jupyterlab/apputils": "^4.0.0",
+    "@jupyterlab/coreutils": "^6.0.0"
+  },
+  "devDependencies": {
+    "@jupyterlab/builder": "^4.0.0"
+  },
+  "jupyterlab": {
+    "extension": true,
+    "outputDir": "dist-labext"
+  }
+}
