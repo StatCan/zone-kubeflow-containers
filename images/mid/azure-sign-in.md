@@ -67,6 +67,12 @@ next time it is needed.
 
 ## Troubleshooting
 
+- **You signed in but ended on a blank `localhost:<port>` "can't reach this
+  page" error** — you opened the `login.microsoftonline.com` link printed by
+  the Azure CLI in your **own** browser. That link only works inside the
+  workspace: after sign-in it redirects to a port that exists only in your
+  notebook. Go back to JupyterLab, open the **Zone Browser** tab, and sign
+  in there instead.
 - **`az login` says it cannot launch a browser** — run it from a terminal
   (JupyterLab or VS Code). From a notebook cell, use `!bash -ic "az login"`.
 - **The Zone Browser tab shows "Disconnected"** — reload the tab.

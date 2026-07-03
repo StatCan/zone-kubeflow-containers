@@ -169,16 +169,27 @@ link_path() {
 
 print_banner() {
     # Deliberately contains no URL: a printed link would be opened by the
-    # user's local browser, which is exactly what this flow avoids.
+    # user's local browser, which is exactly what this flow avoids. The
+    # Azure CLI prints its own login.microsoftonline.com URL above this
+    # banner and we cannot suppress it, so warn against it explicitly:
+    # opened on the user's device, sign-in ends at the CLI's localhost
+    # redirect port, which only exists inside this workspace.
     cat <<EOF
 
 ============================================================================
- The sign-in page is opening in the Zone's secure browser -- a Chromium
+ The sign-in page is opening in the Zone's SECURE BROWSER -- a browser
  that runs INSIDE this workspace, not on your device.
 
- In JupyterLab, a "Zone Browser" tab opens automatically next to this one.
- If it does not appear, click the blue "+" (Launcher) and open the
- "Zone Browser" tile.
+     +--------------------------------------------------------------+
+     |  Do NOT open any login.microsoftonline.com link printed      |
+     |  above in your own browser. It will fail with a blank        |
+     |  "localhost refused to connect" page after you sign in.      |
+     +--------------------------------------------------------------+
+
+ In JupyterLab, a "Zone Browser" tab opens automatically next to this
+ one -- sign in THERE (MFA included) and this command will finish on
+ its own. If the tab does not appear, click the blue "+" (Launcher)
+ and open the "Zone Browser" tile.
 
  The browser shuts down by itself after ${TTL_MINUTES} idle minutes;
  run 'zone-browser --stop' to close it sooner.
