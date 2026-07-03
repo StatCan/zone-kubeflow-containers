@@ -117,63 +117,6 @@ RUN set -eux; \
     rm -rf /tmp/zone-token-broker; \
     fix-permissions "${CONDA_DIR}"
 
-# In-pod sign-in browser: interactive Entra ID auth without the device-code
-# grant that Cybersecurity is retiring. A headless Chromium runs inside the
-# pod, so `az login`, azure-identity and R AzureAuth use their default
-# interactive (authorization-code) flow -- MSAL's localhost redirect server
-# and the browser share the pod's network namespace -- and sign-in traffic
-# originates from the pod's StatCan-network egress, never the user's device.
-# The browser appears as a tab INSIDE JupyterLab (the "Zone Browser"
-# Launcher tile): zone-browser-viewer.py streams Chromium's screen over the
-# Chrome DevTools Protocol through jupyter-server-proxy -- no X server, no
-# VNC (see zone-browser/README.md).
-# Ubuntu's chromium package is a snap stub (unusable in containers), so the
-# Playwright Chromium build is installed under /opt/ms-playwright; the
-# playwright pip package is only a downloader here and is removed afterwards
-# to keep the conda env clean. BROWSER/R_BROWSER route Python's webbrowser
-# module and R's browseURL() to the in-pod browser automatically.
-COPY --chmod=755 zone-browser/zone-browser /usr/local/bin/zone-browser
-COPY --chmod=755 zone-browser/zone-browser-viewer.py /usr/local/bin/zone-browser-viewer.py
-COPY zone-browser/zone-browser-serverproxy.json /tmp/zone-browser-serverproxy.json
-ENV BROWSER=/usr/local/bin/zone-browser \
-    R_BROWSER=/usr/local/bin/zone-browser
-# The ServerProxy traitlets must live in jupyter_server_config.json (the
-# jupyter_server_config.d/ directory only handles extension enablement).
-# Merge rather than overwrite in case the base image ships its own config.
-RUN python -c "\
-import json, os; \
-path = '/opt/conda/etc/jupyter/jupyter_server_config.json'; \
-os.makedirs(os.path.dirname(path), exist_ok=True); \
-cfg = json.load(open(path)) if os.path.exists(path) else {}; \
-add = json.load(open('/tmp/zone-browser-serverproxy.json')); \
-cfg.setdefault('ServerProxy', {}).setdefault('servers', {}).update(add['ServerProxy']['servers']); \
-json.dump(cfg, open(path, 'w'), indent=2)" \
-    && rm /tmp/zone-browser-serverproxy.json \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends libnss3-tools \
-    && pip install --no-cache-dir 'playwright==1.61.0' \
-    && PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright playwright install --with-deps chromium \
-    && pip uninstall --yes playwright \
-    && chmod -R a+rX /opt/ms-playwright \
-    # `az login` refuses interactive auth on Linux unless a GUI env var is
-    # set; no X server exists -- the value only satisfies that check, the
-    # browser itself is headless and driven over the DevTools Protocol.
-    && echo 'export DISPLAY="${DISPLAY:-:20}"' >> /etc/bash.bashrc \
-    && echo 'export DISPLAY="${DISPLAY:-:20}"' >> /etc/zsh/zshrc \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /root/.cache /root/.npm
-
-# Install the zone-browser-autoopen labextension: when a sign-in starts
-# (az login -> zone-browser -> viewer /open), the viewer bridge broadcasts on
-# its /events websocket and this extension opens the Zone Browser tab in
-# JupyterLab automatically -- no printed links for users to click (a link
-# would open in their local browser, which is what this flow avoids).
-# dist-labext is a prebuilt federated extension (~25 KB of static JS, built
-# from labextension/lib -- see zone-browser/README.md to rebuild); shipping
-# it prebuilt keeps jlpm/webpack and the npm registry out of the image build.
-COPY zone-browser/labextension/dist-labext /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
-RUN fix-permissions /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
-
 # Install DuckDB extensions for parquet visualizer (air-gapped support)
 COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 
@@ -260,7 +203,7 @@ RUN set -eu \
     } >> "${HOME_TMP}/.bashrc"
 
 # Copy over various files that should be restored into HOME on first boot.
-COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md azure-sign-in.md ${HOME_TMP}/
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME_TMP}/
 COPY --chown=${NB_USER}:${NB_GID} gpg-agent.conf ${HOME_TMP}/.gnupg/gpg-agent.conf
 
 # Set Python interpreter path for VSCode
@@ -277,5 +220,64 @@ RUN install -d -m 2775 "${HOME_TMP}/.cache" \
     && chmod -R g=u "${HOME_TMP}" \
     && chmod 700 "${HOME_TMP}/.gnupg" \
     && chmod 2775 "${HOME_TMP}/.cache"
+
+# ---- Zone Browser: in-pod sign-in without the device-code grant -----------
+# Kept as the LAST layers on purpose: everything above cache-hits from the
+# registry, so builds only create and export these layers. When this block
+# sat mid-file it invalidated every layer below it and the resulting
+# full-image export exhausted the CI runner's disk (runner shutdown during
+# "exporting layers").
+#
+# A headless Chromium runs inside the pod, so `az login`, azure-identity and
+# R AzureAuth use their default interactive (authorization-code) flow --
+# MSAL's localhost redirect server and the browser share the pod's network
+# namespace, and sign-in traffic egresses from the StatCan network, never
+# the user's device. The browser appears as a tab INSIDE JupyterLab:
+# zone-browser-viewer.py streams Chromium's screen over the Chrome DevTools
+# Protocol through jupyter-server-proxy (no X server, no VNC), and the
+# prebuilt zone-browser-autoopen labextension (~25 KB static JS, see
+# zone-browser/README.md to rebuild) opens the tab automatically when a
+# sign-in starts. Ubuntu's chromium package is a snap stub, so the
+# Playwright Chromium build is installed under /opt/ms-playwright; the
+# playwright pip package is only a downloader and is removed afterwards.
+# BROWSER/R_BROWSER route Python's webbrowser module and R's browseURL()
+# to the in-pod browser automatically.
+USER root
+
+COPY --chmod=755 zone-browser/zone-browser /usr/local/bin/zone-browser
+COPY --chmod=755 zone-browser/zone-browser-viewer.py /usr/local/bin/zone-browser-viewer.py
+COPY zone-browser/labextension/dist-labext /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
+COPY zone-browser/zone-browser-serverproxy.json /tmp/zone-browser-serverproxy.json
+COPY --chown=${NB_USER}:${NB_GID} --chmod=664 azure-sign-in.md ${HOME_TMP}/azure-sign-in.md
+ENV BROWSER=/usr/local/bin/zone-browser \
+    R_BROWSER=/usr/local/bin/zone-browser
+# The ServerProxy traitlets must live in jupyter_server_config.json (the
+# jupyter_server_config.d/ directory only handles extension enablement).
+# Merge rather than overwrite in case the base image ships its own config.
+RUN python -c "\
+import json, os; \
+path = '/opt/conda/etc/jupyter/jupyter_server_config.json'; \
+os.makedirs(os.path.dirname(path), exist_ok=True); \
+cfg = json.load(open(path)) if os.path.exists(path) else {}; \
+add = json.load(open('/tmp/zone-browser-serverproxy.json')); \
+cfg.setdefault('ServerProxy', {}).setdefault('servers', {}).update(add['ServerProxy']['servers']); \
+json.dump(cfg, open(path, 'w'), indent=2)" \
+    && rm /tmp/zone-browser-serverproxy.json \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends libnss3-tools \
+    && pip install --no-cache-dir 'playwright==1.61.0' \
+    && PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright playwright install --with-deps chromium \
+    && pip uninstall --yes playwright \
+    && chmod -R a+rX /opt/ms-playwright \
+    && fix-permissions /opt/conda/share/jupyter/labextensions/zone-browser-autoopen \
+    # `az login` refuses interactive auth on Linux unless a GUI env var is
+    # set; no X server exists -- the value only satisfies that check, the
+    # browser itself is headless and driven over the DevTools Protocol.
+    && echo 'export DISPLAY="${DISPLAY:-:20}"' >> /etc/bash.bashrc \
+    && echo 'export DISPLAY="${DISPLAY:-:20}"' >> /etc/zsh/zshrc \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /root/.cache /root/.npm
+
+USER $NB_USER
 
 EXPOSE 8888
