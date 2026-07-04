@@ -80,6 +80,17 @@ jobs:
           echo "COMMIT_SHORT_SHA=$shortSha"
           echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
 
+      # Build inside an isolated BuildKit builder and push straight from it.
+      # The default docker driver first exports the built image into the
+      # Docker daemon ("exporting to image" / "exporting layers"), a phase
+      # that has repeatedly hung on large from-scratch builds and taken the
+      # whole runner down with it (shutdown signal, exit 143). The
+      # docker-container driver skips that phase entirely: --push streams
+      # layers directly to the registry. Nothing later in this job needs the
+      # image in the local daemon (scans run in the pull-test workflow).
+      - name: Set up isolated BuildKit builder
+        run: docker buildx create --use --name ci-builder --driver docker-container --driver-opt network=host
+
       - name: Build image
         id: build-image
         run: |
