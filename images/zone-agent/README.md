@@ -29,6 +29,23 @@ Calls to Azure OpenAI are made as the user, in the Zone tenant, subject to
 the user's own RBAC. Outside the cluster it falls back to `az login`
 credentials, so the CLI also works on a laptop for development.
 
+## Connecting a model
+
+The agent needs an Azure OpenAI / AI Foundry **endpoint** and a **deployment**.
+On the platform both are set by Zone admins. To point it at a resource yourself
+(or on a laptop), copy the values from the resource's *Keys and Endpoint* page
+(Azure portal or AI Foundry) and set:
+
+```bash
+export AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com/"
+export ZONE_AGENT_DEPLOYMENT="gpt-5-mini"     # your deployment name
+# Entra ID (recommended): nothing else to set — broker on Zone, az login locally.
+# Key-based:              export AZURE_OPENAI_API_KEY="<key from the same page>"
+```
+
+When `AZURE_OPENAI_API_KEY` is set it takes precedence; otherwise the agent
+uses Entra ID tokens. Missing configuration fails fast with instructions.
+
 ## Usage
 
 | Command | Effect |
@@ -46,6 +63,7 @@ Configuration (environment variables):
 | --- | --- |
 | `AZURE_OPENAI_ENDPOINT` | the Azure OpenAI resource endpoint (required) |
 | `ZONE_AGENT_DEPLOYMENT` | deployment (model) name, e.g. `gpt-5-mini` (required, or `--deployment`) |
+| `AZURE_OPENAI_API_KEY` | optional API key; overrides Entra ID auth when set |
 | `AZURE_OPENAI_API_VERSION` | API version override (defaults to `zone_openai`'s) |
 | `ZONE_AGENT_REASONING` | reasoning effort: `minimal`/`low`/`medium`/`high`, `none` omits (default `low`) |
 | `ZONE_AGENT_CONTEXT_BUDGET` | prompt tokens before auto-compaction (default 120000) |
