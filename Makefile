@@ -40,7 +40,7 @@ DEFAULT_NB_PREFIX := /notebook/username/notebookname
 
 # Available images to test
 AVAILABLE_IMAGES := $(notdir $(wildcard images/*/))
-FINAL_IMAGES := base mid sas-kernel jupyterlab-cpu sas
+FINAL_IMAGES := base mid sas-kernel jupyterlab-cpu sas zone-agent
 
 # Autocomplete support
 .PHONY: help _list-images bake test test-smoke test-fast test-coverage dev push post-build

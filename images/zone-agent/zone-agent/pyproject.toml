@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zone-agent"
+version = "0.1.0"
+description = "Broker-authenticated coding agent CLI for Zone notebooks."
+requires-python = ">=3.9"
+dependencies = ["openai"]
+
+[project.scripts]
+zone-agent = "zone_agent.cli:main"
+
+[tool.setuptools]
+packages = ["zone_agent"]

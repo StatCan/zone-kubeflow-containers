@@ -14,6 +14,14 @@ target "mid" {
     tags = ["mid"]
 }
 
+target "zone-agent" {
+    args = {
+        BASE_IMAGE="mid"
+    }
+    context = "./images/zone-agent"
+    tags = ["zone-agent"]
+}
+
 target "rstudio" {
     args = {
         BASE_IMAGE="mid"
