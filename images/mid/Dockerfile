@@ -264,9 +264,20 @@ cfg.setdefault('ServerProxy', {}).setdefault('servers', {}).update(add['ServerPr
 json.dump(cfg, open(path, 'w'), indent=2)" \
     && rm /tmp/zone-browser-serverproxy.json \
     && apt-get update \
-    && apt-get install -y --no-install-recommends libnss3-tools \
+    # Explicit headless-Chromium runtime deps instead of `playwright install
+    # --with-deps`, which drags in ~800 MB (a mesa/LLVM upgrade, xvfb, CJK
+    # font packs) that headless rendering never uses -- the resulting layer
+    # starved CI runners of memory during image export. Most of these are
+    # already in the image; listing them keeps the set explicit and cheap.
+    && apt-get install -y --no-install-recommends \
+        libnss3-tools \
+        at-spi2-common libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 \
+        libasound2t64 libcairo2 libcups2t64 libdbus-1-3 libdrm2 libgbm1 \
+        libglib2.0-0t64 libnspr4 libnss3 libpango-1.0-0 libx11-6 libxcb1 \
+        libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 \
+        libxrandr2 fonts-liberation fonts-noto-color-emoji \
     && pip install --no-cache-dir 'playwright==1.61.0' \
-    && PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright playwright install --with-deps chromium \
+    && PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright playwright install chromium \
     && pip uninstall --yes playwright \
     && chmod -R a+rX /opt/ms-playwright \
     && fix-permissions /opt/conda/share/jupyter/labextensions/zone-browser-autoopen \
