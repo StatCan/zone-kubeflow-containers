@@ -1,0 +1,31 @@
+# Opt-in injection of the zone-agent model catalogue (and, optionally, an
+# API key) into notebook pods — the same PodDefault mechanism the Zone uses
+# for filers. Users tick "zone-agent models" when creating a notebook (or
+# the label is applied by default platform-side).
+#
+# ASSUMPTION (flagged for the platform team): notebook namespaces admit
+# kubeflow.org/v1alpha1 PodDefaults and the notebook controller honours
+# them, as with existing filer/minio injection. Adjust to the real
+# distribution mechanism if it differs.
+apiVersion: kubeflow.org/v1alpha1
+kind: PodDefault
+metadata:
+  name: zone-agent-models
+  namespace: CHANGE-ME-user-namespace
+spec:
+  desc: "zone-agent model catalogue"
+  selector:
+    matchLabels:
+      zone-agent-models: "true"
+  volumes:
+    - name: zone-agent-models
+      configMap:
+        name: zone-agent-models
+  volumeMounts:
+    - name: zone-agent-models
+      mountPath: /etc/zone-agent
+      readOnly: true
+  # Uncomment for key-based teams (see secret-api-key.yaml.example).
+  # envFrom:
+  #   - secretRef:
+  #       name: zone-agent-api-key

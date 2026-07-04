@@ -1,0 +1,50 @@
+# Platform model catalogue for zone-agent, mounted at
+# /etc/zone-agent/config.toml (see configmap-zone-agent.yaml.example).
+# Users pick a profile with `zone-agent --model <name>`; `default_model`
+# is what plain `zone-agent` uses. No secrets belong in this file — keys,
+# when used at all, arrive through a Kubernetes Secret as an env var.
+
+default_model = "gpt-5-mini"
+
+# A classic Azure OpenAI resource, delegated per-user Entra tokens via the
+# Zone AuthService (no keys). Users need the "Cognitive Services OpenAI
+# User" role on the resource (assign to a group, not individuals).
+[models.gpt-5-mini]
+provider = "azure-openai"
+endpoint = "https://CHANGE-ME.openai.azure.com"
+deployment = "gpt-5-mini"
+auth = "broker"
+reasoning = "low"
+
+# The same resource exposing a bigger deployment for heavier work.
+[models.gpt-5]
+provider = "azure-openai"
+endpoint = "https://CHANGE-ME.openai.azure.com"
+deployment = "gpt-5"
+auth = "broker"
+reasoning = "medium"
+
+# An Azure AI Foundry (AI Services) resource serving OpenAI-family models —
+# same wire API, different endpoint domain.
+[models.foundry-gpt]
+provider = "foundry"
+endpoint = "https://CHANGE-ME.services.ai.azure.com"
+deployment = "gpt-5-mini"
+auth = "broker"
+
+# A non-OpenAI model from the Foundry catalogue via the model-inference API.
+# The deployment must support tool calling for zone-agent to work well.
+[models.foundry-catalog]
+provider = "foundry-models"
+endpoint = "https://CHANGE-ME.services.ai.azure.com"
+deployment = "CHANGE-ME-deployment-name"
+auth = "broker"
+
+# Key-based access for a team without per-user RBAC. The key itself comes
+# from the environment (secret-api-key.yaml.example), never from this file.
+[models.keyed]
+provider = "azure-openai"
+endpoint = "https://CHANGE-ME.openai.azure.com"
+deployment = "gpt-5-mini"
+auth = "api-key"
+api_key_env = "AZURE_OPENAI_API_KEY"

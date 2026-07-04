@@ -130,3 +130,34 @@ assert _make_approver(False)("bash", {"command": "true"}) is False
 assert _make_approver(True)("bash", {"command": "true"}) is True
 """,
     )
+
+    # Prod configuration layer: profiles resolve with layered precedence,
+    # env fallback still works, and the shipped example config parses
+    _run_python(
+        container,
+        """
+import os, tomllib
+import zone_agent.config as c
+
+with open("/etc/zone-agent/config.toml.example", "rb") as fh:
+    example = tomllib.load(fh)
+assert example["default_model"] in example["models"]
+
+os.environ["HOME"] = "/tmp/cfg-test"
+os.makedirs("/tmp/cfg-test/.zone-agent", exist_ok=True)
+with open("/tmp/cfg-test/.zone-agent/config.toml", "w") as fh:
+    fh.write(chr(10).join([
+        'default_model = "t"',
+        "[models.t]",
+        'endpoint = "https://x.openai.azure.com"',
+        'deployment = "d"',
+    ]))
+m = c.resolve()
+assert m.name == "t" and m.auth == "broker" and m.provider == "azure-openai"
+assert c.resolve(deployment="other").deployment == "other"
+os.environ["AZURE_OPENAI_ENDPOINT"] = "https://env.openai.azure.com"
+os.environ["ZONE_AGENT_DEPLOYMENT"] = "envdep"
+os.environ["AZURE_OPENAI_API_KEY"] = "k"
+assert c.resolve("not-configured").auth == "api-key"
+""",
+    )

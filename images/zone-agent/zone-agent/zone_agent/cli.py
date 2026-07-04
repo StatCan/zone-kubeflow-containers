@@ -4,9 +4,7 @@ import argparse
 import os
 import sys
 
-from zone_agent import __version__, agent, session
-
-DEPLOYMENT_ENV = "ZONE_AGENT_DEPLOYMENT"
+from zone_agent import __version__, agent, config, session
 
 
 def _color(code, text):
@@ -73,7 +71,10 @@ def _make_approver(auto_yes):
 def _repl(bot):
     print(
         _bold("zone-agent %s" % __version__)
-        + _dim("  session %s · deployment %s" % (bot.session_id, bot.deployment))
+        + _dim(
+            "  session %s · %s · %s"
+            % (bot.session_id, bot.model_config.name, bot.deployment)
+        )
     )
     print(_dim("Working in %s. Type a request, or 'exit' to quit." % os.getcwd()))
     while True:
@@ -118,8 +119,21 @@ def main(argv=None):
         help="run write/edit/bash tools without asking (required for piped use)",
     )
     parser.add_argument(
+        "-m", "--model",
+        help="configured model profile (see --list-models; default: platform default)",
+    )
+    parser.add_argument(
         "--deployment",
-        help="Azure OpenAI deployment name (default: $%s)" % DEPLOYMENT_ENV,
+        help="override the deployment name (default: the model profile's, or $%s)"
+        % config.DEPLOYMENT_ENV,
+    )
+    parser.add_argument(
+        "--list-models", action="store_true",
+        help="list model profiles from the platform and user config and exit",
+    )
+    parser.add_argument(
+        "--doctor", action="store_true",
+        help="check config, auth, and connectivity for the selected model and exit",
     )
     parser.add_argument("--sessions", action="store_true", help="list saved sessions and exit")
     parser.add_argument("--version", action="version", version="zone-agent " + __version__)
@@ -133,13 +147,28 @@ def main(argv=None):
             print("%s  %3d messages  %s" % (session_id, count, first))
         return 0
 
-    deployment = args.deployment or os.environ.get(DEPLOYMENT_ENV)
-    if not deployment:
-        print(
-            "Set %s or pass --deployment (the Azure OpenAI deployment name)." % DEPLOYMENT_ENV,
-            file=sys.stderr,
-        )
+    if args.list_models:
+        rows = config.listing()
+        if not rows:
+            print(
+                "No model profiles configured (%s, %s); the environment "
+                "fallback ($%s + $%s) applies."
+                % (config.PLATFORM_CONFIG, config.USER_CONFIG,
+                   config.ENDPOINT_ENV, config.DEPLOYMENT_ENV)
+            )
+        for name, provider, deployment_name, is_default in rows:
+            marker = "*" if is_default else " "
+            print("%s %-24s %-14s %s" % (marker, name, provider, deployment_name))
+        return 0
+
+    try:
+        model_config = config.resolve(model=args.model, deployment=args.deployment)
+    except config.ConfigError as error:
+        print("zone-agent: %s" % error, file=sys.stderr)
         return 2
+
+    if args.doctor:
+        return config.doctor(model_config, sys.stdout)
 
     if args.resume:
         session_id = session.latest() if args.resume == "latest" else args.resume
@@ -155,7 +184,7 @@ def main(argv=None):
         session_id, messages = session.new_id(), []
 
     bot = agent.Agent(
-        deployment=deployment,
+        model_config=model_config,
         session_id=session_id,
         messages=messages,
         approve=_make_approver(args.yes),

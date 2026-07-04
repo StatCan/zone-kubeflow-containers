@@ -31,10 +31,25 @@ credentials, so the CLI also works on a laptop for development.
 
 ## Connecting a model
 
-The agent needs an Azure OpenAI / AI Foundry **endpoint** and a **deployment**.
-On the platform both are set by Zone admins. To point it at a resource yourself
-(or on a laptop), copy the values from the resource's *Keys and Endpoint* page
-(Azure portal or AI Foundry) and set:
+Model access is configured through **profiles** — named entries describing a
+provider (`azure-openai`, `foundry`, or `foundry-models` for non-OpenAI
+catalogue models), an endpoint, a deployment, and an auth mode (`broker` for
+delegated per-user Entra tokens — the default, no secrets — or `api-key`
+from an environment variable). Profiles merge from three layers, later wins:
+
+1. `/etc/zone-agent/config.toml` — the platform catalogue (in prod, a
+   ConfigMap injected by a PodDefault; stubs in [`deploy/`](deploy/))
+2. `~/.zone-agent/config.toml` — your own profiles and default
+3. environment variables — the zero-config path below still works as-is
+
+```bash
+zone-agent --list-models        # what is configured, * marks the default
+zone-agent --model gpt-5        # pick a profile for this run
+zone-agent --doctor             # config → auth → one real model call
+```
+
+To point the agent at a resource yourself with no config file (or on a
+laptop), copy the values from the resource's *Keys and Endpoint* page:
 
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com/"
@@ -43,8 +58,9 @@ export ZONE_AGENT_DEPLOYMENT="gpt-5-mini"     # your deployment name
 # Key-based:              export AZURE_OPENAI_API_KEY="<key from the same page>"
 ```
 
-When `AZURE_OPENAI_API_KEY` is set it takes precedence; otherwise the agent
-uses Entra ID tokens. Missing configuration fails fast with instructions.
+Production rollout — provisioning, RBAC, networking, and the flagged
+assumptions for the platform team — is documented in
+[`docs/zone-agent-prod.md`](../../docs/zone-agent-prod.md).
 
 ## Usage
 

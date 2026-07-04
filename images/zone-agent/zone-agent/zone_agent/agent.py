@@ -40,8 +40,9 @@ class Agent:
     accompanies tool calls.
     """
 
-    def __init__(self, deployment, session_id, messages, approve, on_tool=None, on_text=None):
-        self.deployment = deployment
+    def __init__(self, model_config, session_id, messages, approve, on_tool=None, on_text=None):
+        self.model_config = model_config
+        self.deployment = model_config.deployment
         self.session_id = session_id
         self.messages = messages
         self.approve = approve
@@ -53,14 +54,10 @@ class Agent:
 
     def _get_client(self):
         if self._client is None:
+            from zone_agent import config
+
             try:
-                import zone_openai
-            except ImportError as error:
-                raise AgentError(
-                    "zone_openai is required (ships with the zone-token-broker package)"
-                ) from error
-            try:
-                self._client = zone_openai.client()
+                self._client = config.build_client(self.model_config)
             except Exception as error:
                 raise AgentError(str(error)) from error
         return self._client
@@ -72,7 +69,9 @@ class Agent:
         }
         if use_tools:
             options["tools"] = tools.DEFINITIONS
-        effort = os.environ.get("ZONE_AGENT_REASONING", "low")
+        effort = os.environ.get(
+            "ZONE_AGENT_REASONING", self.model_config.reasoning or "low"
+        )
         if effort and effort != "none":
             options["reasoning_effort"] = effort
         try:
