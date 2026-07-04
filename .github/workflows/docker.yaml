@@ -124,12 +124,12 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  zone-agent:
+  otto:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "zone-agent"
-      directory: "zone-agent"
+      image: "otto"
+      directory: "otto"
       parent-image: "mid"
       parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -212,11 +212,11 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
-  zone-agent-test:
-    needs: [vars, zone-agent]
+  otto-test:
+    needs: [vars, otto]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "zone-agent"
+      image: "otto"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:

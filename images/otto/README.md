@@ -1,14 +1,16 @@
-# Zone Agent
+# Otto
 
-The `zone-agent` image is the [mid](../mid) image plus **`zone-agent`**, a
-minimal coding agent CLI for the notebook terminal. It reads and edits the
-files in your workspace, searches them, and runs commands — with your
-approval — the way desktop coding agents do, but entirely inside your Zone
-notebook and entirely on your own identity.
+The `otto` image is the [mid](../mid) image plus **Otto** (`otto`), the
+Zone coding agent for the notebook terminal. He reads and edits the files
+in your workspace, searches them, works inside Jupyter notebooks (cells,
+outputs, and error tracebacks), moves data to and from Azure Storage /
+OneLake, and runs commands — with your approval — the way desktop coding
+agents do, but entirely inside your Zone notebook and entirely on your own
+identity.
 
 ```
-$ zone-agent
-zone-agent 0.1.0  session 20260704-101500 · deployment gpt-5-mini
+$ otto
+otto 0.3.0  session 20260704-101500 · gpt-5-mini
 Working in /home/jovyan/my-project. Type a request, or 'exit' to quit.
 
 > add a --dry-run flag to clean.py and show me the diff
@@ -37,15 +39,15 @@ catalogue models), an endpoint, a deployment, and an auth mode (`broker` for
 delegated per-user Entra tokens — the default, no secrets — or `api-key`
 from an environment variable). Profiles merge from three layers, later wins:
 
-1. `/etc/zone-agent/config.toml` — the platform catalogue (in prod, a
+1. `/etc/otto/config.toml` — the platform catalogue (in prod, a
    ConfigMap injected by a PodDefault; stubs in [`deploy/`](deploy/))
-2. `~/.zone-agent/config.toml` — your own profiles and default
+2. `~/.otto/config.toml` — your own profiles and default
 3. environment variables — the zero-config path below still works as-is
 
 ```bash
-zone-agent --list-models        # what is configured, * marks the default
-zone-agent --model gpt-5        # pick a profile for this run
-zone-agent --doctor             # config → auth → one real model call
+otto --list-models        # what is configured, * marks the default
+otto --model gpt-5        # pick a profile for this run
+otto --doctor             # config → auth → one real model call
 ```
 
 To point the agent at a resource yourself with no config file (or on a
@@ -53,43 +55,48 @@ laptop), copy the values from the resource's *Keys and Endpoint* page:
 
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com/"
-export ZONE_AGENT_DEPLOYMENT="gpt-5-mini"     # your deployment name
+export OTTO_DEPLOYMENT="gpt-5-mini"     # your deployment name
 # Entra ID (recommended): nothing else to set — broker on Zone, az login locally.
 # Key-based:              export AZURE_OPENAI_API_KEY="<key from the same page>"
 ```
 
 Production rollout — provisioning, RBAC, networking, and the flagged
 assumptions for the platform team — is documented in
-[`docs/zone-agent-prod.md`](../../docs/zone-agent-prod.md).
+[`docs/otto-prod.md`](../../docs/otto-prod.md).
 
 ## Usage
 
 | Command | Effect |
 | --- | --- |
-| `zone-agent` | interactive session in the current directory |
-| `zone-agent "explain tests/conftest.py"` | one-shot prompt, prints the answer and exits |
-| `zone-agent -r` | resume the most recent session |
-| `zone-agent -r ID` | resume a specific session |
-| `zone-agent --sessions` | list saved sessions |
-| `zone-agent -y ...` | skip approval prompts (scripting; use with care) |
+| `otto` | interactive session in the current directory |
+| `otto "explain tests/conftest.py"` | one-shot prompt, prints the answer and exits |
+| `otto -r` | resume the most recent session |
+| `otto -r ID` | resume a specific session |
+| `otto --sessions` | list saved sessions |
+| `otto -y ...` | skip approval prompts (scripting; use with care) |
+| `cat error.log \| otto "why?"` | piped input becomes context (or the whole prompt) |
+| `/help` `/compact` `/cost` | inside the REPL: help, compact now, token usage |
 
 Configuration (environment variables):
 
 | Variable | Meaning |
 | --- | --- |
 | `AZURE_OPENAI_ENDPOINT` | the Azure OpenAI resource endpoint (required) |
-| `ZONE_AGENT_DEPLOYMENT` | deployment (model) name, e.g. `gpt-5-mini` (required, or `--deployment`) |
+| `OTTO_DEPLOYMENT` | deployment (model) name, e.g. `gpt-5-mini` (required, or `--deployment`) |
 | `AZURE_OPENAI_API_KEY` | optional API key; overrides Entra ID auth when set |
 | `AZURE_OPENAI_API_VERSION` | API version override (defaults to `zone_openai`'s) |
-| `ZONE_AGENT_REASONING` | reasoning effort: `minimal`/`low`/`medium`/`high`, `none` omits (default `low`) |
-| `ZONE_AGENT_CONTEXT_BUDGET` | prompt tokens before auto-compaction (default 120000) |
-| `ZONE_AGENT_HOME` | state directory (default `~/.zone-agent`) |
+| `OTTO_REASONING` | reasoning effort: `minimal`/`low`/`medium`/`high`, `none` omits (default `low`) |
+| `OTTO_CONTEXT_BUDGET` | prompt tokens before auto-compaction (default 120000) |
+| `OTTO_HOME` | state directory (default `~/.otto`) |
 
 ## Safeguards
 
-- **Read-only by default**: `read_file`, `list_dir` and `grep` run freely;
-  `write_file`, `edit_file` and `bash` each require a `[y/N]` approval with
-  a preview of the change. Non-interactive runs deny mutations unless `-y`.
+- **Read-only by default**: `read_file`, `list_dir`, `grep`, `read_notebook`
+  and `azure_ls` run freely; `write_file`, `edit_file`, `edit_notebook`,
+  `bash`, `azure_download` and `azure_upload` each require a `[y/N]`
+  approval with a preview. Non-interactive runs deny mutations unless `-y`.
+  The only network-capable tools are the Azure Storage ones — approval-gated
+  and running as the signed-in user, in-tenant.
 - **User-scoped**: the agent holds no identity of its own; every model call
   uses the user's delegated token and every file/command action runs as the
   user inside their pod, under the pod's existing network policy.
@@ -103,9 +110,22 @@ Configuration (environment variables):
 
 ## Sessions
 
-Sessions are JSONL transcripts under `~/.zone-agent/sessions/` — the home
+Sessions are JSONL transcripts under `~/.otto/sessions/` — the home
 directory is a persistent volume, so they survive notebook restarts and
 image upgrades and stay inside the user's own storage.
+
+## Notebooks and OneLake
+
+Otto is notebook-native: `read_notebook` renders cells with outputs and
+error tracebacks (ask him "why did cell 7 fail?"), `edit_notebook` writes
+whole cells, and he runs notebooks through `jupyter execute --inplace`.
+For data, `azure_ls` / `azure_download` / `azure_upload` take the full
+`az://` or `abfss://` URLs you copy from the portal or Fabric — including
+OneLake (`abfss://<workspace>@onelake.dfs.fabric.microsoft.com/...`) — so
+"bring that OneLake file here, fix it, push it back" is one conversation.
+
+Drop an `AGENTS.md` in your project root and Otto reads it as project
+instructions at the start of every session.
 
 ## Working with worktrees
 
@@ -115,11 +135,12 @@ there, and merge back only when you are happy.
 
 ## Development
 
-The package lives in [`zone-agent/`](zone-agent/) (pure Python, stdlib +
-`openai` only). A wheel is left in `/opt/zone-agent/dist` in the image for
+The package lives in [`otto/`](otto/) (pure Python; its only install
+dependency is `openai` — the notebook and storage tools lazily use the
+image's `nbformat` and `adlfs` when invoked). A wheel is left in `/opt/otto/dist` in the image for
 user-created venvs. To adopt the agent in another image, copy the
 `COPY`/`RUN` block from the [Dockerfile](Dockerfile) — it is deliberately
 self-contained.
 
-Tests: `make bake/zone-agent && make test/zone-agent` (static checks only —
+Tests: `make bake/otto && make test/otto` (static checks only —
 no model calls, so no Azure resources are needed).

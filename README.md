@@ -119,7 +119,7 @@ Image | Notes | Installations
 --- | --- | ---
 [jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, RStudio, R, Python, Julia, Sas kernel
 [sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | RStudio, Sas Studios
-[zone-agent](./images/zone-agent) | The mid image plus the `zone-agent` coding assistant CLI (opt-in AI pilot) | mid + zone-agent
+[otto](./images/otto) | The mid image plus Otto (`otto`), the Zone coding agent (opt-in AI pilot) | mid + otto
 
 ### Overview of Images
 
@@ -137,7 +137,7 @@ graph TD
   upstream_sas["(upstream) sas4c"] --> |copy|sas_kernel
   sas_kernel --> jupyterlab["jupyterlab (jupyterlab-cpu)"]
   sas_kernel --> sas
-  mid --> zone-agent
+  mid --> otto
 ```
 
 ## Usage

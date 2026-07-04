@@ -1,10 +1,10 @@
-"""Model and provider configuration: how zone-agent reaches Azure.
+"""Model and provider configuration: how otto reaches Azure.
 
 Layered sources, later wins:
 
-  1. /etc/zone-agent/config.toml   platform-managed (ConfigMap / PodDefault)
-  2. ~/.zone-agent/config.toml     user-managed
-  3. environment variables         AZURE_OPENAI_*, ZONE_AGENT_*
+  1. /etc/otto/config.toml   platform-managed (ConfigMap / PodDefault)
+  2. ~/.otto/config.toml     user-managed
+  3. environment variables         AZURE_OPENAI_*, OTTO_*
   4. command line flags            --model, --deployment
 
 Config files declare named model profiles; the environment alone (endpoint +
@@ -39,14 +39,14 @@ Auth:
 
 import os
 
-PLATFORM_CONFIG = "/etc/zone-agent/config.toml"
-USER_CONFIG = "~/.zone-agent/config.toml"
+PLATFORM_CONFIG = "/etc/otto/config.toml"
+USER_CONFIG = "~/.otto/config.toml"
 
 ENDPOINT_ENV = "AZURE_OPENAI_ENDPOINT"
 API_KEY_ENV = "AZURE_OPENAI_API_KEY"
 API_VERSION_ENV = "AZURE_OPENAI_API_VERSION"
-DEPLOYMENT_ENV = "ZONE_AGENT_DEPLOYMENT"
-MODEL_ENV = "ZONE_AGENT_MODEL"
+DEPLOYMENT_ENV = "OTTO_DEPLOYMENT"
+MODEL_ENV = "OTTO_MODEL"
 
 DEFAULT_API_VERSION = "2024-10-21"
 FOUNDRY_MODELS_API_VERSION = "2024-05-01-preview"
@@ -120,7 +120,7 @@ def _read_toml(path):
     except ImportError:  # Python < 3.11: config files are unavailable
         import sys
         print(
-            "zone-agent: ignoring %s (Python %d.%d has no tomllib)"
+            "otto: ignoring %s (Python %d.%d has no tomllib)"
             % (path, *sys.version_info[:2]),
             file=sys.stderr,
         )
@@ -165,7 +165,7 @@ def resolve(model=None, deployment=None):
 
     `deployment` overrides the profile's deployment name (the --deployment
     flag). With no config files and no model name, the environment
-    (AZURE_OPENAI_ENDPOINT + ZONE_AGENT_DEPLOYMENT) is used as-is.
+    (AZURE_OPENAI_ENDPOINT + OTTO_DEPLOYMENT) is used as-is.
     """
     config = load()
     model = model or os.environ.get(MODEL_ENV) or config["default_model"]
@@ -250,7 +250,7 @@ def _api_key(config):
     if not key:
         raise ConfigError(
             "model %r uses auth=api-key but $%s is not set (in prod it is "
-            "delivered by a Kubernetes Secret; see images/zone-agent/deploy/)"
+            "delivered by a Kubernetes Secret; see images/otto/deploy/)"
             % (config.name, config.api_key_env)
         )
     return key
@@ -332,5 +332,5 @@ def doctor(config, out):
     except Exception as error:
         out.write("%14s  FAILED: %s\n" % ("model call", error))
         return 1
-    out.write("zone-agent: ready\n")
+    out.write("otto: ready\n")
     return 0

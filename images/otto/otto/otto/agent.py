@@ -7,7 +7,7 @@ its usual local-development fallbacks), so no API keys are handled here.
 import json
 import os
 
-from zone_agent import prompt, session, tools
+from otto import prompt, session, tools
 
 DEFAULT_CONTEXT_BUDGET = 120000  # prompt tokens allowed before compaction
 MAX_STEPS = 40  # model/tool rounds per user turn
@@ -24,9 +24,18 @@ class AgentError(RuntimeError):
     """Raised when the model cannot be reached or configured."""
 
 
+def _project_instructions():
+    """AGENTS.md in the launch directory, if the project provides one."""
+    try:
+        with open("AGENTS.md") as handle:
+            return handle.read(8000).strip()
+    except OSError:
+        return ""
+
+
 def _context_budget():
     try:
-        return int(os.environ.get("ZONE_AGENT_CONTEXT_BUDGET", DEFAULT_CONTEXT_BUDGET))
+        return int(os.environ.get("OTTO_CONTEXT_BUDGET", DEFAULT_CONTEXT_BUDGET))
     except ValueError:
         return DEFAULT_CONTEXT_BUDGET
 
@@ -48,13 +57,17 @@ class Agent:
         self.approve = approve
         self.on_tool = on_tool or (lambda name, arguments: None)
         self.on_text = on_text or (lambda text: None)
+        self._system = prompt.SYSTEM
+        extra = _project_instructions()
+        if extra:
+            self._system += "\n\nProject instructions (from AGENTS.md):\n" + extra
         self.total_tokens = 0
         self._prompt_tokens = 0
         self._client = None
 
     def _get_client(self):
         if self._client is None:
-            from zone_agent import config
+            from otto import config
 
             try:
                 self._client = config.build_client(self.model_config)
@@ -65,12 +78,12 @@ class Agent:
     def _create(self, messages, use_tools=True):
         options = {
             "model": self.deployment,
-            "messages": [{"role": "system", "content": prompt.SYSTEM}] + messages,
+            "messages": [{"role": "system", "content": self._system}] + messages,
         }
         if use_tools:
             options["tools"] = tools.DEFINITIONS
         effort = os.environ.get(
-            "ZONE_AGENT_REASONING", self.model_config.reasoning or "low"
+            "OTTO_REASONING", self.model_config.reasoning or "low"
         )
         if effort and effort != "none":
             options["reasoning_effort"] = effort
@@ -174,14 +187,17 @@ class Agent:
                     }
                 )
 
-    def maybe_compact(self):
+    def maybe_compact(self, force=False):
         """Between turns: summarize the history once it outgrows the budget.
 
         Returns True when the session was compacted. Token counts come from
         the API's own usage figures, so a resumed session compacts after its
-        first response if it is already over budget.
+        first response if it is already over budget. `force` compacts
+        regardless of the budget (the /compact command).
         """
-        if self._prompt_tokens <= _context_budget():
+        if not self.messages:
+            return False
+        if not force and self._prompt_tokens <= _context_budget():
             return False
         reply = self._create(
             self.messages + [{"role": "user", "content": COMPACT_PROMPT}],

@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 
-from zone_agent import __version__, agent, config, session
+from otto import __version__, agent, config, session
 
 
 def _color(code, text):
@@ -68,9 +68,15 @@ def _make_approver(auto_yes):
     return approve
 
 
+REPL_HELP = """/help     this help
+/compact  summarize the conversation now to free context
+/cost     tokens used this session
+exit      quit (Ctrl-D works too)"""
+
+
 def _repl(bot):
     print(
-        _bold("zone-agent %s" % __version__)
+        _bold("otto %s" % __version__)
         + _dim(
             "  session %s · %s · %s"
             % (bot.session_id, bot.model_config.name, bot.deployment)
@@ -88,10 +94,20 @@ def _repl(bot):
             continue
         if text in ("exit", "quit"):
             break
+        if text == "/help":
+            print(_dim(REPL_HELP))
+            continue
+        if text == "/cost":
+            print(_dim("~%d tokens used this session" % bot.total_tokens))
+            continue
+        if text == "/compact":
+            compacted = bot.maybe_compact(force=True)
+            print(_dim("[context compacted]" if compacted else "[nothing to compact]"))
+            continue
         try:
             reply = bot.run_turn(text)
         except agent.AgentError as error:
-            print("zone-agent: %s" % error, file=sys.stderr)
+            print("otto: %s" % error, file=sys.stderr)
             continue
         print("\n" + reply)
         if bot.maybe_compact():
@@ -100,13 +116,34 @@ def _repl(bot):
     return 0
 
 
+def _read_piped_stdin():
+    """Piped input, without ever blocking on an idle inherited pipe.
+
+    A parent process can hand otto an open-but-silent stdin; a plain read()
+    would hang forever. Only read when data (or EOF) is already waiting.
+    """
+    try:
+        import select
+
+        ready, _, _ = select.select([sys.stdin], [], [], 0.5)
+        if not ready:
+            return ""
+        return sys.stdin.read(102400).strip()
+    except (OSError, ValueError):
+        return ""
+
+
 def main(argv=None):
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except AttributeError:
+        pass
     parser = argparse.ArgumentParser(
-        prog="zone-agent",
+        prog="otto",
         description=(
             "A coding agent for Zone notebooks. Uses your own identity via "
             "the token broker (Azure OpenAI, no API keys); sessions persist "
-            "under ~/.zone-agent."
+            "under ~/.otto."
         ),
     )
     parser.add_argument("prompt", nargs="*", help="one-shot prompt; omit for interactive mode")
@@ -136,7 +173,7 @@ def main(argv=None):
         help="check config, auth, and connectivity for the selected model and exit",
     )
     parser.add_argument("--sessions", action="store_true", help="list saved sessions and exit")
-    parser.add_argument("--version", action="version", version="zone-agent " + __version__)
+    parser.add_argument("--version", action="version", version="otto " + __version__)
     args = parser.parse_args(argv)
 
     if args.sessions:
@@ -164,11 +201,22 @@ def main(argv=None):
     try:
         model_config = config.resolve(model=args.model, deployment=args.deployment)
     except config.ConfigError as error:
-        print("zone-agent: %s" % error, file=sys.stderr)
+        print("otto: %s" % error, file=sys.stderr)
         return 2
 
     if args.doctor:
         return config.doctor(model_config, sys.stdout)
+
+    prompt_text = " ".join(args.prompt) if args.prompt else None
+    if not sys.stdin.isatty():
+        piped = _read_piped_stdin()
+        if prompt_text and piped:
+            prompt_text += "\n\n[piped input]\n" + piped
+        elif piped:
+            prompt_text = piped
+        if not prompt_text:
+            print("otto: no prompt given and stdin is not a terminal", file=sys.stderr)
+            return 2
 
     if args.resume:
         session_id = session.latest() if args.resume == "latest" else args.resume
@@ -193,13 +241,13 @@ def main(argv=None):
     )
 
     try:
-        if args.prompt:
-            print(bot.run_turn(" ".join(args.prompt)))
+        if prompt_text:
+            print(bot.run_turn(prompt_text))
             bot.maybe_compact()
             return 0
         return _repl(bot)
     except agent.AgentError as error:
-        print("zone-agent: %s" % error, file=sys.stderr)
+        print("otto: %s" % error, file=sys.stderr)
         return 1
 
 

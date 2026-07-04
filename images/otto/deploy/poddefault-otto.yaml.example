@@ -1,6 +1,6 @@
-# Opt-in injection of the zone-agent model catalogue (and, optionally, an
+# Opt-in injection of the otto model catalogue (and, optionally, an
 # API key) into notebook pods — the same PodDefault mechanism the Zone uses
-# for filers. Users tick "zone-agent models" when creating a notebook (or
+# for filers. Users tick "otto models" when creating a notebook (or
 # the label is applied by default platform-side).
 #
 # ASSUMPTION (flagged for the platform team): notebook namespaces admit
@@ -10,22 +10,22 @@
 apiVersion: kubeflow.org/v1alpha1
 kind: PodDefault
 metadata:
-  name: zone-agent-models
+  name: otto-models
   namespace: CHANGE-ME-user-namespace
 spec:
-  desc: "zone-agent model catalogue"
+  desc: "otto model catalogue"
   selector:
     matchLabels:
-      zone-agent-models: "true"
+      otto-models: "true"
   volumes:
-    - name: zone-agent-models
+    - name: otto-models
       configMap:
-        name: zone-agent-models
+        name: otto-models
   volumeMounts:
-    - name: zone-agent-models
-      mountPath: /etc/zone-agent
+    - name: otto-models
+      mountPath: /etc/otto
       readOnly: true
   # Uncomment for key-based teams (see secret-api-key.yaml.example).
   # envFrom:
   #   - secretRef:
-  #       name: zone-agent-api-key
+  #       name: otto-api-key

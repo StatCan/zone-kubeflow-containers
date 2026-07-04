@@ -14,12 +14,12 @@ target "mid" {
     tags = ["mid"]
 }
 
-target "zone-agent" {
+target "otto" {
     args = {
         BASE_IMAGE="mid"
     }
-    context = "./images/zone-agent"
-    tags = ["zone-agent"]
+    context = "./images/otto"
+    tags = ["otto"]
 }
 
 target "rstudio" {

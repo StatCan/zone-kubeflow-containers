@@ -1,10 +1,10 @@
 # Platform model catalogue as a ConfigMap, one per user namespace (or
 # synced by whatever mechanism distributes the filer/minio config today).
-# Mounted read-only at /etc/zone-agent by the PodDefault.
+# Mounted read-only at /etc/otto by the PodDefault.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: zone-agent-models
+  name: otto-models
   namespace: CHANGE-ME-user-namespace
 data:
   config.toml: |

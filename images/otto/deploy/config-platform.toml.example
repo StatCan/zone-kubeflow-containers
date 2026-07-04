@@ -1,7 +1,7 @@
-# Platform model catalogue for zone-agent, mounted at
-# /etc/zone-agent/config.toml (see configmap-zone-agent.yaml.example).
-# Users pick a profile with `zone-agent --model <name>`; `default_model`
-# is what plain `zone-agent` uses. No secrets belong in this file — keys,
+# Platform model catalogue for otto, mounted at
+# /etc/otto/config.toml (see configmap-otto.yaml.example).
+# Users pick a profile with `otto --model <name>`; `default_model`
+# is what plain `otto` uses. No secrets belong in this file — keys,
 # when used at all, arrive through a Kubernetes Secret as an env var.
 
 default_model = "gpt-5-mini"
@@ -33,7 +33,7 @@ deployment = "gpt-5-mini"
 auth = "broker"
 
 # A non-OpenAI model from the Foundry catalogue via the model-inference API.
-# The deployment must support tool calling for zone-agent to work well.
+# The deployment must support tool calling for otto to work well.
 [models.foundry-catalog]
 provider = "foundry-models"
 endpoint = "https://CHANGE-ME.services.ai.azure.com"

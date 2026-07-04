@@ -1,4 +1,4 @@
-"""Persistent sessions: one JSONL file per session under ~/.zone-agent.
+"""Persistent sessions: one JSONL file per session under ~/.otto.
 
 On Zone the home directory is a persistent volume, so sessions survive
 notebook restarts and image upgrades. Each line is one chat message dict,
@@ -12,7 +12,7 @@ import time
 
 
 def sessions_dir():
-    root = os.environ.get("ZONE_AGENT_HOME", "~/.zone-agent")
+    root = os.environ.get("OTTO_HOME", "~/.otto")
     path = pathlib.Path(root).expanduser() / "sessions"
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -40,7 +40,7 @@ def load(session_id):
     target = path_for(session_id)
     if not target.exists():
         raise FileNotFoundError(
-            "no session %s (list sessions with `zone-agent --sessions`)" % session_id
+            "no session %s (list sessions with `otto --sessions`)" % session_id
         )
     with open(target) as f:
         return [json.loads(line) for line in f if line.strip()]

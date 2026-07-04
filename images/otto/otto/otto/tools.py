@@ -108,7 +108,7 @@ DEFINITIONS = [
             "name": "bash",
             "description": (
                 "Run a shell command and return its output and exit code. Each "
-                "call is a fresh shell in the directory zone-agent was started "
+                "call is a fresh shell in the directory otto was started "
                 "from; chain with && if you need cd or environment changes."
             ),
             "parameters": {
@@ -193,6 +193,7 @@ def bash(command, timeout=None):
         ["bash", "-c", command],
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
         timeout=timeout or BASH_TIMEOUT_SECONDS,
     )
     output = result.stdout
@@ -232,3 +233,13 @@ def run(name, arguments):
         return "error: bad arguments for %s: %s" % (name, error)
     except Exception as error:  # noqa: BLE001 -- boundary with model-supplied input
         return "error: %s" % error
+
+
+# Notebook and Azure storage tools plug into the same registry and the same
+# approval gate.
+from otto import notebooks, storage  # noqa: E402  (registry composition)
+
+DEFINITIONS = DEFINITIONS + notebooks.DEFINITIONS + storage.DEFINITIONS
+MUTATING = MUTATING | notebooks.MUTATING | storage.MUTATING
+_HANDLERS.update(notebooks.HANDLERS)
+_HANDLERS.update(storage.HANDLERS)
