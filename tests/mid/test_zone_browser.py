@@ -82,6 +82,16 @@ def test_zone_browser_stack(container):
         f"zone-browser-autoopen labextension not installed: {result.output}"
     )
 
+    # R sign-ins (AzureAuth/browseURL) must route to the in-pod browser,
+    # including in RStudio, which overrides the browser option at session
+    # init -- hence the rstudio.sessionInit hook in Rprofile.site
+    result = container.container.exec_run(
+        ["grep", "-q", "rstudio.sessionInit", "/opt/conda/lib/R/etc/Rprofile.site"]
+    )
+    assert result.exit_code == 0, (
+        "zone-browser hook missing from Rprofile.site"
+    )
+
     # Starts headless Chromium + the CDP viewer, probes the viewer page and
     # the /open navigation API, then stops everything.
     result = container.container.exec_run(["zone-browser", "--selftest"])

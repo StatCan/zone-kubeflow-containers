@@ -31,6 +31,11 @@ az login (MSAL) ── http://localhost:<random> redirect, same pod netns
    `zone-browser` when a sign-in page must be opened. `DISPLAY=:20` is
    exported from `/etc/bash.bashrc` only because `az` refuses interactive
    auth on Linux without a GUI env var; no X server exists.
+   For R, `Rprofile-zone-browser.R` (appended to `Rprofile.site` at build)
+   sets `options(browser=)` to zone-browser and re-asserts it from a
+   `rstudio.sessionInit` hook — RStudio otherwise replaces the option at
+   session init with a handler that opens the user's local browser. This
+   covers the rstudio image too, which builds FROM mid.
 2. `zone-browser <url>` starts the headless Chromium if needed and points it
    at the URL — via the running viewer bridge (`POST /open`) so an open Zone
    Browser tab updates live, else via a one-shot DevTools call.

@@ -36,10 +36,12 @@ cred = InteractiveBrowserCredential()
 token = cred.get_token("https://storage.azure.com/.default")
 ```
 
-## R
+## R (including RStudio)
 
 `AzureAuth` / `AzureRMR` with the default `authorization_code` flow open the
-Zone Browser via `browseURL()`:
+Zone Browser via `browseURL()` — in the R console, in a Jupyter R kernel,
+and inside RStudio (where the Zone overrides RStudio's default of opening
+your local browser):
 
 ```r
 token <- AzureAuth::get_azure_token(

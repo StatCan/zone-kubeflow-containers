@@ -248,6 +248,7 @@ COPY --chmod=755 zone-browser/zone-browser /usr/local/bin/zone-browser
 COPY --chmod=755 zone-browser/zone-browser-viewer.py /usr/local/bin/zone-browser-viewer.py
 COPY zone-browser/labextension/dist-labext /opt/conda/share/jupyter/labextensions/zone-browser-autoopen
 COPY zone-browser/zone-browser-serverproxy.json /tmp/zone-browser-serverproxy.json
+COPY zone-browser/Rprofile-zone-browser.R /tmp/Rprofile-zone-browser.R
 COPY --chown=${NB_USER}:${NB_GID} --chmod=664 azure-sign-in.md ${HOME_TMP}/azure-sign-in.md
 ENV BROWSER=/usr/local/bin/zone-browser \
     R_BROWSER=/usr/local/bin/zone-browser
@@ -263,6 +264,11 @@ add = json.load(open('/tmp/zone-browser-serverproxy.json')); \
 cfg.setdefault('ServerProxy', {}).setdefault('servers', {}).update(add['ServerProxy']['servers']); \
 json.dump(cfg, open(path, 'w'), indent=2)" \
     && rm /tmp/zone-browser-serverproxy.json \
+    # Route R's browseURL() (AzureAuth, httr OAuth, ...) to the in-pod
+    # browser everywhere, including RStudio, which replaces the browser
+    # option at session init (see the rstudio.sessionInit hook).
+    && cat /tmp/Rprofile-zone-browser.R >> /opt/conda/lib/R/etc/Rprofile.site \
+    && rm /tmp/Rprofile-zone-browser.R \
     && apt-get update \
     # Explicit headless-Chromium runtime deps instead of `playwright install
     # --with-deps`, which drags in ~800 MB (a mesa/LLVM upgrade, xvfb, CJK
