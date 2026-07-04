@@ -55,7 +55,9 @@ find_chromium() {
         echo "$ZONE_BROWSER_CHROMIUM"
         return
     fi
-    ls -1d /opt/ms-playwright/chromium-*/chrome-linux/chrome 2>/dev/null | sort -V | tail -1
+    # x64 gets Chrome-for-Testing builds (chrome-linux64/), other arches the
+    # classic Playwright build (chrome-linux/) -- match both layouts.
+    ls -1d /opt/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1
 }
 
 pid_alive() { # pid_alive <name>

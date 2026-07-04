@@ -277,7 +277,7 @@ json.dump(cfg, open(path, 'w'), indent=2)" \
         libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 \
         libxrandr2 fonts-liberation fonts-noto-color-emoji \
     && pip install --no-cache-dir 'playwright==1.61.0' \
-    && PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright playwright install chromium \
+    && PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright playwright install chromium --no-shell \
     && pip uninstall --yes playwright \
     && chmod -R a+rX /opt/ms-playwright \
     && fix-permissions /opt/conda/share/jupyter/labextensions/zone-browser-autoopen \
