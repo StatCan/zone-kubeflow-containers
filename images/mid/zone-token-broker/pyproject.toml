@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zone-token-broker"
+version = "0.1.0"
+description = "Internal AuthService client for delegated access tokens."
+requires-python = ">=3.9"
+dependencies = ["requests"]
+
+[project.optional-dependencies]
+zone-dvc = ["dvc", "dvc-azure"]
+
+[project.scripts]
+zone-dvc = "zone_dvc:main"
+
+[tool.setuptools]
+py-modules = ["zone_token_broker", "zone_dvc"]
