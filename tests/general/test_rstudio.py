@@ -24,8 +24,8 @@ def _execute_on_container(package_helper, command):
 def _skip_if_no_rstudio(package_helper):
     # Extract container image name and check if RStudio is expected to be installed
     image_name = package_helper.running_container.image.tags[0].lower() if package_helper.running_container.image.tags else ""
-    # Skip test for base and mid images that don't include RStudio
-    if 'base' in image_name or 'mid' in image_name:
+    # Skip test for base, mid, and otto images that don't include RStudio
+    if 'base' in image_name or 'mid' in image_name or 'otto' in image_name:
         pytest.skip("RStudio not available in this image, skipping RStudio test")
 
 
