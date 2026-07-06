@@ -56,7 +56,7 @@ def test_otto_installed(container):
     _run_python(
         container,
         "import otto, otto.agent, otto.cli, otto.config, otto.notebooks, "
-        "otto.prompt, otto.session, otto.storage, otto.tools",
+        "otto.prompt, otto.session, otto.storage, otto.tools, otto.ui",
     )
 
     # Wheel for user-created venvs (same convention as zone-token-broker)
@@ -125,9 +125,95 @@ assert "[exit code 3]" in t.run("bash", {"command": "exit 3"})
     _run_python(
         container,
         """
+import otto.ui as u
 from otto.cli import _make_approver
-assert _make_approver(False)("bash", {"command": "true"}) is False
-assert _make_approver(True)("bash", {"command": "true"}) is True
+view = u.UI()
+assert _make_approver(False, view)("bash", {"command": "true"}) is False
+assert _make_approver(True, view)("bash", {"command": "true"}) is True
+""",
+    )
+
+    # Terminal presentation: plain when piped, styled + streamed when pretty
+    _run_python(
+        container,
+        """
+import io
+import otto.ui as u
+
+# Without a TTY nothing decorative is emitted (pipes stay machine-readable)
+plain = u.UI(out=io.StringIO())
+assert plain.pretty is False and plain.color is False
+assert plain.paint(u.ACCENT, "x") == "x"
+plain.tool_call("bash", {"command": "ls"})
+plain.banner("0", "m", "/")
+assert plain.out.getvalue() == ""
+
+# Pretty mode: markdown streams with styling, fed in awkward chunks
+out = io.StringIO()
+view = u.UI(out=out, pretty=True)
+view.begin_turn()
+for chunk in ("Use ", "`x`", " now\\n", "- a bullet\\n", "```", "py\\ncode\\n``", "`\\ntail"):
+    view.stream_feed(chunk)
+assert view.stream_close() is True
+text = out.getvalue()
+assert "\\033[36mx\\033[0m" in text          # inline code styled
+assert "\\033[38;5;208m\\u2022\\033[0m a bullet" in text  # bullet swapped
+assert "\\u2502" in text and "code" in text  # fenced code gets a gutter
+assert text.rstrip("\\n").endswith("tail")   # unterminated tail flushed
+
+# Tool traces: call line, result preview with exit-code and size hints
+out = io.StringIO()
+view = u.UI(out=out, pretty=True)
+view.tool_call("bash", {"command": "python x.py"})
+view.tool_result("bash", {}, "boom\\n[exit code 2]")
+view.tool_result("bash", {}, "Denied by user.")
+text = out.getvalue()
+assert "bash" in text and "python x.py" in text
+assert "exit 2" in text and "denied" in text
+assert u.describe_call("azure_upload", {"src": "a", "url": "b"}) == "a b"
+""",
+    )
+
+    # Streaming assembly: text deltas and fragmented tool calls, offline
+    _run_python(
+        container,
+        """
+import types
+import otto.agent as a
+import otto.config as c
+
+def chunk(content=None, calls=None, usage=None):
+    delta = types.SimpleNamespace(content=content, tool_calls=calls)
+    choice = types.SimpleNamespace(delta=delta)
+    return types.SimpleNamespace(choices=[choice] if (content or calls) else [], usage=usage)
+
+def call_delta(index, id=None, name=None, arguments=None):
+    fn = types.SimpleNamespace(name=name, arguments=arguments)
+    return types.SimpleNamespace(index=index, id=id, function=fn)
+
+chunks = [
+    chunk(content="hel"), chunk(content="lo"),
+    chunk(calls=[call_delta(0, id="c1", name="bash", arguments='{"comm')]),
+    chunk(calls=[call_delta(0, arguments='and": "ls"}')]),
+    chunk(usage=types.SimpleNamespace(total_tokens=10, prompt_tokens=7)),
+]
+
+class FakeCompletions:
+    def create(self, **options):
+        assert options.get("stream") is True
+        return iter(chunks)
+
+deltas = []
+mc = c.ModelConfig("t", "https://x.openai.azure.com", "d")
+bot = a.Agent(mc, "test", [], approve=lambda n, g: False, on_delta=deltas.append)
+bot._client = types.SimpleNamespace(
+    chat=types.SimpleNamespace(completions=FakeCompletions())
+)
+reply = bot._create([{"role": "user", "content": "hi"}], stream=True)
+assert "".join(deltas) == "hello" and reply.content == "hello"
+assert reply.tool_calls[0].id == "c1"
+assert reply.tool_calls[0].function.arguments == '{"command": "ls"}'
+assert bot.total_tokens == 10 and bot._prompt_tokens == 7
 """,
     )
 

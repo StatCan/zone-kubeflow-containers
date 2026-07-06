@@ -77,6 +77,12 @@ assumptions for the platform team — is documented in
 | `cat error.log \| otto "why?"` | piped input becomes context (or the whole prompt) |
 | `/help` `/compact` `/cost` | inside the REPL: help, compact now, token usage |
 
+On a terminal, answers stream live with markdown styling and every tool
+call is traced (`●` call, `⎿` result) so you can watch what he does;
+approvals appear inline. Piped or redirected output is plain text with the
+final answer only, so `otto "..." > notes.md` and pipelines stay clean.
+`NO_COLOR=1` keeps the layout but drops the color.
+
 Configuration (environment variables):
 
 | Variable | Meaning |

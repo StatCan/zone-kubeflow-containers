@@ -1,41 +1,20 @@
-"""Command line interface: interactive REPL, one-shot prompts, sessions."""
+"""Command line interface: interactive REPL, one-shot prompts, sessions.
+
+All presentation goes through otto.ui: on a terminal the model's answer
+streams live with markdown styling and every tool call is traced; piped
+output stays plain (the final answer only), so `... | otto "..."` and
+`otto "..." > file` remain machine-friendly.
+"""
 
 import argparse
 import os
 import sys
 
-from otto import __version__, agent, config, session
-
-
-def _color(code, text):
-    if not sys.stdout.isatty() or os.environ.get("NO_COLOR"):
-        return text
-    return "\033[%sm%s\033[0m" % (code, text)
-
-
-def _dim(text):
-    return _color("2", text)
-
-
-def _bold(text):
-    return _color("1", text)
-
-
-def _preview(name, arguments):
-    """One line describing a tool call, for the activity trace."""
-    if name == "bash":
-        return "bash: %s" % arguments.get("command", "")
-    if name == "write_file":
-        content = arguments.get("content", "")
-        return "write_file: %s (%d bytes)" % (arguments.get("path", ""), len(content.encode()))
-    if name == "edit_file":
-        return "edit_file: %s" % arguments.get("path", "")
-    shown = ", ".join("%s=%r" % item for item in sorted(arguments.items()))
-    return "%s(%s)" % (name, shown)
+from otto import __version__, agent, config, session, ui
 
 
 def _approval_detail(name, arguments):
-    """What the user is approving, shown under the [y/N] question."""
+    """What the user is approving, shown above the [y/N] question."""
     if name == "edit_file":
         return "--- old ---\n%s\n--- new ---\n%s" % (
             arguments.get("old_string", ""),
@@ -50,69 +29,97 @@ def _approval_detail(name, arguments):
     return ""
 
 
-def _make_approver(auto_yes):
+def _make_approver(auto_yes, view):
     def approve(name, arguments):
         if auto_yes:
             return True
         if not sys.stdin.isatty():
             return False
-        detail = _approval_detail(name, arguments)
-        if detail:
-            print(_dim("    " + detail.replace("\n", "\n    ")))
-        try:
-            answer = input(_bold("    approve? [y/N] "))
-        except EOFError:
-            return False
-        return answer.strip().lower() in ("y", "yes")
+        return view.confirm(name, _approval_detail(name, arguments))
 
     return approve
 
 
-REPL_HELP = """/help     this help
-/compact  summarize the conversation now to free context
-/cost     tokens used this session
-exit      quit (Ctrl-D works too)"""
+COMMANDS = (
+    ("/help", "show this help"),
+    ("/cost", "tokens used this session"),
+    ("/compact", "summarize the conversation now to free context"),
+    ("exit", "quit (ctrl-d works too)"),
+)
 
 
-def _repl(bot):
-    print(
-        _bold("otto %s" % __version__)
-        + _dim(
-            "  session %s · %s · %s"
-            % (bot.session_id, bot.model_config.name, bot.deployment)
-        )
+def _show_help(view):
+    for name, blurb in COMMANDS:
+        view.note("  %s  %s" % (view.paint(ui.ACCENT, "%-8s" % name), blurb))
+
+
+def _finish_turn(bot, view, reply):
+    """Render whatever the stream did not already show, then compact."""
+    streamed = view.stream_close()
+    if reply == "[interrupted]":
+        view.note("— interrupted")
+    elif reply and not streamed:
+        view.say(reply)
+    view.spin("compacting")
+    compacted = bot.maybe_compact()
+    view.unspin()
+    if compacted:
+        view.note("✦ context compacted")
+
+
+def _repl(bot, view):
+    name_part = bot.deployment
+    if bot.model_config.name not in (bot.deployment, "environment"):
+        name_part += " (%s)" % bot.model_config.name
+    view.banner(
+        __version__,
+        "%s · %s · session %s"
+        % (name_part, bot.model_config.auth, bot.session_id),
+        os.getcwd(),
     )
-    print(_dim("Working in %s. Type a request, or 'exit' to quit." % os.getcwd()))
     while True:
         try:
-            text = input("\n> ")
-        except (EOFError, KeyboardInterrupt):
+            text = input(view.prompt())
+        except EOFError:
             print()
             break
+        except KeyboardInterrupt:
+            print()
+            view.note("(use ctrl-d or 'exit' to quit)")
+            continue
         text = text.strip()
         if not text:
             continue
         if text in ("exit", "quit"):
             break
         if text == "/help":
-            print(_dim(REPL_HELP))
+            _show_help(view)
             continue
         if text == "/cost":
-            print(_dim("~%d tokens used this session" % bot.total_tokens))
+            view.note("~{:,} tokens used this session".format(bot.total_tokens))
             continue
         if text == "/compact":
+            view.spin("compacting")
             compacted = bot.maybe_compact(force=True)
-            print(_dim("[context compacted]" if compacted else "[nothing to compact]"))
+            view.unspin()
+            view.note("✦ context compacted" if compacted else "nothing to compact")
             continue
+        view.begin_turn()
+        view.spin("thinking")
         try:
             reply = bot.run_turn(text)
         except agent.AgentError as error:
-            print("otto: %s" % error, file=sys.stderr)
+            view.unspin()
+            view.stream_close()
+            view.error(str(error))
             continue
-        print("\n" + reply)
-        if bot.maybe_compact():
-            print(_dim("[context compacted]"))
-    print(_dim("session %s saved · ~%d tokens used" % (bot.session_id, bot.total_tokens)))
+        finally:
+            view.unspin()
+        _finish_turn(bot, view, reply)
+    view.note(
+        "session %s saved · ~%s tokens used"
+        % (bot.session_id, format(bot.total_tokens, ","))
+    )
     return 0
 
 
@@ -198,10 +205,12 @@ def main(argv=None):
             print("%s %-24s %-14s %s" % (marker, name, provider, deployment_name))
         return 0
 
+    view = ui.UI()
+
     try:
         model_config = config.resolve(model=args.model, deployment=args.deployment)
     except config.ConfigError as error:
-        print("otto: %s" % error, file=sys.stderr)
+        view.error(str(error))
         return 2
 
     if args.doctor:
@@ -215,39 +224,63 @@ def main(argv=None):
         elif piped:
             prompt_text = piped
         if not prompt_text:
-            print("otto: no prompt given and stdin is not a terminal", file=sys.stderr)
+            view.error("no prompt given and stdin is not a terminal")
             return 2
+    elif not prompt_text:
+        try:
+            import readline  # noqa: F401  (line editing + history in input())
+
+            view.readline = True
+            view.libedit = "libedit" in (getattr(readline, "__doc__", None) or "")
+        except ImportError:
+            pass
 
     if args.resume:
         session_id = session.latest() if args.resume == "latest" else args.resume
         if session_id is None:
-            print("No sessions to resume.", file=sys.stderr)
+            view.error("no sessions to resume")
             return 2
         try:
             messages = session.load(session_id)
         except FileNotFoundError as error:
-            print(error, file=sys.stderr)
+            view.error(str(error))
             return 2
     else:
         session_id, messages = session.new_id(), []
+
+    def on_tool_result(name, arguments, result):
+        view.tool_result(name, arguments, result)
+        view.spin("working")
 
     bot = agent.Agent(
         model_config=model_config,
         session_id=session_id,
         messages=messages,
-        approve=_make_approver(args.yes),
-        on_tool=lambda name, arguments: print(_dim("  · " + _preview(name, arguments))),
-        on_text=lambda text: print("\n" + text),
+        approve=_make_approver(args.yes, view),
+        on_tool=view.tool_call,
+        on_tool_result=on_tool_result,
+        on_delta=view.stream_feed if view.pretty else None,
+        on_text=None if view.pretty else (lambda text: print("\n" + text)),
     )
 
     try:
         if prompt_text:
-            print(bot.run_turn(prompt_text))
-            bot.maybe_compact()
+            view.begin_turn()
+            view.spin("thinking")
+            try:
+                reply = bot.run_turn(prompt_text)
+            finally:
+                view.unspin()
+            if view.pretty:
+                _finish_turn(bot, view, reply)
+            else:
+                print(reply)
+                bot.maybe_compact()
             return 0
-        return _repl(bot)
+        return _repl(bot, view)
     except agent.AgentError as error:
-        print("otto: %s" % error, file=sys.stderr)
+        view.unspin()
+        view.error(str(error))
         return 1
 
 
