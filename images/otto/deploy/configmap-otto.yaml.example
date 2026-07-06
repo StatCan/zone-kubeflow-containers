@@ -1,0 +1,18 @@
+# Platform model catalogue as a ConfigMap, one per user namespace (or
+# synced by whatever mechanism distributes the filer/minio config today).
+# Mounted read-only at /etc/otto by the PodDefault.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otto-models
+  namespace: CHANGE-ME-user-namespace
+data:
+  config.toml: |
+    default_model = "gpt-5-mini"
+
+    [models.gpt-5-mini]
+    provider = "azure-openai"
+    endpoint = "https://CHANGE-ME.openai.azure.com"
+    deployment = "gpt-5-mini"
+    auth = "broker"
+    reasoning = "low"

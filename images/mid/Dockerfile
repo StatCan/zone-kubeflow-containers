@@ -103,7 +103,8 @@ RUN mamba install --quiet --yes -c conda-forge \
 # Zone AuthService delegated-token helper — Python package + R wrapper.
 # Provides `import zone_token_broker` in Python and `library(zonetokenbroker)`
 # in R for any downstream consumer (OneLake DFS, Fabric REST, etc.) that needs
-# to call the in-cluster AuthService getPassthroughToken endpoint.
+# to call the in-cluster AuthService getPassthroughToken endpoint, and
+# `import zone_openai` for broker-authenticated Azure OpenAI clients.
 # Installed here in mid, after the mamba install, so it targets the final conda
 # env and leaves source/wheel artifacts under /opt/zone-token-broker for
 # user-created Python and R environments. httr is provided by conda-forge.
@@ -112,7 +113,7 @@ RUN mamba install --quiet --yes -c conda-forge \
 COPY zone-token-broker /opt/zone-token-broker
 RUN set -eux; \
     pip install --no-cache-dir 'adlfs==2026.5.0'; \
-    pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc]'; \
+    pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc,zone-openai]'; \
     pip wheel --no-cache-dir --no-deps --no-build-isolation --wheel-dir /opt/zone-token-broker/dist /opt/zone-token-broker; \
     /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
     fix-permissions "${CONDA_DIR}"; \

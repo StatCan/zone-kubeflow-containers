@@ -14,6 +14,14 @@ target "mid" {
     tags = ["mid"]
 }
 
+target "otto" {
+    args = {
+        BASE_IMAGE="mid"
+    }
+    context = "./images/otto"
+    tags = ["otto"]
+}
+
 target "rstudio" {
     args = {
         BASE_IMAGE="mid"
