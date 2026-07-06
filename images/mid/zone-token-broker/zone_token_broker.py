@@ -1,5 +1,6 @@
 """Internal AuthService client for delegated access tokens."""
 
+import asyncio
 import json
 import os
 import re
@@ -124,6 +125,25 @@ class BrokerCredential:
         return AccessToken(token.access_token, token.expires_on)
 
 
+class AsyncBrokerCredential:
+    """Async Azure TokenCredential backed by AuthService for adlfs/fsspec."""
+
+    def __init__(self, scope, client=None):
+        self.scope = scope
+        self.client = client or BrokerClient()
+
+    async def get_token(self, *scopes, **_kwargs):
+        scope = " ".join(scopes) if scopes else self.scope
+        token = await asyncio.to_thread(self.client.get_token, scope)
+        return AccessToken(token.access_token, token.expires_on)
+
+    async def close(self):
+        session = getattr(self.client, "_session", None)
+        if session is not None:
+            session.close()
+            self.client._session = None
+
+
 _default_client = BrokerClient()
 
 
@@ -133,3 +153,7 @@ def get_token(scope):
 
 def credential(scope):
     return BrokerCredential(scope=scope)
+
+
+def async_credential(scope):
+    return AsyncBrokerCredential(scope=scope)
