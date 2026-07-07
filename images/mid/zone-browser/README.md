@@ -89,6 +89,26 @@ for the `ZONE_BROWSER_*` env vars. Set `ZONE_EXTERNAL_URL=https://<zone
 host>` (e.g. via PodDefault or the notebook controller) to make the printed
 fallback link fully clickable.
 
+**GC SSO / ADFS Windows Integrated Auth:** from inside the StatCan network,
+`sso1.gcsso.gc.ca` serves its WIA endpoint (`/adfs/ls/wia`) to user agents
+on its `WIASupportedUserAgents` list; the pod has no Kerberos ticket, so
+the sign-in dead-ends on a blank page. Fix by setting `ZONE_BROWSER_UA` (on
+the pod, via PodDefault/controller env) to a UA outside that list so ADFS
+falls back to forms sign-in, e.g.
+`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)
+ZoneBrowser/1.0 Safari/537.36` (verified to render Microsoft sign-in pages
+correctly). Confirm which UAs trigger WIA from a pod with
+`curl -s -o /dev/null -w '%{http_code}\n' -A "<ua>"
+https://sso1.gcsso.gc.ca/adfs/ls/` (401 = WIA challenge, 200 = forms).
+
+**Support bundles:** `zone-browser --dump` captures what the browser is
+showing right now (screenshot + page HTML + URL) into
+`/tmp/zone-browser-$UID/dump-<timestamp>/` — through the running viewer
+bridge when one is attached, else via a direct one-shot DevTools call.
+
+**Display quality:** frames are captured at 2× device scale, JPEG quality
+90 (supersampled on standard-DPI monitors, native on hi-DPI).
+
 `zone-browser --selftest` (used by `tests/mid/test_zone_browser.py`) starts
 Chromium and the viewer, probes the viewer page and the `/open` navigation
 API, and shuts everything down.

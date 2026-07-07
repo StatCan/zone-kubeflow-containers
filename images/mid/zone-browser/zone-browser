@@ -22,6 +22,8 @@
 #   zone-browser --serve <p>  run the viewer bridge in the foreground on port
 #                             <p>; jupyter-server-proxy entry point that backs
 #                             the "Zone Browser" JupyterLab tile
+#   zone-browser --dump       save what the browser is showing right now
+#                             (screenshot + page HTML + URL) for support
 #   zone-browser --selftest   start, probe and stop everything (CI)
 #
 # Tunables (set before first use):
@@ -29,6 +31,7 @@
 #   ZONE_BROWSER_SIZE         browser window size          (default 1440,900)
 #   ZONE_BROWSER_TTL_MINUTES  idle minutes before shutdown (default 15)
 #   ZONE_BROWSER_CHROMIUM     path to a chromium binary    (default: bundled)
+#   ZONE_BROWSER_UA           user-agent override (ADFS/WIA workaround)
 #   ZONE_EXTERNAL_URL         https://<zone host>, used to print a clickable link
 
 set -u
@@ -110,6 +113,15 @@ ensure_chromium() {
             echo "zone-browser: set ZONE_BROWSER_CHROMIUM to a chromium binary" >&2
             return 1
         fi
+        # ZONE_BROWSER_UA: override the user agent. From inside the StatCan
+        # network, GC SSO's ADFS serves its Windows-Integrated-Auth endpoint
+        # (/adfs/ls/wia) to user agents it deems WIA-capable; the pod has no
+        # Kerberos ticket, so that dead-ends in a blank page. A UA outside
+        # the ADFS WIASupportedUserAgents list falls back to forms sign-in.
+        local extra_args=()
+        if [ -n "${ZONE_BROWSER_UA:-}" ]; then
+            extra_args+=("--user-agent=${ZONE_BROWSER_UA}")
+        fi
         start_daemon chromium "$chrome" \
             --headless=new \
             --remote-debugging-port="$CDP_PORT" \
@@ -119,6 +131,7 @@ ensure_chromium() {
             --password-store=basic \
             --user-data-dir="$RUN_DIR/profile" \
             --window-size="$WINDOW_SIZE" \
+            "${extra_args[@]}" \
             about:blank
         wait_for "Chromium DevTools on port ${CDP_PORT}" port_open "$CDP_PORT" || return 1
     fi
@@ -244,6 +257,23 @@ do_ensure() {
     return 0
 }
 
+do_dump() {
+    # Capture what the in-pod browser is showing right now (screenshot, page
+    # HTML, URL) into a support bundle -- the first thing to ask for when a
+    # user reports a blank or stuck sign-in page.
+    local vport=""
+    if ! pid_alive chromium; then
+        echo "zone-browser: the browser is not running (nothing to dump)" >&2
+        return 1
+    fi
+    [ -f "$RUN_DIR/viewer.port" ] && vport="$(cat "$RUN_DIR/viewer.port")"
+    if [ -n "$vport" ] && curl -fsS -m 20 -X POST "http://127.0.0.1:${vport}/dump" 2>/dev/null; then
+        echo
+        return 0
+    fi
+    python3 "$VIEWER" --dump
+}
+
 do_selftest() {
     local chrome test_port=6089
     chrome="$(find_chromium)"
@@ -293,6 +323,7 @@ case "${1:-}" in
     --stop) do_stop ;;
     --status) do_status ;;
     --ensure) do_ensure ;;
+    --dump) do_dump ;;
     --serve) do_serve "${2:-}" ;;
     --selftest) do_selftest ;;
     --help | -h) usage ;;

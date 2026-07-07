@@ -79,5 +79,12 @@ next time it is needed.
   (JupyterLab or VS Code). From a notebook cell, use `!bash -ic "az login"`.
 - **The Zone Browser tab shows "Disconnected"** — reload the tab.
 - **Blank page** — wait a moment; the browser may still be starting.
-- Logs live under `/tmp/zone-browser-$(id -u)/` if you need to report an
-  issue.
+- **Blank white page on `sso1.gcsso.gc.ca/adfs/ls/wia`** — GC SSO tried
+  Windows Integrated Authentication, which a notebook pod cannot do (it is
+  not a domain-joined device). Ask your admins to set a user-agent that GC
+  SSO does not treat as WIA-capable (the `ZONE_BROWSER_UA` environment
+  variable), which makes the normal username/password page appear instead.
+- **Reporting an issue** — run `zone-browser --dump` while the problem is
+  on screen: it saves a screenshot, the page HTML, and the URL under
+  `/tmp/zone-browser-$(id -u)/dump-*/`. Attach that folder (plus the `*.log`
+  files next to it) to your ticket.

@@ -66,6 +66,7 @@ class Upstream:
         self.conn = None
         self.clients = set()
         self.next_id = BRIDGE_ID_BASE
+        self.pending = {}
 
     async def ensure(self):
         if self.conn is not None:
@@ -96,10 +97,14 @@ class Upstream:
             if msg is None:
                 break
             try:
-                mid = json.loads(msg).get("id")
+                parsed = json.loads(msg)
+                mid = parsed.get("id")
             except (ValueError, AttributeError):
-                mid = None
+                parsed, mid = None, None
             if isinstance(mid, int) and mid >= BRIDGE_ID_BASE:
+                future = self.pending.pop(mid, None)
+                if future is not None and not future.done():
+                    future.set_result(parsed)
                 continue
             for client in list(self.clients):
                 try:
@@ -107,6 +112,10 @@ class Upstream:
                 except tornado.websocket.WebSocketClosedError:
                     self.clients.discard(client)
         self.conn = None
+        for future in self.pending.values():
+            if not future.done():
+                future.set_exception(RuntimeError("browser connection closed"))
+        self.pending.clear()
         for client in list(self.clients):
             try:
                 client.write_message(json.dumps({"method": "ZoneBrowser.browserGone"}))
@@ -119,6 +128,24 @@ class Upstream:
         await conn.write_message(
             json.dumps({"id": self.next_id, "method": method, "params": params})
         )
+
+    async def request(self, method, params, timeout=20):
+        """Send a CDP command and await its reply (unlike command())."""
+        conn = await self.ensure()
+        self.next_id += 1
+        request_id = self.next_id
+        future = asyncio.get_event_loop().create_future()
+        self.pending[request_id] = future
+        await conn.write_message(
+            json.dumps({"id": request_id, "method": method, "params": params})
+        )
+        try:
+            reply = await asyncio.wait_for(future, timeout)
+        finally:
+            self.pending.pop(request_id, None)
+        if "error" in reply:
+            raise RuntimeError("%s: %s" % (method, reply["error"]))
+        return reply.get("result", {})
 
 
 UPSTREAM = Upstream()
@@ -195,6 +222,47 @@ class OpenHandler(tornado.web.RequestHandler):
         broadcast_open()
         await UPSTREAM.command("Page.navigate", {"url": url})
         self.write("ok")
+
+
+def _write_dump(screenshot_b64, html, url):
+    import base64
+    import time
+
+    directory = os.path.join(RUN_DIR, "dump-" + time.strftime("%Y%m%d-%H%M%S"))
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, "page.png"), "wb") as handle:
+        handle.write(base64.b64decode(screenshot_b64 or ""))
+    with open(os.path.join(directory, "page.html"), "w", errors="replace") as handle:
+        handle.write(html or "")
+    with open(os.path.join(directory, "url.txt"), "w") as handle:
+        handle.write((url or "") + "\n")
+    return directory
+
+
+DUMP_COMMANDS = (
+    ("Page.captureScreenshot", {"format": "png"}),
+    ("Runtime.evaluate",
+     {"expression": "document.documentElement.outerHTML", "returnByValue": True}),
+    ("Runtime.evaluate", {"expression": "location.href", "returnByValue": True}),
+)
+
+
+def _dump_results(shot, html, url):
+    return _write_dump(
+        shot.get("data", ""),
+        (html.get("result") or {}).get("value", ""),
+        (url.get("result") or {}).get("value", ""),
+    )
+
+
+class DumpHandler(tornado.web.RequestHandler):
+    """POST /dump -- support bundle of whatever the browser shows right now."""
+
+    async def post(self):
+        replies = [
+            await UPSTREAM.request(method, params) for method, params in DUMP_COMMANDS
+        ]
+        self.write("dumped: " + _dump_results(*replies))
 
 
 class HealthHandler(tornado.web.RequestHandler):
@@ -278,12 +346,15 @@ VIEWER_HTML = r"""<!doctype html>
     var h = Math.max(240, Math.floor(r.height));
     if (w === W && h === H) return;
     W = w; H = h;
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Always render and capture at 2x: on standard-DPI monitors the frame
+    // is downscaled in the tab (supersampled, crisp text); on retina it is
+    // native. 1x capture reads as blurry/"fake".
+    var dpr = 2;
     send("Emulation.setDeviceMetricsOverride",
          { width: W, height: H, deviceScaleFactor: dpr, mobile: false });
     send("Page.stopScreencast");
     send("Page.startScreencast",
-         { format: "jpeg", quality: 80,
+         { format: "jpeg", quality: 90,
            maxWidth: Math.floor(W * dpr), maxHeight: Math.floor(H * dpr) });
   }
   var fitTimer = null;
@@ -434,6 +505,34 @@ VIEWER_HTML = r"""<!doctype html>
 """
 
 
+def dump_oneshot():
+    """--dump without a running bridge: talk to the page target directly."""
+    pages = list_pages()
+    if not pages:
+        raise SystemExit("zone-browser-viewer: no page target (is Chromium running?)")
+
+    async def go():
+        conn = await websocket_connect(
+            pages[0]["webSocketDebuggerUrl"], max_message_size=64 * 1024 * 1024
+        )
+        for request_id, (method, params) in enumerate(DUMP_COMMANDS, start=1):
+            await conn.write_message(
+                json.dumps({"id": request_id, "method": method, "params": params})
+            )
+        replies = {}
+        while len(replies) < len(DUMP_COMMANDS):
+            msg = await conn.read_message()
+            if msg is None:
+                raise SystemExit("zone-browser-viewer: browser connection closed")
+            data = json.loads(msg)
+            if data.get("id") in range(1, len(DUMP_COMMANDS) + 1):
+                replies[data["id"]] = data.get("result", {})
+        conn.close()
+        return [replies[i] for i in range(1, len(DUMP_COMMANDS) + 1)]
+
+    print("dumped: " + _dump_results(*asyncio.run(go())))
+
+
 def navigate_oneshot(url):
     """Point the browser at url without a running bridge (single use)."""
     pages = list_pages()
@@ -464,6 +563,7 @@ def serve(port):
             (r"/ws", WSHandler),
             (r"/events", EventsHandler),
             (r"/open", OpenHandler),
+            (r"/dump", DumpHandler),
             (r"/healthz", HealthHandler),
         ],
         websocket_max_message_size=64 * 1024 * 1024,
@@ -477,9 +577,12 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--serve", type=int, metavar="PORT")
     group.add_argument("--navigate", metavar="URL")
+    group.add_argument("--dump", action="store_true")
     args = parser.parse_args()
     if args.navigate:
         navigate_oneshot(args.navigate)
+    elif args.dump:
+        dump_oneshot()
     else:
         serve(args.serve)
 
