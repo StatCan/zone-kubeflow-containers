@@ -303,6 +303,15 @@ VIEWER_HTML = r"""<!doctype html>
             user-select: none; -webkit-user-drag: none; }
   #msg { position: absolute; inset: 0; display: flex; align-items: center;
          justify-content: center; color: #9aa0a6; background: #202124; }
+  #wia { position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+         display: none; max-width: 560px; background: #35363a; color: #e8eaed;
+         border: 1px solid #5f6368; border-radius: 8px; padding: 14px 16px;
+         box-shadow: 0 4px 16px rgba(0,0,0,.4); font-size: 13px;
+         line-height: 1.5; z-index: 5; }
+  #wia button { margin: 10px 8px 0 0; padding: 5px 12px; border-radius: 4px;
+                border: 1px solid #5f6368; background: #8ab4f8; color: #202124;
+                font: inherit; cursor: pointer; }
+  #wia button.quiet { background: none; color: #e8eaed; }
 </style>
 </head>
 <body>
@@ -316,6 +325,16 @@ VIEWER_HTML = r"""<!doctype html>
 <div id="view" tabindex="0">
   <img id="screen" draggable="false" alt="">
   <div id="msg">Starting the in-workspace browser&hellip;</div>
+  <div id="wia">
+    <strong>This sign-in page needs Windows authentication.</strong><br>
+    GC SSO tried a silent Windows (Kerberos) sign-in, which a notebook
+    workspace cannot complete &mdash; that is why the page below is blank.
+    <br>
+    <button id="wia-try">Try the standard sign-in page</button>
+    <button id="wia-close" class="quiet">Dismiss</button><br>
+    If that also fails, ask your administrator to set
+    <code>ZONE_BROWSER_UA</code> (see azure-sign-in.md in your home folder).
+  </div>
 </div>
 <script>
 (function () {
@@ -363,9 +382,34 @@ VIEWER_HTML = r"""<!doctype html>
     fitTimer = setTimeout(fit, 150);
   });
 
+  var wiaBox = document.getElementById("wia");
+  var wiaUrl = "";
+  function checkWia(u) {
+    // ADFS served its Windows-Integrated-Auth endpoint, which dead-ends in
+    // a pod (no Kerberos): explain the blank page and offer the forms
+    // endpoint (same URL without /wia) as a one-click recovery attempt.
+    if (u.indexOf("/adfs/ls/wia") !== -1) {
+      wiaUrl = u;
+      wiaBox.style.display = "block";
+    } else {
+      wiaBox.style.display = "none";
+    }
+  }
+  document.getElementById("wia-try").addEventListener("click", function () {
+    if (wiaUrl) send("Page.navigate",
+                     { url: wiaUrl.replace("/adfs/ls/wia", "/adfs/ls/") });
+    wiaBox.style.display = "none";
+    view.focus();
+  });
+  document.getElementById("wia-close").addEventListener("click", function () {
+    wiaBox.style.display = "none";
+    view.focus();
+  });
+
   function setUrl(u) {
     if (document.activeElement !== urlBox) urlBox.value = u;
     lock.innerHTML = /^https:/.test(u) ? "&#128274;" : "&#9888;&#65039;";
+    checkWia(u);
   }
 
   function refreshUrl() {
