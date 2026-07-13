@@ -246,16 +246,26 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         return True
 
     async def open(self):
-        # one live viewer at a time: the newest tab wins
-        for client in list(UPSTREAM.clients):
-            client.close(4000, "another Zone Browser tab was opened")
-        UPSTREAM.clients = {self}
+        # every open Zone Browser tab shows the live browser: az login
+        # auto-opens one per Lab frontend, and the visible one must never
+        # be a dead tab because another frontend connected later
+        UPSTREAM.clients.add(self)
         try:
             await UPSTREAM.ensure()
         except Exception:
             self.close(4001, "in-pod browser unavailable")
 
     async def on_message(self, message):
+        try:
+            parsed = json.loads(message)
+        except ValueError:
+            parsed = {}
+        if parsed.get("method") == "ZoneBrowser.ping":
+            # viewer keepalive so proxies between Lab and the bridge do not
+            # idle the socket out; answered locally -- it must neither wake
+            # Chromium nor reset the browser's idle timer
+            self.write_message(json.dumps({"id": parsed.get("id"), "result": {}}))
+            return
         touch_last_used()
         try:
             conn = await UPSTREAM.ensure()
@@ -432,20 +442,12 @@ VIEWER_HTML = r"""<!doctype html>
 
   var base = location.pathname.replace(/[^/]*$/, "");
   var proto = location.protocol === "https:" ? "wss://" : "ws://";
-  var ws = new WebSocket(proto + location.host + base + "ws");
+  var ws = null;
 
   var nextId = 1;
   var pending = {};
   function send(method, params, cb) {
-    if (ws.readyState !== 1) {
-      // a click on a dead connection must not die silently -- but never
-      // clobber a more specific message (e.g. "view moved to a newer tab")
-      if (ws.readyState > 1 && msg.style.display === "none") {
-        msg.textContent = "Disconnected. Reload this tab to reconnect.";
-        msg.style.display = "flex";
-      }
-      return;
-    }
+    if (!ws || ws.readyState !== 1) return; // reconnect is already underway
     var id = nextId++;
     if (cb) pending[id] = cb;
     ws.send(JSON.stringify({ id: id, method: method, params: params || {} }));
@@ -521,15 +523,25 @@ VIEWER_HTML = r"""<!doctype html>
     refreshUrl();
   }
 
-  ws.onopen = function () {
+  var reconnectDelay = 1000;
+  var keepalive = null;
+
+  function onWsOpen() {
+    reconnectDelay = 1000;
     rearm();
     // the CLI may have navigated just before this viewer attached
     setTimeout(refreshUrl, 1500);
     setTimeout(refreshUrl, 4000);
     view.focus();
-  };
+    // proxies between this tab and the bridge idle out quiet websockets;
+    // the ping is answered by the bridge without waking the browser
+    keepalive = setInterval(function () {
+      if (ws && ws.readyState === 1)
+        ws.send(JSON.stringify({ id: nextId++, method: "ZoneBrowser.ping" }));
+    }, 25000);
+  }
 
-  ws.onmessage = function (ev) {
+  function onWsMessage(ev) {
     var m;
     try { m = JSON.parse(ev.data); } catch (e) { return; }
     if (m.id && pending[m.id]) {
@@ -556,17 +568,28 @@ VIEWER_HTML = r"""<!doctype html>
     } else if (m.method === "ZoneBrowser.browserGone") {
       wiaBox.style.display = "none";
       msg.textContent = "The in-workspace browser stopped (idle timeout). " +
-                        "Run az login again, or reload this tab.";
+                        "Run az login again to restart it.";
       msg.style.display = "flex";
     }
-  };
+  }
 
-  ws.onclose = function (ev) {
-    msg.textContent = (ev.code === 4000)
-      ? "This view moved to a newer Zone Browser tab."
-      : "Disconnected. Reload this tab to reconnect.";
+  function onWsClose() {
+    clearInterval(keepalive);
+    // the notebook proxy route can idle out or the bridge can restart;
+    // reconnect quietly (jupyter-server-proxy respawns the bridge on demand)
+    msg.textContent = "Reconnecting to the workspace browser…";
     msg.style.display = "flex";
-  };
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+  }
+
+  function connect() {
+    ws = new WebSocket(proto + location.host + base + "ws");
+    ws.onopen = onWsOpen;
+    ws.onmessage = onWsMessage;
+    ws.onclose = onWsClose;
+  }
+  connect();
 
   function mods(e) {
     return (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) |
