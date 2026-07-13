@@ -351,9 +351,12 @@ open_url() {
     do_ensure || return 1
     # Prefer the viewer bridge: it tells every JupyterLab frontend to open
     # the Zone Browser tab (/events) and navigates the shared Chromium so an
-    # attached tab updates live. Fall back to a one-shot DevTools call.
+    # attached tab updates live. Fall back to a one-shot DevTools call. The
+    # generous timeout matters: on a cold pod the bridge waits for Chromium's
+    # first page target, and giving up early would race a second navigation
+    # path against it (a hidden duplicate tab the viewer never shows).
     [ -f "$RUN_DIR/viewer.port" ] && vport="$(cat "$RUN_DIR/viewer.port")"
-    if [ -z "$vport" ] || ! curl -fsS -m 5 -X POST --data-urlencode "url=$url" \
+    if [ -z "$vport" ] || ! curl -fsS -m 90 -X POST --data-urlencode "url=$url" \
         "http://127.0.0.1:${vport}/open" >/dev/null 2>&1; then
         python3 "$VIEWER" --navigate "$url" || return 1
     fi

@@ -86,18 +86,24 @@ class Upstream:
         if self.conn is not None:
             return self.conn
         pages = []
-        for attempt in range(3):
+        # On slow nodes Chromium's DevTools port answers seconds before its
+        # first page target is listed -- keep retrying well past that gap.
+        for attempt in range(10):
             try:
                 pages = list_pages()
             except OSError:
                 pages = []
             if pages:
                 break
-            # Chromium is not up (first use, or reaped by the idle watchdog)
+            # Chromium is not up (first use, or reaped by the idle watchdog);
+            # --ensure is a fast no-op when it is already starting
             subprocess.run([ZONE_BROWSER_BIN, "--ensure"], check=False, timeout=120)
-            await asyncio.sleep(1 + attempt)
+            await asyncio.sleep(1)
         if not pages:
             raise RuntimeError("in-pod Chromium is not reachable")
+        # never adopt a blank tab when a real page exists (e.g. a sign-in
+        # tab a one-shot fallback created while Chromium was still warming)
+        pages.sort(key=lambda p: p.get("url", "") in ("about:blank", ""))
         self._adopt(await self._connect(pages[0]), pages[0])
         self.known_targets = {p["id"] for p in pages}
         # an already-open viewer tab (idle-reaped browser) must re-arm its
@@ -168,7 +174,9 @@ class Upstream:
             pages = await self._list_pages()
         except Exception:
             return False
-        pages.sort(key=lambda p: p["id"] == self.target_id)
+        # prefer real pages over blank tabs, and the tab that just died last
+        pages.sort(key=lambda p: (p["id"] == self.target_id,
+                                  p.get("url", "") in ("about:blank", "")))
         for page in pages:
             try:
                 self._adopt(await self._connect(page), page)
@@ -676,7 +684,17 @@ def dump_oneshot():
 
 def navigate_oneshot(url):
     """Point the browser at url without a running bridge (single use)."""
-    pages = list_pages()
+    # a just-started Chromium answers /json/list before its first page
+    # target exists -- wait for it rather than creating a duplicate tab
+    # the viewer bridge would never look at
+    for _ in range(10):
+        try:
+            pages = list_pages()
+        except OSError:
+            pages = []
+        if pages:
+            break
+        time.sleep(1)
     if not pages:
         req = urllib.request.Request(
             f"{CDP}/json/new?{urllib.parse.urlencode({'url': url})}", method="PUT"
