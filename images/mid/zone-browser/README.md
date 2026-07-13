@@ -38,7 +38,20 @@ az login (MSAL) ── http://localhost:<random> redirect, same pod netns
    covers the rstudio image too, which builds FROM mid.
 2. `zone-browser <url>` starts the headless Chromium if needed and points it
    at the URL — via the running viewer bridge (`POST /open`) so an open Zone
-   Browser tab updates live, else via a one-shot DevTools call.
+   Browser tab updates live, else via a one-shot DevTools call. Entra
+   authorize URLs get `domain_hint` appended (and `prompt=select_account`
+   dropped — it suppresses the acceleration, and the pod-local profile has
+   no other accounts to pick): Entra then answers with a plain 302 straight
+   to GC SSO instead of the JavaScript "Taking you to your organization's
+   sign-in page" interstitial, whose aadcdn.* CDN assets restricted
+   networks may block (freezing the sign-in right there).
+2a. The bridge follows NEW tabs: if a page continues the flow via
+   window.open / target="_blank" (e.g. the interstitial's "click here"
+   fallback link), headless Chromium puts it in a hidden target. The bridge
+   polls the target list, re-attaches to the newest tab, closes the page it
+   replaced and broadcasts `ZoneBrowser.targetChanged` so the viewer
+   re-arms events and the screencast — the sign-in always continues inside
+   the single Zone Browser tab.
 2b. The `zone-browser-autoopen` labextension (built from `labextension/` at
    image build) holds the bridge's `/events` websocket from every JupyterLab
    frontend; on the bridge's `{"type": "open"}` broadcast it opens/focuses
@@ -101,6 +114,14 @@ pages correctly). If GC SSO still WIA-challenges that UA, set
 `curl -s -o /dev/null -w '%{http_code}\n' -A "<ua>"
 https://sso1.gcsso.gc.ca/adfs/ls/` (401 = WIA challenge, 200 = forms);
 `ZONE_BROWSER_UA=""` restores Chromium's native user agent.
+
+**Entra sign-in acceleration:** `ZONE_BROWSER_DOMAIN_HINT` (default
+`statcan.gc.ca`) is appended as `domain_hint` to
+`login.microsoftonline.com/*/authorize` URLs, making Entra 302 directly to
+the federated IdP (GC SSO) — no email-discovery page, no "taking you to
+your organization" interstitial, no aadcdn.* CDN dependence for the hop.
+Set it to `""` to disable (e.g. for a tenant whose HRD policy disables
+auto-acceleration).
 
 **Support bundles:** `zone-browser --dump` captures what the browser is
 showing right now (screenshot + page HTML + URL) into

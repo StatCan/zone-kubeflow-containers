@@ -59,14 +59,25 @@ def list_pages():
         return [t for t in json.load(resp) if t.get("type") == "page"]
 
 
+def close_target(target_id):
+    try:
+        with urllib.request.urlopen(f"{CDP}/json/close/{target_id}", timeout=5):
+            pass
+    except OSError:
+        pass
+
+
 class Upstream:
-    """The single shared CDP connection to the Chromium page target."""
+    """The single shared CDP connection to the current Chromium page target."""
 
     def __init__(self):
         self.conn = None
+        self.target_id = None
+        self.known_targets = set()
         self.clients = set()
         self.next_id = BRIDGE_ID_BASE
         self.pending = {}
+        self.watch_task = None
 
     async def ensure(self):
         if self.conn is not None:
@@ -84,14 +95,80 @@ class Upstream:
             await asyncio.sleep(1 + attempt)
         if not pages:
             raise RuntimeError("in-pod Chromium is not reachable")
-        self.conn = await websocket_connect(
-            pages[0]["webSocketDebuggerUrl"], max_message_size=64 * 1024 * 1024
-        )
-        asyncio.ensure_future(self._pump())
+        self._adopt(await self._connect(pages[0]), pages[0])
+        self.known_targets = {p["id"] for p in pages}
+        if self.watch_task is None:
+            self.watch_task = asyncio.ensure_future(self._watch_targets())
         return self.conn
 
-    async def _pump(self):
-        conn = self.conn
+    async def _connect(self, page):
+        return await websocket_connect(
+            page["webSocketDebuggerUrl"], max_message_size=64 * 1024 * 1024
+        )
+
+    def _adopt(self, conn, page):
+        old, self.conn = self.conn, conn
+        self.target_id = page["id"]
+        self._fail_pending()
+        asyncio.ensure_future(self._pump(conn))
+        if old is not None:
+            old.close()
+
+    def _fail_pending(self):
+        for future in self.pending.values():
+            if not future.done():
+                future.set_exception(RuntimeError("browser connection closed"))
+        self.pending.clear()
+
+    def broadcast(self, message):
+        for client in list(self.clients):
+            try:
+                client.write_message(message)
+            except tornado.websocket.WebSocketClosedError:
+                self.clients.discard(client)
+
+    async def _watch_targets(self):
+        # Sign-in pages sometimes continue in a NEW tab (window.open or
+        # target="_blank" -- e.g. the "click here" fallback link on Entra's
+        # "Taking you to your organization's sign-in page" interstitial).
+        # Headless Chromium puts that tab in a hidden target, so the viewer
+        # would keep screencasting the old, now-frozen page. Follow the new
+        # tab (dropping the page it replaced) so the sign-in always
+        # continues inside the Zone Browser tab.
+        while True:
+            await asyncio.sleep(2)
+            if self.conn is None:
+                continue
+            try:
+                pages = list_pages()
+            except OSError:
+                continue
+            fresh = [p for p in pages if p["id"] not in self.known_targets]
+            self.known_targets = {p["id"] for p in pages}
+            if not fresh or self.conn is None:
+                continue
+            replaced = self.target_id
+            try:
+                self._adopt(await self._connect(fresh[0]), fresh[0])
+            except Exception:
+                continue
+            close_target(replaced)
+            self.broadcast('{"method": "ZoneBrowser.targetChanged"}')
+
+    async def _reattach(self):
+        # Our tab closed (e.g. a sign-in popup finished and closed itself)
+        # while Chromium is still up: move to a surviving tab.
+        try:
+            pages = list_pages()
+            if not pages:
+                return False
+            self._adopt(await self._connect(pages[0]), pages[0])
+            self.known_targets = {p["id"] for p in pages}
+        except Exception:
+            return False
+        return True
+
+    async def _pump(self, conn):
         while True:
             msg = await conn.read_message()
             if msg is None:
@@ -111,16 +188,14 @@ class Upstream:
                     client.write_message(msg)
                 except tornado.websocket.WebSocketClosedError:
                     self.clients.discard(client)
+        if self.conn is not conn:
+            return  # superseded by a target switch
         self.conn = None
-        for future in self.pending.values():
-            if not future.done():
-                future.set_exception(RuntimeError("browser connection closed"))
-        self.pending.clear()
-        for client in list(self.clients):
-            try:
-                client.write_message(json.dumps({"method": "ZoneBrowser.browserGone"}))
-            except tornado.websocket.WebSocketClosedError:
-                pass
+        self._fail_pending()
+        if await self._reattach():
+            self.broadcast('{"method": "ZoneBrowser.targetChanged"}')
+            return
+        self.broadcast('{"method": "ZoneBrowser.browserGone"}')
 
     async def command(self, method, params):
         conn = await self.ensure()
@@ -352,7 +427,14 @@ VIEWER_HTML = r"""<!doctype html>
   var nextId = 1;
   var pending = {};
   function send(method, params, cb) {
-    if (ws.readyState !== 1) return;
+    if (ws.readyState !== 1) {
+      // a click on a dead connection must not die silently
+      if (ws.readyState > 1) {
+        msg.textContent = "Disconnected. Reload this tab to reconnect.";
+        msg.style.display = "flex";
+      }
+      return;
+    }
     var id = nextId++;
     if (cb) pending[id] = cb;
     ws.send(JSON.stringify({ id: id, method: method, params: params || {} }));
@@ -449,7 +531,15 @@ VIEWER_HTML = r"""<!doctype html>
       refreshUrl();
     } else if (m.method === "Page.javascriptDialogOpening") {
       send("Page.handleJavaScriptDialog", { accept: true });
+    } else if (m.method === "ZoneBrowser.targetChanged") {
+      // the sign-in continued in a new browser tab and the bridge followed
+      // it: re-arm events and the screencast on the new page
+      send("Page.enable");
+      W = 0; H = 0;
+      fit();
+      refreshUrl();
     } else if (m.method === "ZoneBrowser.browserGone") {
+      wiaBox.style.display = "none";
       msg.textContent = "The in-workspace browser stopped (idle timeout). " +
                         "Run az login again, or reload this tab.";
       msg.style.display = "flex";

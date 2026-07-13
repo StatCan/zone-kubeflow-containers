@@ -34,6 +34,10 @@
 #   ZONE_BROWSER_UA           user-agent override; defaults to a UA without
 #                             the "Chrome" token (ADFS/WIA workaround), ""
 #                             restores Chromium's native user agent
+#   ZONE_BROWSER_DOMAIN_HINT  domain_hint appended to Entra authorize URLs
+#                             (default statcan.gc.ca, "" disables): sign-in
+#                             redirects straight to GC SSO, skipping the
+#                             fragile "taking you to your organization" page
 #   ZONE_EXTERNAL_URL         https://<zone host>, used to print a clickable link
 
 set -u
@@ -51,6 +55,7 @@ TTL_MINUTES="${ZONE_BROWSER_TTL_MINUTES:-15}"
 # set it to the empty string to use Chromium's native user agent.
 DEFAULT_UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ZoneBrowser/1.0 Safari/537.36"
 ZONE_BROWSER_UA="${ZONE_BROWSER_UA-$DEFAULT_UA}"
+DOMAIN_HINT="${ZONE_BROWSER_DOMAIN_HINT-statcan.gc.ca}"
 RUN_DIR="/tmp/zone-browser-$(id -u)"
 export ZONE_BROWSER_RUN_DIR="$RUN_DIR"
 export ZONE_BROWSER_BIN="$SELF"
@@ -60,7 +65,7 @@ mkdir -p "$RUN_DIR"
 chmod 700 "$RUN_DIR"
 
 usage() {
-    sed -n '2,37s/^# \{0,1\}//p' "$SELF"
+    sed -n '2,41s/^# \{0,1\}//p' "$SELF"
 }
 
 find_chromium() {
@@ -314,8 +319,37 @@ do_selftest() {
     return 0
 }
 
+accelerate_sign_in() {
+    # Entra's authorize page normally discovers the user's IdP from their
+    # typed email, then hops to it via the "Taking you to your organization's
+    # sign-in page" interstitial -- JavaScript served from Microsoft's
+    # aadcdn.* CDN, which restricted networks may block, freezing the
+    # sign-in right there. With domain_hint Entra instead answers with a
+    # plain 302 straight to the federated IdP (GC SSO): no email prompt,
+    # no interstitial, no CDN dependency for the hop. prompt=select_account
+    # (sent by az login) suppresses that redirect, so drop it -- the pod
+    # browser's profile is pod-local, there are no other accounts to pick.
+    local url="$1"
+    case "$url" in
+    *://login.microsoftonline.com/*/authorize\?*)
+        case "$url" in
+        *domain_hint=*) ;;
+        *)
+            if [ -n "$DOMAIN_HINT" ]; then
+                url="${url/&prompt=select_account/}"
+                url="${url/prompt=select_account&/}"
+                url="${url}&domain_hint=${DOMAIN_HINT}"
+            fi
+            ;;
+        esac
+        ;;
+    esac
+    printf '%s' "$url"
+}
+
 open_url() {
-    local url="$1" vport=""
+    local url vport=""
+    url="$(accelerate_sign_in "$1")"
     do_ensure || return 1
     # Prefer the viewer bridge: it tells every JupyterLab frontend to open
     # the Zone Browser tab (/events) and navigates the shared Chromium so an

@@ -16,7 +16,7 @@ browser on your device.
    ```
 
 2. A **Zone Browser** tab opens automatically beside your terminal, showing
-   the Microsoft sign-in page. (If it does not appear, click the blue **+**
+   the GC SSO sign-in page. (If it does not appear, click the blue **+**
    (Launcher) and open the **Zone Browser** tile.)
 
 3. Sign in (including MFA) in that tab. Your terminal finishes logging in on
@@ -79,6 +79,11 @@ next time it is needed.
   (JupyterLab or VS Code). From a notebook cell, use `!bash -ic "az login"`.
 - **The Zone Browser tab shows "Disconnected"** — reload the tab.
 - **Blank page** — wait a moment; the browser may still be starting.
+- **Stuck on "Taking you to your organization's sign-in page"** — this page
+  should normally be skipped entirely (the workspace sends sign-ins straight
+  to GC SSO). If you still land on it, click the "click here" link on the
+  page — the Zone Browser follows it, even when it opens in a new browser
+  tab behind the scenes.
 - **Blank white page on `sso1.gcsso.gc.ca/adfs/ls/wia`** — GC SSO tried
   Windows Integrated Authentication, which a notebook pod cannot do (it is
   not a domain-joined device). Ask your admins to set a user-agent that GC

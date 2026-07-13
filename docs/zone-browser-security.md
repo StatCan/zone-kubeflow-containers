@@ -131,7 +131,12 @@ session; the Zone Browser adds no new exposure.
 2. **Egress:** rendering the sign-in pages in-pod requires egress to
    Microsoft's sign-in CDNs (`aadcdn.msauth.net`, `aadcdn.msftauth.net`) and
    `sso1.gcsso.gc.ca` in addition to `login.microsoftonline.com` (which
-   device-code already required).
+   device-code already required). To reduce that CDN dependence, the
+   launcher appends `domain_hint=statcan.gc.ca` to Entra authorize URLs
+   (`ZONE_BROWSER_DOMAIN_HINT`): Entra then answers with a plain HTTP 302
+   straight to GC SSO, so the CDN-rendered account-picker/discovery pages
+   are never loaded on the critical path. This is Entra's documented Home
+   Realm Discovery auto-acceleration; it adds no scopes, apps or endpoints.
 3. **General-purpose browsing:** the in-pod browser can technically render
    any URL the pod can reach — the same reachability a user already has via
    `curl`/`requests` from a terminal. Existing egress policy remains the
