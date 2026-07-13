@@ -327,21 +327,19 @@ accelerate_sign_in() {
     # sign-in right there. With domain_hint Entra instead answers with a
     # plain 302 straight to the federated IdP (GC SSO): no email prompt,
     # no interstitial, no CDN dependency for the hop. prompt=select_account
-    # (sent by az login) suppresses that redirect, so drop it -- the pod
-    # browser's profile is pod-local, there are no other accounts to pick.
+    # (sent by az login) suppresses that redirect, so drop it; to sign in
+    # as a different account, see azure-sign-in.md.
     local url="$1"
+    if [ -z "$DOMAIN_HINT" ]; then
+        printf '%s' "$url"
+        return
+    fi
     case "$url" in
-    *://login.microsoftonline.com/*/authorize\?*)
-        case "$url" in
-        *domain_hint=*) ;;
-        *)
-            if [ -n "$DOMAIN_HINT" ]; then
-                url="${url/&prompt=select_account/}"
-                url="${url/prompt=select_account&/}"
-                url="${url}&domain_hint=${DOMAIN_HINT}"
-            fi
-            ;;
-        esac
+    *domain_hint=*) ;;
+    https://login.microsoftonline.com/*/authorize\?*)
+        url="${url/&prompt=select_account/}"
+        url="${url/\?prompt=select_account&/?}"
+        url="${url}&domain_hint=${DOMAIN_HINT}"
         ;;
     esac
     printf '%s' "$url"

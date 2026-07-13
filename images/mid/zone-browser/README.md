@@ -48,10 +48,11 @@ az login (MSAL) ── http://localhost:<random> redirect, same pod netns
 2a. The bridge follows NEW tabs: if a page continues the flow via
    window.open / target="_blank" (e.g. the interstitial's "click here"
    fallback link), headless Chromium puts it in a hidden target. The bridge
-   polls the target list, re-attaches to the newest tab, closes the page it
-   replaced and broadcasts `ZoneBrowser.targetChanged` so the viewer
-   re-arms events and the screencast — the sign-in always continues inside
-   the single Zone Browser tab.
+   polls the target list, re-attaches to the newest tab and broadcasts
+   `ZoneBrowser.targetChanged` so the viewer re-arms events and the
+   screencast. The replaced page is left open — popup flows hand their
+   result back to `window.opener` — and when the followed tab closes
+   itself, the bridge reattaches to a surviving tab the same way.
 2b. The `zone-browser-autoopen` labextension (built from `labextension/` at
    image build) holds the bridge's `/events` websocket from every JupyterLab
    frontend; on the bridge's `{"type": "open"}` broadcast it opens/focuses

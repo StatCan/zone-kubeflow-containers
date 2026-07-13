@@ -38,6 +38,16 @@ ZONE_BROWSER_BIN = os.environ.get("ZONE_BROWSER_BIN", "/usr/local/bin/zone-brows
 # ids >= this are commands issued by the bridge itself; their replies are not
 # forwarded to the viewer (the viewer's own ids start at 1)
 BRIDGE_ID_BASE = 1_000_000_000
+TARGET_CHANGED = json.dumps({"method": "ZoneBrowser.targetChanged"})
+BROWSER_GONE = json.dumps({"method": "ZoneBrowser.browserGone"})
+
+
+def send_all(clients, message):
+    for client in list(clients):
+        try:
+            client.write_message(message)
+        except tornado.websocket.WebSocketClosedError:
+            clients.discard(client)
 
 _last_touch = 0.0
 
@@ -59,14 +69,6 @@ def list_pages():
         return [t for t in json.load(resp) if t.get("type") == "page"]
 
 
-def close_target(target_id):
-    try:
-        with urllib.request.urlopen(f"{CDP}/json/close/{target_id}", timeout=5):
-            pass
-    except OSError:
-        pass
-
-
 class Upstream:
     """The single shared CDP connection to the current Chromium page target."""
 
@@ -78,6 +80,7 @@ class Upstream:
         self.next_id = BRIDGE_ID_BASE
         self.pending = {}
         self.watch_task = None
+        self.pump_task = None
 
     async def ensure(self):
         if self.conn is not None:
@@ -97,7 +100,10 @@ class Upstream:
             raise RuntimeError("in-pod Chromium is not reachable")
         self._adopt(await self._connect(pages[0]), pages[0])
         self.known_targets = {p["id"] for p in pages}
-        if self.watch_task is None:
+        # an already-open viewer tab (idle-reaped browser) must re-arm its
+        # screencast on the fresh target
+        send_all(self.clients, TARGET_CHANGED)
+        if self.watch_task is None or self.watch_task.done():
             self.watch_task = asyncio.ensure_future(self._watch_targets())
         return self.conn
 
@@ -110,7 +116,7 @@ class Upstream:
         old, self.conn = self.conn, conn
         self.target_id = page["id"]
         self._fail_pending()
-        asyncio.ensure_future(self._pump(conn))
+        self.pump_task = asyncio.ensure_future(self._pump(conn))
         if old is not None:
             old.close()
 
@@ -120,53 +126,57 @@ class Upstream:
                 future.set_exception(RuntimeError("browser connection closed"))
         self.pending.clear()
 
-    def broadcast(self, message):
-        for client in list(self.clients):
-            try:
-                client.write_message(message)
-            except tornado.websocket.WebSocketClosedError:
-                self.clients.discard(client)
+    async def _list_pages(self):
+        # keep the blocking HTTP call off the event loop: a slow /json/list
+        # must not stall the screencast and input websockets
+        return await asyncio.get_event_loop().run_in_executor(None, list_pages)
 
     async def _watch_targets(self):
         # Sign-in pages sometimes continue in a NEW tab (window.open or
         # target="_blank" -- e.g. the "click here" fallback link on Entra's
         # "Taking you to your organization's sign-in page" interstitial).
         # Headless Chromium puts that tab in a hidden target, so the viewer
-        # would keep screencasting the old, now-frozen page. Follow the new
-        # tab (dropping the page it replaced) so the sign-in always
-        # continues inside the Zone Browser tab.
+        # would keep screencasting the old, now-frozen page. Follow the
+        # newest tab. The replaced page is deliberately left open: popup
+        # flows hand their result back to window.opener, and when a popup
+        # closes itself, _pump()'s _reattach returns the viewer to it.
         while True:
             await asyncio.sleep(2)
             if self.conn is None:
                 continue
             try:
-                pages = list_pages()
-            except OSError:
-                continue
+                pages = await self._list_pages()
+            except Exception:
+                continue  # Chromium mid-shutdown/unreachable; retry later
             fresh = [p for p in pages if p["id"] not in self.known_targets]
-            self.known_targets = {p["id"] for p in pages}
             if not fresh or self.conn is None:
                 continue
-            replaced = self.target_id
             try:
                 self._adopt(await self._connect(fresh[0]), fresh[0])
             except Exception:
-                continue
-            close_target(replaced)
-            self.broadcast('{"method": "ZoneBrowser.targetChanged"}')
+                continue  # tab still initializing; retry on the next tick
+            # only mark targets known once the switch succeeded, so a
+            # transient connect failure is retried instead of orphaned
+            self.known_targets = {p["id"] for p in pages}
+            send_all(self.clients, TARGET_CHANGED)
 
     async def _reattach(self):
         # Our tab closed (e.g. a sign-in popup finished and closed itself)
-        # while Chromium is still up: move to a surviving tab.
+        # while Chromium is still up: move to a surviving tab, trying the
+        # tab that just died last (it may still be listed while closing).
         try:
-            pages = list_pages()
-            if not pages:
-                return False
-            self._adopt(await self._connect(pages[0]), pages[0])
-            self.known_targets = {p["id"] for p in pages}
+            pages = await self._list_pages()
         except Exception:
             return False
-        return True
+        pages.sort(key=lambda p: p["id"] == self.target_id)
+        for page in pages:
+            try:
+                self._adopt(await self._connect(page), page)
+            except Exception:
+                continue
+            self.known_targets = {p["id"] for p in pages}
+            return True
+        return False
 
     async def _pump(self, conn):
         while True:
@@ -183,19 +193,15 @@ class Upstream:
                 if future is not None and not future.done():
                     future.set_result(parsed)
                 continue
-            for client in list(self.clients):
-                try:
-                    client.write_message(msg)
-                except tornado.websocket.WebSocketClosedError:
-                    self.clients.discard(client)
+            send_all(self.clients, msg)
         if self.conn is not conn:
             return  # superseded by a target switch
         self.conn = None
         self._fail_pending()
         if await self._reattach():
-            self.broadcast('{"method": "ZoneBrowser.targetChanged"}')
+            send_all(self.clients, TARGET_CHANGED)
             return
-        self.broadcast('{"method": "ZoneBrowser.browserGone"}')
+        send_all(self.clients, BROWSER_GONE)
 
     async def command(self, method, params):
         conn = await self.ensure()
@@ -259,11 +265,7 @@ EVENT_CLIENTS = set()
 
 def broadcast_open():
     """Tell every JupyterLab frontend to open (or focus) the Zone Browser tab."""
-    for client in list(EVENT_CLIENTS):
-        try:
-            client.write_message('{"type": "open"}')
-        except tornado.websocket.WebSocketClosedError:
-            EVENT_CLIENTS.discard(client)
+    send_all(EVENT_CLIENTS, '{"type": "open"}')
 
 
 class EventsHandler(tornado.websocket.WebSocketHandler):
@@ -428,8 +430,9 @@ VIEWER_HTML = r"""<!doctype html>
   var pending = {};
   function send(method, params, cb) {
     if (ws.readyState !== 1) {
-      // a click on a dead connection must not die silently
-      if (ws.readyState > 1) {
+      // a click on a dead connection must not die silently -- but never
+      // clobber a more specific message (e.g. "view moved to a newer tab")
+      if (ws.readyState > 1 && msg.style.display === "none") {
         msg.textContent = "Disconnected. Reload this tab to reconnect.";
         msg.style.display = "flex";
       }
@@ -501,13 +504,20 @@ VIEWER_HTML = r"""<!doctype html>
     });
   }
 
-  ws.onopen = function () {
+  function rearm() {
+    // (re)subscribe events and restart the screencast -- used at open and
+    // whenever the bridge moves to another browser tab
     send("Page.enable");
+    W = 0; H = 0;
+    fit();
     refreshUrl();
+  }
+
+  ws.onopen = function () {
+    rearm();
     // the CLI may have navigated just before this viewer attached
     setTimeout(refreshUrl, 1500);
     setTimeout(refreshUrl, 4000);
-    fit();
     view.focus();
   };
 
@@ -533,11 +543,8 @@ VIEWER_HTML = r"""<!doctype html>
       send("Page.handleJavaScriptDialog", { accept: true });
     } else if (m.method === "ZoneBrowser.targetChanged") {
       // the sign-in continued in a new browser tab and the bridge followed
-      // it: re-arm events and the screencast on the new page
-      send("Page.enable");
-      W = 0; H = 0;
-      fit();
-      refreshUrl();
+      // it (or reattached after a restart): re-arm on the new page
+      rearm();
     } else if (m.method === "ZoneBrowser.browserGone") {
       wiaBox.style.display = "none";
       msg.textContent = "The in-workspace browser stopped (idle timeout). " +

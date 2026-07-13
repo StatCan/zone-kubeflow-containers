@@ -84,6 +84,14 @@ next time it is needed.
   to GC SSO). If you still land on it, click the "click here" link on the
   page — the Zone Browser follows it, even when it opens in a new browser
   tab behind the scenes.
+- **Signed in as the wrong account, or need to switch accounts** — the
+  workspace browser keeps your sign-in session, so a new `az login` may
+  sign you back in silently. Clear it first:
+
+  ```bash
+  zone-browser --stop && rm -rf /tmp/zone-browser-$(id -u)/profile
+  az login
+  ```
 - **Blank white page on `sso1.gcsso.gc.ca/adfs/ls/wia`** — GC SSO tried
   Windows Integrated Authentication, which a notebook pod cannot do (it is
   not a domain-joined device). Ask your admins to set a user-agent that GC
