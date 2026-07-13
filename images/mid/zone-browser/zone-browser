@@ -31,7 +31,9 @@
 #   ZONE_BROWSER_SIZE         browser window size          (default 1440,900)
 #   ZONE_BROWSER_TTL_MINUTES  idle minutes before shutdown (default 15)
 #   ZONE_BROWSER_CHROMIUM     path to a chromium binary    (default: bundled)
-#   ZONE_BROWSER_UA           user-agent override (ADFS/WIA workaround)
+#   ZONE_BROWSER_UA           user-agent override; defaults to a UA without
+#                             the "Chrome" token (ADFS/WIA workaround), ""
+#                             restores Chromium's native user agent
 #   ZONE_EXTERNAL_URL         https://<zone host>, used to print a clickable link
 
 set -u
@@ -41,6 +43,14 @@ VIEWER="${ZONE_BROWSER_VIEWER:-/usr/local/bin/zone-browser-viewer.py}"
 CDP_PORT="${ZONE_BROWSER_CDP_PORT:-9222}"
 WINDOW_SIZE="${ZONE_BROWSER_SIZE:-1440,900}"
 TTL_MINUTES="${ZONE_BROWSER_TTL_MINUTES:-15}"
+# Default user agent: no "Chrome" token, so ADFS deployments whose
+# WIASupportedUserAgents list matches on it (GC SSO does for requests from
+# inside the StatCan network) serve their forms sign-in page instead of a
+# Windows-Integrated-Auth challenge the pod cannot answer. Verified to
+# render Microsoft sign-in pages correctly. Override with ZONE_BROWSER_UA;
+# set it to the empty string to use Chromium's native user agent.
+DEFAULT_UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ZoneBrowser/1.0 Safari/537.36"
+ZONE_BROWSER_UA="${ZONE_BROWSER_UA-$DEFAULT_UA}"
 RUN_DIR="/tmp/zone-browser-$(id -u)"
 export ZONE_BROWSER_RUN_DIR="$RUN_DIR"
 export ZONE_BROWSER_BIN="$SELF"

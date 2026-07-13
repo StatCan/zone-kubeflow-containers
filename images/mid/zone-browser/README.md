@@ -92,14 +92,15 @@ fallback link fully clickable.
 **GC SSO / ADFS Windows Integrated Auth:** from inside the StatCan network,
 `sso1.gcsso.gc.ca` serves its WIA endpoint (`/adfs/ls/wia`) to user agents
 on its `WIASupportedUserAgents` list; the pod has no Kerberos ticket, so
-the sign-in dead-ends on a blank page. Fix by setting `ZONE_BROWSER_UA` (on
-the pod, via PodDefault/controller env) to a UA outside that list so ADFS
-falls back to forms sign-in, e.g.
-`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)
-ZoneBrowser/1.0 Safari/537.36` (verified to render Microsoft sign-in pages
-correctly). Confirm which UAs trigger WIA from a pod with
+the sign-in dead-ends on a blank page. The browser therefore runs BY
+DEFAULT with a user agent that drops the "Chrome" token
+(`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)
+ZoneBrowser/1.0 Safari/537.36` — verified to render Microsoft sign-in
+pages correctly). If GC SSO still WIA-challenges that UA, set
+`ZONE_BROWSER_UA` to a value confirmed with
 `curl -s -o /dev/null -w '%{http_code}\n' -A "<ua>"
-https://sso1.gcsso.gc.ca/adfs/ls/` (401 = WIA challenge, 200 = forms).
+https://sso1.gcsso.gc.ca/adfs/ls/` (401 = WIA challenge, 200 = forms);
+`ZONE_BROWSER_UA=""` restores Chromium's native user agent.
 
 **Support bundles:** `zone-browser --dump` captures what the browser is
 showing right now (screenshot + page HTML + URL) into
