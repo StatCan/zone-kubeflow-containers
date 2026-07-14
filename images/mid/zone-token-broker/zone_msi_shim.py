@@ -99,8 +99,24 @@ class MsiRequestHandler(BaseHTTPRequestHandler):
         self.log_message("%s %s %s", self.command, urlparse(self.path).path, code)
 
 
+def _port():
+    # Kubernetes injects <SERVICE>_PORT=tcp://<ip>:<port> for every service
+    # in the namespace, so a notebook named zone-msi shadows this variable
+    # with a URL. Anything that is not a plain port number is ignored.
+    raw = os.environ.get(PORT_ENV, "")
+    try:
+        return int(raw)
+    except ValueError:
+        if raw:
+            print(
+                f"zone-msi-shim: ignoring non-numeric {PORT_ENV}={raw!r}; using {DEFAULT_PORT}",
+                file=sys.stderr,
+            )
+        return DEFAULT_PORT
+
+
 def main():
-    port = int(os.environ.get(PORT_ENV, DEFAULT_PORT))
+    port = _port()
     server = ThreadingHTTPServer((BIND_ADDRESS, port), MsiRequestHandler)
     print(f"zone-msi-shim: serving managed-identity tokens on http://{BIND_ADDRESS}:{port}", file=sys.stderr)
     try:
