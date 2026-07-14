@@ -118,6 +118,15 @@ RUN set -eux; \
     fix-permissions "${CONDA_DIR}"; \
     fix-permissions /opt/zone-token-broker
 
+# App Service managed-identity emulation: azure-identity and MSAL (so
+# `az login --identity` too) detect these env vars and speak the 2019-08-01
+# protocol to the zone-msi-shim s6 service, which exchanges the requested
+# resource for a user-delegated token via zone_token_broker. IDENTITY_HEADER
+# is a static value on purpose: the shim binds loopback inside a single-user
+# pod, so the header only exists to satisfy the protocol, not to gate access.
+ENV IDENTITY_ENDPOINT=http://127.0.0.1:8901/msi/token \
+    IDENTITY_HEADER=zone
+
 # Install DuckDB extensions for parquet visualizer (air-gapped support)
 COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 
@@ -204,7 +213,7 @@ RUN set -eu \
     } >> "${HOME_TMP}/.bashrc"
 
 # Copy over various files that should be restored into HOME on first boot.
-COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md ${HOME_TMP}/
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md azure-sign-in.md ${HOME_TMP}/
 COPY --chown=${NB_USER}:${NB_GID} gpg-agent.conf ${HOME_TMP}/.gnupg/gpg-agent.conf
 
 # Set Python interpreter path for VSCode
