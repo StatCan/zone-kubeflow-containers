@@ -209,7 +209,7 @@ ENV PATH="${LD_LIBRARY_PATH}:/opt/mssql-tools18/bin:${PATH}"
 
 # Dockerfile GIST: https://gist.github.com/mathis-marcotte/13a32c27ba9a7252864cb644a5029f06
 # gets the linux client wallet and the tnsnames.ora file for Oracle DB connections
-COPY --from=k8scc01covidacr.azurecr.io/oracletns:latest /azcopy/dbConnection/ ${LD_LIBRARY_PATH}/
+COPY --from=stcthezoneacr.azurecr.io/oracletns:latest /azcopy/dbConnection/ ${LD_LIBRARY_PATH}/
 COPY dbConnection/sqlnet.ora ${TNS_ADMIN}/sqlnet.ora
 
 # give users permissions to edit the alias file
