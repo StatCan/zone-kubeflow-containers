@@ -14,6 +14,7 @@ zone-dvc = ["dvc", "dvc-azure"]
 
 [project.scripts]
 zone-dvc = "zone_dvc:main"
+zone-msi-shim = "zone_msi_shim:main"
 
 [tool.setuptools]
-py-modules = ["zone_token_broker", "zone_dvc"]
+py-modules = ["zone_token_broker", "zone_dvc", "zone_msi_shim"]

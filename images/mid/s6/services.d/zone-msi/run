@@ -1,0 +1,12 @@
+#!/command/with-contenv bash
+
+# Managed-identity shim: serves the App Service MSI protocol on loopback so
+# `az login --identity` and DefaultAzureCredential authenticate as the pod
+# user without a browser. The shim only proxies zone_token_broker; when the
+# broker is unreachable it stays up and answers broker_error so credential
+# chains can fall through instead of hanging on a dead endpoint.
+echo "--------------------starting zone-msi-shim--------------------"
+exec 2>&1
+exec \
+  s6-envdir /run/s6-env \
+  /opt/conda/bin/zone-msi-shim
