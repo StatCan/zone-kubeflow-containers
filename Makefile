@@ -27,7 +27,7 @@ POST_BUILD_HOOK := post-build-hook.sh
 BAKE_BUILD_EXEC := bake-build.sh
 
 # Default labels
-DEFAULT_REPO := k8scc01covidacr.azurecr.io
+DEFAULT_REPO := stcthezoneacr.azurecr.io
 GIT_SHA := $(shell git rev-parse HEAD)
 # This works during local development, but if on a GitHub PR it will resolve to "HEAD"
 # so don't rely on it when on the GH runners!
