@@ -8,7 +8,7 @@ jobs:
   vars:
     runs-on: ubuntu-latest
     outputs:
-      REGISTRY_NAME: "k8scc01covidacr.azurecr.io"
+      REGISTRY_NAME: "stcthezoneacr.azurecr.io"
       TAG: "v2"
     steps:
       - uses: actions/checkout@v4
