@@ -133,7 +133,7 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
+ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
 # Configure container startup
