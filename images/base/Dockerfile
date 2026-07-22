@@ -5,7 +5,7 @@ ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
 FROM $BASE_IMAGE
 
 USER root
-RUN mamba install --quiet --yes -c conda-forge 'python=3.14' \  
+RUN mamba install --quiet --yes -c conda-forge 'python=3.14.5' \  
     && conda clean -afy
 
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
