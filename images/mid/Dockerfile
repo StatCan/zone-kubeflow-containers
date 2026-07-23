@@ -37,17 +37,19 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
 ####### TESTING IF IT CANT JUST SOLVE THE ENV
-RUN mamba install --quiet --yes -c conda-forge \
-        'sqlite>=3.45' \    
-        && clean-layer.sh \
-        && rm -rf /root/.cache /root/.npm \
-        && fix-permissions $CONDA_DIR
+# This installs fine
+# RUN mamba install --quiet --yes -c conda-forge \
+#         'sqlite>=3.45' \    
+#         && clean-layer.sh \
+#         && rm -rf /root/.cache /root/.npm \
+#         && fix-permissions $CONDA_DIR
 # Seems to fail here, though i cant tell which package triggers it, am wondering if its a single package install and it cant solve so will add something above
-RUN mamba install --quiet --yes -c conda-forge \
+# removing the quiet
+RUN mamba install --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
-        'joblib==1.2.0' \
+        'joblib==1.5.3' \
         's3fs' \
         'fire' \
         'mkl' \
@@ -62,7 +64,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'ipympl' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
-        'jupyter-server-proxy==4.2.0' \
+        'jupyter-server-proxy==4.5.0' \
         'jupyterlab-language-pack-fr-fr' \
         'jupyterlab_execute_time' \
         'nb_conda_kernels' \
@@ -70,7 +72,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyter-lsp' \
         'python-lsp-server' \
         'r-arrow' \
-        'r-aws.s3' \
+        # 'r-aws.s3' \ #unsure if this is the problematic file
         'r-base=4.6.1' \
         'r-catools' \
         'r-e1071' \
