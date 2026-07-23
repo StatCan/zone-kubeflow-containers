@@ -1,12 +1,10 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
-FROM $BASE_IMAGE
+# Changed to reference custom built version with 3.14.5 and without Julia
+FROM stcthezoneacr.azurecr.io/datascience-notebook:python3.14.5
 
 USER root
-RUN mamba install --quiet --yes -c conda-forge 'python=3.14.5' \  
-    && conda clean -afy
 
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
