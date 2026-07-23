@@ -36,6 +36,13 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
+####### TESTING IF IT CANT JUST SOLVE THE ENV
+RUN mamba install --quiet --yes -c conda-forge \
+        'sqlite>=3.45' \    
+        && clean-layer.sh \
+        && rm -rf /root/.cache /root/.npm \
+        && fix-permissions $CONDA_DIR
+# Seems to fail here, though i cant tell which package triggers it, am wondering if its a single package install and it cant solve so will add something above
 RUN mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
@@ -64,7 +71,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'python-lsp-server' \
         'r-arrow' \
         'r-aws.s3' \
-        'r-base=4.5.1' \
+        'r-base=4.6.1' \
         'r-catools' \
         'r-e1071' \
         'r-hdf5r' \
@@ -74,9 +81,9 @@ RUN mamba install --quiet --yes -c conda-forge \
         'r-odbc' \
         'r-renv' \
         'r-rodbc' \
-        'r-sf' \
-        'r-sparklyr' \
-        'r-tidyverse' \
+        # 'r-sf' \
+        # 'r-sparklyr' \
+        # 'r-tidyverse' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
