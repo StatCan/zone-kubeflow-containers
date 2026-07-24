@@ -80,7 +80,7 @@ RUN mamba install --yes -c conda-forge \
         # 'r-httr' \
         # 'r-jsonlite' \
         # 'r-markdown' \
-        'r-odbc' \
+        # 'r-odbc' \
         #'r-renv=1.2.3' \ # no viable version
         #'r-rodbc' \
         # 'r-sf' \
