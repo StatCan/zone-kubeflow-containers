@@ -62,6 +62,7 @@ RUN mamba install --yes -c conda-forge \
         'ipywidgets' \
         'markupsafe' \
         'ipympl' \
+        'cmake' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
         'jupyter-server-proxy==4.5.0' \
