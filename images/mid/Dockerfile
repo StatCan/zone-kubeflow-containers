@@ -81,7 +81,7 @@ RUN mamba install --yes -c conda-forge \
         # 'r-jsonlite' \
         # 'r-markdown' \
         'r-odbc' \
-        'r-renv' \
+        'r-renv=1.2.3' \
         'r-rodbc' \
         # 'r-sf' \
         # 'r-sparklyr' \
