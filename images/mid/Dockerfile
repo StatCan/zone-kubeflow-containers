@@ -71,15 +71,15 @@ RUN mamba install --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-arrow' \
+        # 'r-arrow' \ # incompatible
         # 'r-aws.s3' \ #unsure if this is the problematic file
         'r-base=4.6.1' \
-        'r-catools' \
-        'r-e1071' \
-        'r-hdf5r' \
-        'r-httr' \
-        'r-jsonlite' \
-        'r-markdown' \
+        # 'r-catools' \
+        # 'r-e1071' \
+        # 'r-hdf5r' \
+        # 'r-httr' \
+        # 'r-jsonlite' \
+        # 'r-markdown' \
         'r-odbc' \
         'r-renv' \
         'r-rodbc' \
