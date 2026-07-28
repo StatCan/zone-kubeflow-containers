@@ -22,7 +22,10 @@ rm(existing_r_package_dirs)
 #options(stringsAsFactors = FALSE)
 #options(prompt = "AAW> ")
 
-# using wget because https://github.com/StatCan/aaw-kubeflow-containers/issues/569
-# https://stackoverflow.com/questions/70559397/r-internet-routines-cannot-be-loaded-when-starting-from-rstudio
-options(download.file.method="wget")
+# Package repositories (Posit Package Manager) are configured system-wide in
+# /etc/R/Rprofile.site; in-cluster startup appends the internal Artifactory
+# PPM remotes there. download.file.method is left at the R default (libcurl):
+# the old `options(download.file.method="wget")` workaround (aaw-kubeflow-
+# containers#569, needed for conda's R) breaks PPM's prebuilt-binary serving,
+# which keys off R's HTTP user agent, and system R does not need it.
 

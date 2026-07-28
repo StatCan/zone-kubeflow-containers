@@ -1,7 +1,10 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
+# scipy-notebook rather than datascience-notebook: R now comes from CRAN's apt
+# repository below (Julia is dropped deliberately), so the conda R/Julia stack
+# the datascience image adds on top of scipy is no longer wanted.
+ARG BASE_IMAGE=quay.io/jupyter/scipy-notebook
 FROM $BASE_IMAGE
 
 USER root
@@ -88,6 +91,47 @@ RUN apt-get update --yes \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
+
+# System R from CRAN's Ubuntu repository, replacing the conda-forge R stack
+# that previously came with the datascience-notebook base image. Keeping the
+# interpreter out of conda decouples Zone R upgrades from conda-forge's r-*
+# rebuild cycle: R package binaries come from Posit Package Manager instead
+# (see images/mid), which publishes builds for new R versions immediately.
+# R_APT_VERSION is the CRAN apt package revision for Ubuntu 24.04 (noble).
+ARG R_APT_VERSION=4.6.1-1.2404.1
+# Public PPM used at build time; in-cluster, s6 startup appends the internal
+# Artifactory PPM remote for the running R version (see images/mid/s6).
+ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
+RUN wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg] https://cloud.r-project.org/bin/linux/ubuntu ${VERSION_CODENAME}-cran40/" > /etc/apt/sources.list.d/cran-r.list \
+    && apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        "r-base-core=${R_APT_VERSION}" \
+        "r-base-dev=${R_APT_VERSION}" \
+        "r-recommended=${R_APT_VERSION}" \
+        # used by the s6 startup script to derive the PPM mirror name
+        lsb-release \
+        # pbdZMQ (IRkernel) links the system zeromq
+        libzmq3-dev \
+    && rm -f /etc/apt/sources.list.d/cran-r.list /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    # Site-wide default repo: PPM serves prebuilt Linux binaries, selected
+    # transparently based on R's HTTP user agent.
+    && printf '%s\n' \
+        'local({' \
+        '  r <- getOption("repos")' \
+        "  r[\"CRAN\"] <- \"${PPM_CRAN_URL}\"" \
+        '  options(repos = r)' \
+        '})' >> /etc/R/Rprofile.site \
+    && touch /etc/R/Renviron.site \
+    # s6 startup appends cluster-specific repos/env as the notebook user
+    && chown ${NB_USER}:${NB_GID} /etc/R/Rprofile.site /etc/R/Renviron.site \
+    # Jupyter R kernel against system R, registered into conda's Jupyter
+    && Rscript -e "install.packages('IRkernel', repos = '${PPM_CRAN_URL}'); stopifnot('IRkernel' %in% rownames(installed.packages()))" \
+    && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
+    && rm -rf /tmp/downloaded_packages /tmp/Rtmp*
 
 # adds utility scripts
 # add script for kerberos keytab creation
