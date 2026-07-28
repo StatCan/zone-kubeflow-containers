@@ -36,16 +36,15 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
-####### TESTING IF IT CANT JUST SOLVE THE ENV
-# This installs fine
-# RUN mamba install --quiet --yes -c conda-forge \
-#         'sqlite>=3.45' \    
-#         && clean-layer.sh \
-#         && rm -rf /root/.cache /root/.npm \
-#         && fix-permissions $CONDA_DIR
-# Seems to fail here, though i cant tell which package triggers it, am wondering if its a single package install and it cant solve so will add something above
-# removing the quiet
-RUN mamba install --yes -c conda-forge \
+#
+# R version: pinned to 4.5.x on purpose. conda-forge ships r-base 4.6.x, but as
+# of 2026-07 none of the r-* packages below have been rebuilt against the R 4.6
+# ABI -- their newest builds are all `r45*` (`r-base >=4.5,<4.6.0a0`). Requesting
+# `r-base=4.6.1` alongside any of them is therefore unsolvable, not merely
+# awkward. Revisit once the conda-forge r-base 4.6 migration has landed and
+# `r-tidyverse`/`r-arrow`/`r-sf` publish `r46*` builds.
+#
+RUN mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
@@ -62,7 +61,6 @@ RUN mamba install --yes -c conda-forge \
         'ipywidgets' \
         'markupsafe' \
         'ipympl' \
-        'cmake' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
         'jupyter-server-proxy==4.5.0' \
@@ -72,21 +70,21 @@ RUN mamba install --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        # 'r-arrow' \ # incompatible
-        # 'r-aws.s3' \ #unsure if this is the problematic file
-        'r-base=4.6.1' \
-        # 'r-catools' \
-        # 'r-e1071' \
-        # 'r-hdf5r' \
-        # 'r-httr' \
-        # 'r-jsonlite' \
-        # 'r-markdown' \
-        # 'r-odbc' \
-        #'r-renv=1.2.3' \ # no viable version
-        #'r-rodbc' \
-        # 'r-sf' \
-        # 'r-sparklyr' \
-        # 'r-tidyverse' \
+        'r-arrow' \
+        'r-aws.s3' \
+        'r-base=4.5.1' \
+        'r-catools' \
+        'r-e1071' \
+        'r-hdf5r' \
+        'r-httr' \
+        'r-jsonlite' \
+        'r-markdown' \
+        'r-odbc' \
+        'r-renv' \
+        'r-rodbc' \
+        'r-sf' \
+        'r-sparklyr' \
+        'r-tidyverse' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
@@ -143,7 +141,11 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
+# Python version: tracks the upstream datascience-notebook base (3.13.x). Do not
+# move to 3.14 until banff/banffprocessor relax their `pyarrow<19` (and banff's
+# `nanoarrow<0.7`) caps -- no release in those ranges publishes a cp314 wheel, so
+# pip falls back to the pyarrow sdist and the build dies in CMake.
+ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
 # Configure container startup

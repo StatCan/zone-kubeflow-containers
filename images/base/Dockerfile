@@ -1,8 +1,8 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-# Changed to reference custom built version with 3.14.5 and without Julia
-FROM stcthezoneacr.azurecr.io/datascience-notebook:python3.14.5
+ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
+FROM $BASE_IMAGE
 
 USER root
 
