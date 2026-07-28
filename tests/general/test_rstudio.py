@@ -5,8 +5,11 @@ from helpers import CondaPackageHelper
 
 LOGGER = logging.getLogger(__name__)
 
-# Expected RStudio version string for validation
-EXPECTED = "2025.09.1+401 (Cucumberleaf Sunflower) for Ubuntu Jammy"
+# Expected RStudio version string for validation.
+# Keep in sync with RSTUDIO_VERSION in images/rstudio/Dockerfile (the "+" build
+# separator here corresponds to the "-" in the .deb version). Matched as a
+# substring so the release codename does not need to be tracked.
+EXPECTED = "2026.04.0+526"
 
 @pytest.fixture(scope="function")
 def package_helper(container):
