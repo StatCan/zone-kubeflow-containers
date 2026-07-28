@@ -117,15 +117,23 @@ RUN wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc |
     && rm -f /etc/apt/sources.list.d/cran-r.list /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    # Site-wide default repo: PPM serves prebuilt Linux binaries, selected
-    # transparently based on R's HTTP user agent.
+    # Site-wide default repo: PPM serves prebuilt Linux binaries, but only
+    # when the client advertises its R version in the HTTP user agent -- set
+    # it explicitly (Posit-documented form); without it PPM falls back to
+    # source tarballs and installs turn into compiles.
     && printf '%s\n' \
         'local({' \
         '  r <- getOption("repos")' \
         "  r[\"CRAN\"] <- \"${PPM_CRAN_URL}\"" \
         '  options(repos = r)' \
-        '})' >> /etc/R/Rprofile.site \
-    && touch /etc/R/Renviron.site \
+        '})' \
+        'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
+        >> /etc/R/Rprofile.site \
+    # R source installs must find the system .pc files: conda ships its own
+    # pkg-config earlier in PATH whose default search path hides them.
+    && printf '%s\n' \
+        'PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig' \
+        > /etc/R/Renviron.site \
     # s6 startup appends cluster-specific repos/env as the notebook user
     && chown ${NB_USER}:${NB_GID} /etc/R/Rprofile.site /etc/R/Renviron.site \
     # Jupyter R kernel against system R, registered into conda's Jupyter

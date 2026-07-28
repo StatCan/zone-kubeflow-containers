@@ -116,7 +116,8 @@ RUN mamba install --quiet --yes -c conda-forge \
 # site library; install.packages() does not fail on error, so verify the full
 # set landed before the layer is accepted.
 ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
-RUN Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caTools', 'e1071', 'hdf5r', 'httr', 'jsonlite', \
+RUN Rscript -e "options(HTTPUserAgent = sprintf('R/%s R (%s)', getRversion(), paste(getRversion(), R.version['platform'], R.version['arch'], R.version['os']))); \
+                pkgs <- c('arrow', 'aws.s3', 'caTools', 'e1071', 'hdf5r', 'httr', 'jsonlite', \
                           'markdown', 'odbc', 'renv', 'RODBC', 'sf', 'sparklyr', 'tidyverse', \
                           'languageserver'); \
                 install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
