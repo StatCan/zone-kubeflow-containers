@@ -61,9 +61,10 @@ def _skip_unless_system_r(package_helper):
 
 
 def _skip_unless_r_packages(package_helper):
-    """The R package set is installed in mid; base and jupyterlab-cpu only ship R itself"""
+    """The R package set arrives in mid; every downstream image (rstudio,
+    sas-kernel, sas, jupyterlab-cpu) inherits it -- only base ships R alone"""
     image_name = package_helper.running_container.image.tags[0].lower() if package_helper.running_container.image.tags else ""
-    if "base" in image_name or "jupyterlab" in image_name:
+    if "base" in image_name:
         pytest.skip("R package set not expected in this image")
 
 
