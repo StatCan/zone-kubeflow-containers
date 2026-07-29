@@ -42,7 +42,7 @@ jobs:
   base:
     needs: [vars]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "base"
       directory: "base"
@@ -56,7 +56,7 @@ jobs:
   mid:
     needs: [vars, base]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "mid"
       directory: "mid"
@@ -71,7 +71,7 @@ jobs:
   rstudio:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "rstudio"
       directory: "rstudio"
@@ -86,7 +86,7 @@ jobs:
   sas-kernel:
     needs: [vars, rstudio]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "sas-kernel"
       directory: "sas_kernel"
@@ -103,7 +103,7 @@ jobs:
   jupyterlab-cpu:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "jupyterlab-cpu"
       directory: "jupyterlab"
@@ -118,7 +118,7 @@ jobs:
   sas:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "sas"
       directory: "sas"
@@ -134,7 +134,7 @@ jobs:
   base-beta:
     needs: [vars]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "base-beta"
       directory: "base-beta"
@@ -148,7 +148,7 @@ jobs:
   mid-beta:
     needs: [vars, base-beta]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "mid-beta"
       directory: "mid-beta"
@@ -163,7 +163,7 @@ jobs:
   rstudio-beta:
     needs: [vars, mid-beta]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "rstudio-beta"
       directory: "rstudio-beta"
@@ -178,7 +178,7 @@ jobs:
   sas-kernel-beta:
     needs: [vars, rstudio-beta]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "sas-kernel-beta"
       directory: "sas_kernel-beta"
@@ -195,7 +195,7 @@ jobs:
   jupyterlab-cpu-beta:
     needs: [vars, sas-kernel-beta]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "jupyterlab-cpu-beta"
       directory: "jupyterlab-beta"
@@ -210,7 +210,7 @@ jobs:
   sas-beta:
     needs: [vars, sas-kernel-beta]
     uses: ./.github/workflows/docker-steps.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "sas-beta"
       directory: "sas-beta"
@@ -227,7 +227,7 @@ jobs:
   base-test:
     needs: [vars, base]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "base"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -240,7 +240,7 @@ jobs:
   mid-test:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "mid"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -253,7 +253,7 @@ jobs:
   rstudio-test:
     needs: [vars, rstudio]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "rstudio"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -266,7 +266,7 @@ jobs:
   sas-kernel-test:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "sas-kernel"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -279,7 +279,7 @@ jobs:
   jupyterlab-cpu-test:
     needs: [vars, jupyterlab-cpu]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "jupyterlab-cpu"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -292,7 +292,7 @@ jobs:
   sas-test:
     needs: [vars, sas]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name == 'master' }}
+    if: ${{ needs.vars.outputs.branch-name == 'master' }}
     with:
       image: "sas"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -306,7 +306,7 @@ jobs:
   base-test:
     needs: [vars, base-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "base-beta"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -319,7 +319,7 @@ jobs:
   mid-test:
     needs: [vars, mid-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "mid-beta"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -332,7 +332,7 @@ jobs:
   rstudio-test:
     needs: [vars, rstudio-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "rstudio-beta"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -345,7 +345,7 @@ jobs:
   sas-kernel-test:
     needs: [vars, sas-kernel-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "sas-kernel-beta"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -358,7 +358,7 @@ jobs:
   jupyterlab-cpu-test:
     needs: [vars, jupyterlab-cpu-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "jupyterlab-cpu-beta"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -371,7 +371,7 @@ jobs:
   sas-test:
     needs: [vars, sas-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
-    if: ${{ branch-name != 'master' }}
+    if: ${{ needs.vars.outputs.branch-name != 'master' }}
     with:
       image: "sas-beta"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
