@@ -22,9 +22,9 @@ rm(existing_r_package_dirs)
 #options(stringsAsFactors = FALSE)
 #options(prompt = "AAW> ")
 
-# Package repositories (Posit Package Manager) are configured system-wide in
-# /etc/R/Rprofile.site; in-cluster startup appends the internal Artifactory
-# PPM remotes there. download.file.method is left at the R default (libcurl):
+# Package repositories are configured at container startup in
+# /etc/R/Rprofile.site (internal Artifactory PPM remotes) -- no public repo
+# is baked in. download.file.method is left at the R default (libcurl):
 # the old `options(download.file.method="wget")` workaround (aaw-kubeflow-
 # containers#569, needed for conda's R) breaks PPM's prebuilt-binary serving,
 # which keys off R's HTTP user agent, and system R does not need it.

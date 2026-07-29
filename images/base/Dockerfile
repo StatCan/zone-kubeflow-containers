@@ -99,8 +99,10 @@ RUN apt-get update --yes \
 # (see images/mid), which publishes builds for new R versions immediately.
 # R_APT_VERSION is the CRAN apt package revision for Ubuntu 24.04 (noble).
 ARG R_APT_VERSION=4.6.1-1.2404.1
-# Public PPM used at build time; in-cluster, s6 startup appends the internal
-# Artifactory PPM remote for the running R version (see images/mid/s6).
+# Public PPM, used ONLY at build time (passed explicitly as repos= to the
+# install commands here and in images/mid). It is deliberately NOT baked into
+# the image's R config: in-cluster the public internet is unreachable, and
+# pod startup appends the internal Artifactory PPM remotes instead.
 ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
 RUN wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
     && . /etc/os-release \
@@ -117,18 +119,18 @@ RUN wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc |
     && rm -f /etc/apt/sources.list.d/cran-r.list /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    # Site-wide default repo: PPM serves prebuilt Linux binaries, but only
-    # when the client advertises its R version in the HTTP user agent -- set
-    # it explicitly (Posit-documented form); without it PPM falls back to
-    # source tarballs and installs turn into compiles.
+    # Overwrite the stock Rprofile.site: it defaults CRAN to
+    # cloud.r-project.org, which is unreachable in-cluster and would only add
+    # timeouts. Package repos are configured at pod startup by the s6 script
+    # (internal Artifactory PPM remotes for the running R version). Keep only
+    # the HTTP user agent: PPM -- and the Artifactory remotes proxying it --
+    # serve prebuilt binaries only when the client advertises its R version;
+    # without it every install turns into a source compile.
     && printf '%s\n' \
-        'local({' \
-        '  r <- getOption("repos")' \
-        "  r[\"CRAN\"] <- \"${PPM_CRAN_URL}\"" \
-        '  options(repos = r)' \
-        '})' \
+        '# Package repos are configured at container startup (internal Artifactory' \
+        '# PPM remotes); see images/mid/s6/cont-init.d/02-start-custom.' \
         'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
-        >> /etc/R/Rprofile.site \
+        > /etc/R/Rprofile.site \
     # R source installs must find the system .pc files: conda ships its own
     # pkg-config earlier in PATH whose default search path hides them.
     && printf '%s\n' \
