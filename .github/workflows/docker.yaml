@@ -6,7 +6,6 @@ on:
       - "beta"
     paths:
       - ".github/workflows/*"
-
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
@@ -15,7 +14,6 @@ on:
   pull_request:
     paths:
       - ".github/workflows/*"
-      
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
@@ -23,6 +21,7 @@ on:
       - "requirements-dev.txt"
 
 jobs:
+# Set shared variables:
   vars:
     runs-on: ubuntu-latest
     outputs:
@@ -39,9 +38,11 @@ jobs:
           echo "branch-name=$BRANCH_NAME"
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
+# Publish images:
   base:
     needs: [vars]
     uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "base"
       directory: "base"
@@ -55,6 +56,7 @@ jobs:
   mid:
     needs: [vars, base]
     uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "mid"
       directory: "mid"
@@ -69,6 +71,7 @@ jobs:
   rstudio:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "rstudio"
       directory: "rstudio"
@@ -83,6 +86,7 @@ jobs:
   sas-kernel:
     needs: [vars, rstudio]
     uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "sas-kernel"
       directory: "sas_kernel"
@@ -99,6 +103,7 @@ jobs:
   jupyterlab-cpu:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "jupyterlab-cpu"
       directory: "jupyterlab"
@@ -113,6 +118,7 @@ jobs:
   sas:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "sas"
       directory: "sas"
@@ -124,11 +130,104 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  # Test the Images
+# Publish beta images:
+  base-beta:
+    needs: [vars]
+    uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "base-beta"
+      directory: "base-beta"
+      base-image: "quay.io/jupyter/datascience-notebook:2025-08-15"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
+  mid-beta:
+    needs: [vars, base-beta]
+    uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "mid-beta"
+      directory: "mid-beta"
+      parent-image: "base-beta"
+      parent-image-is-diff: "${{ needs.base-beta.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  rstudio-beta:
+    needs: [vars, mid-beta]
+    uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "rstudio-beta"
+      directory: "rstudio-beta"
+      parent-image: "mid-beta"
+      parent-image-is-diff: "${{ needs.mid-beta.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  sas-kernel-beta:
+    needs: [vars, rstudio-beta]
+    uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "sas-kernel-beta"
+      directory: "sas_kernel-beta"
+      parent-image: "rstudio-beta"
+      parent-image-is-diff: "${{ needs.rstudio-beta.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      SAS_SA_NAME: ${{ secrets.SAS_SA_NAME }}
+      SAS_SA_KEY_1: ${{ secrets.SAS_SA_KEY_1 }}
+
+  jupyterlab-cpu-beta:
+    needs: [vars, sas-kernel-beta]
+    uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "jupyterlab-cpu-beta"
+      directory: "jupyterlab-beta"
+      parent-image: "sas-kernel-beta"
+      parent-image-is-diff: "${{ needs.sas-kernel-beta.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  sas-beta:
+    needs: [vars, sas-kernel-beta]
+    uses: ./.github/workflows/docker-steps.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "sas-beta"
+      directory: "sas-beta"
+      parent-image: "sas-kernel-beta"
+      parent-image-is-diff: "${{ needs.sas-kernel-beta.outputs.is-diff }}"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      branch-name: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+
+# Test the Images
   base-test:
     needs: [vars, base]
     uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "base"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -141,6 +240,7 @@ jobs:
   mid-test:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "mid"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -153,6 +253,7 @@ jobs:
   rstudio-test:
     needs: [vars, rstudio]
     uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "rstudio"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -165,6 +266,7 @@ jobs:
   sas-kernel-test:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "sas-kernel"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -177,6 +279,7 @@ jobs:
   jupyterlab-cpu-test:
     needs: [vars, jupyterlab-cpu]
     uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "jupyterlab-cpu"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -189,6 +292,7 @@ jobs:
   sas-test:
     needs: [vars, sas]
     uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name == 'master' }}
     with:
       image: "sas"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
@@ -197,3 +301,83 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+# Test beta images:
+  base-test:
+    needs: [vars, base-beta]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "base-beta"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  mid-test:
+    needs: [vars, mid-beta]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "mid-beta"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  rstudio-test:
+    needs: [vars, rstudio-beta]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "rstudio-beta"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  sas-kernel-test:
+    needs: [vars, sas-kernel-beta]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "sas-kernel-beta"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  jupyterlab-cpu-test:
+    needs: [vars, jupyterlab-cpu-beta]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "jupyterlab-cpu-beta"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
+  sas-test:
+    needs: [vars, sas-beta]
+    uses: ./.github/workflows/docker-pull-test.yaml
+    if: ${{ branch-name != 'master' }}
+    with:
+      image: "sas-beta"
+      registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
+      tag: "${{ needs.vars.outputs.branch-name }}"
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
