@@ -303,7 +303,7 @@ jobs:
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
 # Test beta images:
-  base-test:
+  base-beta-test:
     needs: [vars, base-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
     if: ${{ needs.vars.outputs.branch-name != 'master' }}
@@ -316,7 +316,7 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
-  mid-test:
+  mid-beta-test:
     needs: [vars, mid-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
     if: ${{ needs.vars.outputs.branch-name != 'master' }}
@@ -329,7 +329,7 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
-  rstudio-test:
+  rstudio-beta-test:
     needs: [vars, rstudio-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
     if: ${{ needs.vars.outputs.branch-name != 'master' }}
@@ -342,7 +342,7 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
-  sas-kernel-test:
+  sas-kernel-beta-test:
     needs: [vars, sas-kernel-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
     if: ${{ needs.vars.outputs.branch-name != 'master' }}
@@ -355,7 +355,7 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
-  jupyterlab-cpu-test:
+  jupyterlab-cpu-beta-test:
     needs: [vars, jupyterlab-cpu-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
     if: ${{ needs.vars.outputs.branch-name != 'master' }}
@@ -368,7 +368,7 @@ jobs:
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
 
-  sas-test:
+  sas-beta-test:
     needs: [vars, sas-beta]
     uses: ./.github/workflows/docker-pull-test.yaml
     if: ${{ needs.vars.outputs.branch-name != 'master' }}
