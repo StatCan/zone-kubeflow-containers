@@ -28,7 +28,7 @@ jobs:
     outputs:
       REGISTRY_NAME: "stcthezoneacr.azurecr.io"
       branch-name: ${{ steps.getBranch.outputs.branch-name }}
-      beta: ""${{ steps.ifBranchIsBeta.outputs.beta }}
+      beta: ""${{ steps.ifBeta.outputs.beta }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +40,9 @@ jobs:
           echo "branch-name=$BRANCH_NAME"
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
     
-      # Set beta branch suffix to '-beta' if branch is beta:
-      - id: ifBranchIsBeta
+      - name: Check if branch is beta
+        id: ifBeta
+        if: ${{ steps.getBranch.outputs.branch-name == 'beta' }}
         run: echo "::set-output name=beta::-beta"
 
 # Publish images:
