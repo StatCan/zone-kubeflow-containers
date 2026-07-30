@@ -39,6 +39,13 @@ COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
+# RStudio 2026.04 ships Posit Assistant, which fetches
+# https://cdn.posit.co/posit-ai/manifest.json at session startup -- unreachable
+# in-cluster, so every session opened with an error popup. This variable is the
+# documented way to disable the feature and its startup download entirely
+# (https://github.com/rstudio/rstudio/issues/17234).
+ENV RSTUDIO_DISABLE_POSIT_ASSISTANT=1
+
 USER $NB_USER
 
 # Seed first-boot home defaults
