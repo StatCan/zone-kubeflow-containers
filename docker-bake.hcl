@@ -1,5 +1,8 @@
 target "base" {
     args = {
+        # Local-build default (Python 3.13). CI builds base from a custom
+        # Python 3.14 scipy-notebook chain instead -- see the upstream-scipy
+        # job in .github/workflows/docker.yaml.
         BASE_IMAGE="quay.io/jupyter/scipy-notebook:2025-08-15"
     }
     context = "./images/base"

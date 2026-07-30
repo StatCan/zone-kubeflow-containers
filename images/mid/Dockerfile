@@ -34,6 +34,11 @@ COPY --chown=${NB_USER}:${NB_GID} vscode-overrides.json ${HOME_TMP}/.local/share
 # Sets the default workspace for vscode
 COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.local/share/code-server/
 
+# Internal wheels installed from file in the pip step below (GitHub CI cannot
+# reach StatCan Artifactory/GitLab); kept in the image so users can install
+# them into their own environments too. See vendor/README.md.
+COPY vendor/ /opt/vendor/
+
 # System libraries required by the R packages installed further below (union
 # of Posit Package Manager's sysreqs for that package set on Ubuntu 24.04,
 # minus what images/base already installs). -dev variants so source installs
@@ -64,6 +69,9 @@ RUN mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
+        # banff dependency: PyPI publishes no cp314 wheels inside banff's
+        # nanoarrow<0.9 pin, but conda-forge ships py314 builds of 0.8.0
+        'nanoarrow' \
         'joblib==1.5.3' \
         's3fs' \
         'fire' \
@@ -92,9 +100,14 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
-        'pyspark[ml]==3.5.5' \
-        'banff' \
-        'banffprocessor' \
+        # PySpark 4.x is required on Python 3.14 (3.5.x supports <=3.11).
+        # NOTE: Spark major-version jump -- also affects r-sparklyr users.
+        'pyspark[ml]==4.2.0' \
+        # banff: vendored internal wheel (see vendor/README.md); public PyPI
+        # banff 3.1.3 pins pyarrow<19, unsatisfiable on Python 3.14.
+        /opt/vendor/banff-*.whl \
+        # banffprocessor: temporarily ABSENT -- public 2.0.3 pins pyarrow<19.
+        # Restore from its updated internal wheel (see vendor/README.md).
         # Python<->R bridge; previously shipped by the datascience-notebook
         # base via conda, now built here against the system R.
         'rpy2' \
@@ -159,11 +172,11 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-# Python version: tracks the upstream scipy-notebook base (3.13.x). Do not
-# move to 3.14 until banff/banffprocessor relax their `pyarrow<19` (and banff's
-# `nanoarrow<0.7`) caps -- no release in those ranges publishes a cp314 wheel, so
-# pip falls back to the pyarrow sdist and the build dies in CMake.
-ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
+# Python version: tracks the CI-built scipy-notebook chain (Python 3.14 --
+# see the upstream-scipy job in .github/workflows/docker.yaml). banff comes
+# from the vendored internal 3.2.x wheel; public PyPI banff/banffprocessor
+# pins (pyarrow<19) cannot be satisfied on 3.14.
+ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
 # Configure container startup

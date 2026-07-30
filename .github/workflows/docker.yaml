@@ -39,15 +39,68 @@ jobs:
           echo "branch-name=$BRANCH_NAME"
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
-  base:
+  # Upstream jupyter/docker-stacks publishes no Python 3.14 images, so build
+  # its foundation -> base-notebook -> minimal-notebook -> scipy-notebook
+  # chain at a pinned commit with PYTHON_VERSION overridden, and push the
+  # result to the ACR. The tag encodes the commit + python version, so this
+  # job is a fast no-op whenever that tag already exists.
+  upstream-scipy:
     needs: [vars]
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    env:
+      DOCKER_STACKS_REF: d7c65738a271df758c4a6cfe683587a06fec3ea8
+      PYTHON_VERSION: "3.14"
+    steps:
+      - name: Compute image ref
+        id: ref
+        run: echo "image=${{ needs.vars.outputs.REGISTRY_NAME }}/scipy-notebook:python${PYTHON_VERSION}-${DOCKER_STACKS_REF:0:12}" >> $GITHUB_OUTPUT
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ needs.vars.outputs.REGISTRY_NAME }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Check whether the image already exists
+        id: exists
+        run: |
+          if docker manifest inspect "${{ steps.ref.outputs.image }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout jupyter/docker-stacks
+        if: steps.exists.outputs.exists == 'false'
+        uses: actions/checkout@v4
+        with:
+          repository: jupyter/docker-stacks
+          ref: ${{ env.DOCKER_STACKS_REF }}
+
+      - name: Build the docker-stacks chain
+        if: steps.exists.outputs.exists == 'false'
+        run: |
+          docker build ./images/docker-stacks-foundation -t local/docker-stacks-foundation --build-arg PYTHON_VERSION="${PYTHON_VERSION}"
+          docker build ./images/base-notebook -t local/base-notebook --build-arg BASE_IMAGE=local/docker-stacks-foundation
+          docker build ./images/minimal-notebook -t local/minimal-notebook --build-arg BASE_IMAGE=local/base-notebook
+          docker build ./images/scipy-notebook -t "${{ steps.ref.outputs.image }}" --build-arg BASE_IMAGE=local/minimal-notebook
+
+      - name: Push
+        if: steps.exists.outputs.exists == 'false'
+        run: docker push "${{ steps.ref.outputs.image }}"
+
+  base:
+    needs: [vars, upstream-scipy]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "base"
       directory: "base"
-      # scipy-notebook: R comes from CRAN apt + Posit Package Manager inside
-      # images/base and images/mid (Julia dropped); see images/base/Dockerfile.
-      base-image: "quay.io/jupyter/scipy-notebook:2025-08-15"
+      # CI-built scipy-notebook (Python 3.14, Julia-free): R comes from CRAN
+      # apt + Posit Package Manager inside images/base and images/mid.
+      base-image: "${{ needs.upstream-scipy.outputs.image }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:
