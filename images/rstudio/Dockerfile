@@ -44,7 +44,7 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 # in-cluster, so every session opened with an error popup. This variable is the
 # documented way to disable the feature and its startup download entirely
 # (https://github.com/rstudio/rstudio/issues/17234).
-ENV RSTUDIO_DISABLE_POSIT_ASSISTANT=1
+ENV RSTUDIO_DISABLE_POSIT_AI=1
 
 USER $NB_USER
 
