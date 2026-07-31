@@ -6,7 +6,6 @@ on:
       - "beta"
     paths:
       - ".github/workflows/*"
-
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
@@ -15,7 +14,6 @@ on:
   pull_request:
     paths:
       - ".github/workflows/*"
-      
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
@@ -23,11 +21,14 @@ on:
       - "requirements-dev.txt"
 
 jobs:
+
+# Set shared variables:
   vars:
     runs-on: ubuntu-latest
     outputs:
       REGISTRY_NAME: "stcthezoneacr.azurecr.io"
       branch-name: ${{ steps.getBranch.outputs.branch-name }}
+      beta: ""${{ steps.ifBeta.outputs.beta }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,13 +39,20 @@ jobs:
           BRANCH_NAME=$(./make_helpers/get_branch_name.sh)
           echo "branch-name=$BRANCH_NAME"
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+    
+      - name: Check if branch is beta
+        id: ifBeta
+        if: ${{ steps.getBranch.outputs.branch-name == 'beta' }}
+        run: echo "beta=-beta" >> $GITHUB_OUTPUT
+        
 
+# Publish images:
   base:
     needs: [vars]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "base"
-      directory: "base"
+      image: "base"${{needs.vars.outputs.beta}}
+      directory: "base"${{needs.vars.outputs.beta}}
       base-image: "quay.io/jupyter/datascience-notebook:2025-08-15"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
@@ -56,9 +64,9 @@ jobs:
     needs: [vars, base]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "mid"
-      directory: "mid"
-      parent-image: "base"
+      image: "mid"${{needs.vars.outputs.beta}}
+      directory: "mid"${{needs.vars.outputs.beta}}
+      parent-image: "base"${{needs.vars.outputs.beta}}
       parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
@@ -70,9 +78,9 @@ jobs:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "rstudio"
-      directory: "rstudio"
-      parent-image: "mid"
+      image: "rstudio"${{needs.vars.outputs.beta}}
+      directory: "rstudio"${{needs.vars.outputs.beta}}
+      parent-image: "mid"${{needs.vars.outputs.beta}}
       parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
@@ -84,9 +92,9 @@ jobs:
     needs: [vars, rstudio]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "sas-kernel"
-      directory: "sas_kernel"
-      parent-image: "rstudio"
+      image: "sas-kernel"${{needs.vars.outputs.beta}}
+      directory: "sas_kernel"${{needs.vars.outputs.beta}}
+      parent-image: "rstudio"${{needs.vars.outputs.beta}}
       parent-image-is-diff: "${{ needs.rstudio.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
@@ -100,9 +108,9 @@ jobs:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "jupyterlab-cpu"
-      directory: "jupyterlab"
-      parent-image: "sas-kernel"
+      image: "jupyterlab-cpu"${{needs.vars.outputs.beta}}
+      directory: "jupyterlab"${{needs.vars.outputs.beta}}
+      parent-image: "sas-kernel"${{needs.vars.outputs.beta}}
       parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
@@ -114,9 +122,9 @@ jobs:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-steps.yaml
     with:
-      image: "sas"
-      directory: "sas"
-      parent-image: "sas-kernel"
+      image: "sas"${{needs.vars.outputs.beta}}
+      directory: "sas"${{needs.vars.outputs.beta}}
+      parent-image: "sas-kernel"${{needs.vars.outputs.beta}}
       parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
@@ -124,13 +132,13 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
-  # Test the Images
 
+# Test images
   base-test:
     needs: [vars, base]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "base"
+      image: "base"${{needs.vars.outputs.beta}}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -142,7 +150,7 @@ jobs:
     needs: [vars, mid]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "mid"
+      image: "mid"${{needs.vars.outputs.beta}}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -154,7 +162,7 @@ jobs:
     needs: [vars, rstudio]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "rstudio"
+      image: "rstudio"${{needs.vars.outputs.beta}}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -166,7 +174,7 @@ jobs:
     needs: [vars, sas-kernel]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "sas-kernel"
+      image: "sas-kernel"${{needs.vars.outputs.beta}}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -178,7 +186,7 @@ jobs:
     needs: [vars, jupyterlab-cpu]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "jupyterlab-cpu"
+      image: "jupyterlab-cpu"${{needs.vars.outputs.beta}}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
@@ -190,10 +198,11 @@ jobs:
     needs: [vars, sas]
     uses: ./.github/workflows/docker-pull-test.yaml
     with:
-      image: "sas"
+      image: "sas"${{needs.vars.outputs.beta}}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       tag: "${{ needs.vars.outputs.branch-name }}"
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       CVE_ALLOWLIST: ${{ secrets.CVE_ALLOWLIST}}
+
