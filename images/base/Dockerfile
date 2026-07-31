@@ -1,7 +1,10 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
+# scipy-notebook rather than datascience-notebook: R now comes from CRAN's apt
+# repository below (Julia is dropped deliberately), so the conda R/Julia stack
+# the datascience image adds on top of scipy is no longer wanted.
+ARG BASE_IMAGE=quay.io/jupyter/scipy-notebook
 FROM $BASE_IMAGE
 
 USER root
@@ -88,6 +91,57 @@ RUN apt-get update --yes \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
+
+# System R from CRAN's Ubuntu repository, replacing the conda-forge R stack
+# that previously came with the datascience-notebook base image. Keeping the
+# interpreter out of conda decouples Zone R upgrades from conda-forge's r-*
+# rebuild cycle: R package binaries come from Posit Package Manager instead
+# (see images/mid), which publishes builds for new R versions immediately.
+# R_APT_VERSION is the CRAN apt package revision for Ubuntu 24.04 (noble).
+ARG R_APT_VERSION=4.6.1-1.2404.1
+# Public PPM, used ONLY at build time (passed explicitly as repos= to the
+# install commands here and in images/mid). It is deliberately NOT baked into
+# the image's R config: in-cluster the public internet is unreachable, and
+# pod startup appends the internal Artifactory PPM remotes instead.
+ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
+RUN wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg] https://cloud.r-project.org/bin/linux/ubuntu ${VERSION_CODENAME}-cran40/" > /etc/apt/sources.list.d/cran-r.list \
+    && apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        "r-base-core=${R_APT_VERSION}" \
+        "r-base-dev=${R_APT_VERSION}" \
+        "r-recommended=${R_APT_VERSION}" \
+        # used by the s6 startup script to derive the PPM mirror name
+        lsb-release \
+        # pbdZMQ (IRkernel) links the system zeromq
+        libzmq3-dev \
+    && rm -f /etc/apt/sources.list.d/cran-r.list /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    # Overwrite the stock Rprofile.site: it defaults CRAN to
+    # cloud.r-project.org, which is unreachable in-cluster and would only add
+    # timeouts. Package repos are configured at pod startup by the s6 script
+    # (internal Artifactory PPM remotes for the running R version). Keep only
+    # the HTTP user agent: PPM -- and the Artifactory remotes proxying it --
+    # serve prebuilt binaries only when the client advertises its R version;
+    # without it every install turns into a source compile.
+    && printf '%s\n' \
+        '# Package repos are configured at container startup (internal Artifactory' \
+        '# PPM remotes); see images/mid/s6/cont-init.d/02-start-custom.' \
+        'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
+        > /etc/R/Rprofile.site \
+    # R source installs must find the system .pc files: conda ships its own
+    # pkg-config earlier in PATH whose default search path hides them.
+    && printf '%s\n' \
+        'PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig' \
+        > /etc/R/Renviron.site \
+    # s6 startup appends cluster-specific repos/env as the notebook user
+    && chown ${NB_USER}:${NB_GID} /etc/R/Rprofile.site /etc/R/Renviron.site \
+    # Jupyter R kernel against system R, registered into conda's Jupyter
+    && Rscript -e "install.packages('IRkernel', repos = '${PPM_CRAN_URL}'); stopifnot('IRkernel' %in% rownames(installed.packages()))" \
+    && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
+    && rm -rf /tmp/downloaded_packages /tmp/Rtmp*
 
 # adds utility scripts
 # add script for kerberos keytab creation

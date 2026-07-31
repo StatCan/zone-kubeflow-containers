@@ -61,7 +61,11 @@ fi
 
 if ! TARGET_CONDA_ENV="$(resolve_conda_env "$TARGET_CONDA_ENV")"; then
   log "Saved env invalid or missing, falling back to CONDA_PREFIX/default"
-  TARGET_CONDA_ENV="$(resolve_conda_env "${CONDA_PREFIX:-/opt/conda}")"
+  if ! TARGET_CONDA_ENV="$(resolve_conda_env "${CONDA_PREFIX:-/opt/conda}")"; then
+    # No Conda env provides R: use the image's system R (/usr/bin/R).
+    TARGET_CONDA_ENV="system"
+    log "No Conda env with R found, using system R"
+  fi
 fi
 
 printf '%s\n' "$TARGET_CONDA_ENV" > "$RSTUDIO_CONDA_ENV_FILE"
@@ -75,7 +79,16 @@ mkdir -p "$(dirname "$COOKIE_KEY_PATH")"
 
 python3 -c 'import uuid; print(uuid.uuid4())' > "$COOKIE_KEY_PATH"
 chmod 600 "$COOKIE_KEY_PATH"
-export RETICULATE_PYTHON="${TARGET_CONDA_ENV}/bin/python"
+# Resolve the R binary, loader path, and reticulate python for the target.
+if [ "$TARGET_CONDA_ENV" = "system" ]; then
+  R_BIN="/usr/bin/R"
+  R_LD_PATH="/usr/lib/R/lib"
+  export RETICULATE_PYTHON="${CONDA_PREFIX:-/opt/conda}/bin/python"
+else
+  R_BIN="${TARGET_CONDA_ENV}/bin/R"
+  R_LD_PATH="${TARGET_CONDA_ENV}/lib"
+  export RETICULATE_PYTHON="${TARGET_CONDA_ENV}/bin/python"
+fi
 log "COOKIE_KEY_PATH=${COOKIE_KEY_PATH}"
 log "RETICULATE_PYTHON=${RETICULATE_PYTHON}"
 
@@ -97,9 +110,9 @@ log "BASE_PATH=${BASE_PATH}"
 rm -rf "$RSTUDIO_DATA_DIR"
 log "Cleared stale runtime state ${RSTUDIO_DATA_DIR})"
 
-# Pin R and the loader path to the target env selected before launch.
-log "Launching rserver with R=${TARGET_CONDA_ENV}/bin/R"
-log "Launching rserver with LD_LIBRARY_PATH=${TARGET_CONDA_ENV}/lib"
+# Pin R and the loader path to the target selected before launch.
+log "Launching rserver with R=${R_BIN}"
+log "Launching rserver with LD_LIBRARY_PATH=${R_LD_PATH}"
 /usr/lib/rstudio-server/bin/rserver   --server-daemonize=0 \
   --auth-none=1 \
   --www-port="$1" \
@@ -110,8 +123,8 @@ log "Launching rserver with LD_LIBRARY_PATH=${TARGET_CONDA_ENV}/lib"
   --www-same-site=lax \
   --secure-cookie-key-file="$COOKIE_KEY_PATH" \
   --server-data-dir="$RSTUDIO_DATA_DIR" \
-  --rsession-which-r="${TARGET_CONDA_ENV}/bin/R" \
-  --rsession-ld-library-path="${TARGET_CONDA_ENV}/lib" \
+  --rsession-which-r="${R_BIN}" \
+  --rsession-ld-library-path="${R_LD_PATH}" \
   --rsession-path="$CWD/rsession.sh" \
   --server-user "$USER" \
   --database-config-file "$DB_CONF_PATH" \

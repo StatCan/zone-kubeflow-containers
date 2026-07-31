@@ -45,7 +45,9 @@ jobs:
     with:
       image: "base"
       directory: "base"
-      base-image: "quay.io/jupyter/datascience-notebook:2025-08-15"
+      # scipy-notebook: R comes from CRAN apt + Posit Package Manager inside
+      # images/base and images/mid (Julia dropped); see images/base/Dockerfile.
+      base-image: "quay.io/jupyter/scipy-notebook:2025-08-15"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:

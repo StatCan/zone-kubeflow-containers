@@ -8,8 +8,8 @@ USER root
 
 # Install RStudio Server and keep the temporary CRAN apt source scoped to this
 # layer.
-ARG RSTUDIO_VERSION=2025.09.1-401
-ARG RSTUDIO_SHA256=9a6b1ccf05a62e13bb7cab26b9ef5ba01445b58abb4a9f2c9868855e33613f1b
+ARG RSTUDIO_VERSION=2026.04.0-526
+ARG RSTUDIO_SHA256=9618cb9478d85ae7a606a773a73f6ea4221d3d69dfc0aba8358ce87c924a353a
 RUN apt-get update \
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg \
     && echo "deb [signed-by=/etc/apt/trusted.gpg.d/cran_ubuntu_key.gpg] https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/" > /etc/apt/sources.list.d/cran-r.list \
@@ -25,6 +25,13 @@ RUN apt-get update \
 # Harden rstudio-server and route sessions through the selected Conda env.
 COPY rsession.conf /etc/rstudio/
 
+# System-wide preference defaults. Applied to every user, including existing
+# ones -- unlike the per-user rstudio-prefs.json further below, which is only
+# seeded into a fresh HOME (01-copy-tmp-home uses `cp --update=none`).
+# Selecting the "none" assistant/chat provider stops Posit Assistant from
+# initialising, and assistant_show_messages=false suppresses its message box.
+COPY rstudio-prefs-system.json /etc/rstudio/rstudio-prefs.json
+
 # Jupyter RStudio Proxy
 COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
@@ -38,6 +45,19 @@ RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
 COPY --chmod=755 customRStu/rstudio-use-current-conda.sh /usr/local/bin/rstudio-use-current-conda
 
 ENV PATH=$PATH:/usr/lib/rstudio-server/bin
+
+# RStudio 2026.04 ships Posit Assistant, which fetches
+# https://cdn.posit.co/posit-ai/manifest.json at session startup -- unreachable
+# in-cluster, so every session opens with an error popup.
+#
+# NOTE: neither env var fixes this on 2026.04.0+526. Unpacking the shipped
+# .deb shows no RSTUDIO_DISABLE_POSIT_* string anywhere in the package:
+# RSTUDIO_DISABLE_POSIT_ASSISTANT is the real switch (rstudio/rstudio#17234,
+# and the only spelling in RStudio's source) but it landed after this build,
+# and RSTUDIO_DISABLE_POSIT_AI has never existed. The system prefs above are
+# what actually disable the feature here; this is kept only so a future
+# RStudio bump picks it up automatically.
+ENV RSTUDIO_DISABLE_POSIT_ASSISTANT=1
 
 USER $NB_USER
 

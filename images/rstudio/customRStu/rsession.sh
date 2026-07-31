@@ -29,6 +29,15 @@ fi
 CONDA_ENV="$(tr -d '\r' < "$RSTUDIO_CONDA_ENV_FILE")"
 log "Loaded target Conda env: ${CONDA_ENV}"
 
+# "system" means no Conda env provides R: run the image's system R (/usr/bin/R)
+# directly. Library paths come from Rprofile.site and the user's ~/.Rprofile.
+if [ "$CONDA_ENV" = "system" ]; then
+  log "Using system R ($(/usr/bin/R --version | head -n 1))"
+  export RETICULATE_PYTHON="/opt/conda/bin/python"
+  log "RETICULATE_PYTHON=${RETICULATE_PYTHON}"
+  exec /usr/lib/rstudio-server/bin/rsession "$@"
+fi
+
 if [ ! -x "$CONDA_ENV/bin/R" ]; then
   log "ERROR: Invalid RStudio Conda env: $CONDA_ENV"
   exit 1
