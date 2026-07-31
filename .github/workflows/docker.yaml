@@ -43,7 +43,8 @@ jobs:
       - name: Check if branch is beta
         id: ifBeta
         if: ${{ steps.getBranch.outputs.branch-name == 'beta' }}
-        run: echo "::set-output name=beta::-beta"
+        run: echo "beta=-beta" >> $GITHUB_OUTPUT
+        
 
 # Publish images:
   base:
