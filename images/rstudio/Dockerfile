@@ -25,6 +25,13 @@ RUN apt-get update \
 # Harden rstudio-server and route sessions through the selected Conda env.
 COPY rsession.conf /etc/rstudio/
 
+# System-wide preference defaults. Applied to every user, including existing
+# ones -- unlike the per-user rstudio-prefs.json further below, which is only
+# seeded into a fresh HOME (01-copy-tmp-home uses `cp --update=none`).
+# Selecting the "none" assistant/chat provider stops Posit Assistant from
+# initialising, and assistant_show_messages=false suppresses its message box.
+COPY rstudio-prefs-system.json /etc/rstudio/rstudio-prefs.json
+
 # Jupyter RStudio Proxy
 COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
@@ -41,9 +48,13 @@ ENV PATH=$PATH:/usr/lib/rstudio-server/bin
 
 # RStudio 2026.04 ships Posit Assistant, which fetches
 # https://cdn.posit.co/posit-ai/manifest.json at session startup -- unreachable
-# in-cluster, so every session opened with an error popup. This variable is the
-# documented way to disable the feature and its startup download entirely
-# (https://github.com/rstudio/rstudio/issues/17234).
+# in-cluster, so every session opens with an error popup.
+#
+# NOTE: RSTUDIO_DISABLE_POSIT_ASSISTANT is the documented switch
+# (rstudio/rstudio#17234) but landed AFTER this build -- the string does not
+# appear anywhere in the 2026.04.0+526 package, so it is a no-op here. It is
+# kept only so a future RStudio bump picks it up automatically; the prefs
+# below are what actually disable the feature on 526.
 ENV RSTUDIO_DISABLE_POSIT_ASSISTANT=1
 
 USER $NB_USER
