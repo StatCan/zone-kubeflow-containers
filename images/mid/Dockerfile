@@ -103,11 +103,12 @@ RUN mamba install --quiet --yes -c conda-forge \
         # PySpark 4.x is required on Python 3.14 (3.5.x supports <=3.11).
         # NOTE: Spark major-version jump -- also affects r-sparklyr users.
         'pyspark[ml]==4.2.0' \
-        # banff: vendored internal wheel (see vendor/README.md); public PyPI
-        # banff 3.1.3 pins pyarrow<19, unsatisfiable on Python 3.14.
+        # banff + banffprocessor: vendored internal wheels (see
+        # vendor/README.md); their public PyPI releases pin pyarrow<19,
+        # unsatisfiable on Python 3.14. banffprocessor requires banff>=3.2.0,
+        # satisfied by the wheel alongside it.
         /opt/vendor/banff-*.whl \
-        # banffprocessor: temporarily ABSENT -- public 2.0.3 pins pyarrow<19.
-        # Restore from its updated internal wheel (see vendor/README.md).
+        /opt/vendor/banffprocessor-*.whl \
         # Python<->R bridge; previously shipped by the datascience-notebook
         # base via conda, now built here against the system R.
         'rpy2' \

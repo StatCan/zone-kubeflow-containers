@@ -40,6 +40,7 @@ def test_banff_import(container):
 
     test_script = (
         "import banff\n"
+        "import banffprocessor\n"
         "import pyarrow\n"
         "import nanoarrow\n"
         "print('banff', banff.__version__)\n"
