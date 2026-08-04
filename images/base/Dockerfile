@@ -86,8 +86,9 @@ RUN apt-get update --yes \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
-        # Use headless Java to save space
-        openjdk-8-jre-headless \
+        # Use headless Java to save space. 21 (noble's default LTS): Spark 4
+        # requires Java 17+, so pyspark 4.x cannot start a JVM on Java 8.
+        openjdk-21-jre-headless \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
