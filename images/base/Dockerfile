@@ -4,7 +4,12 @@
 # scipy-notebook rather than datascience-notebook: R now comes from CRAN's apt
 # repository below (Julia is dropped deliberately), so the conda R/Julia stack
 # the datascience image adds on top of scipy is no longer wanted.
-ARG BASE_IMAGE=quay.io/jupyter/scipy-notebook
+#
+# The default is the CI-built Python 3.14 chain from the ACR (produced by the
+# upstream-scipy job in .github/workflows/docker.yaml), so a bare local build
+# matches CI without rebuilding the upstream chain. docker-bake.hcl passes the
+# same ref explicitly -- keep the two in sync.
+ARG BASE_IMAGE=stcthezoneacr.azurecr.io/scipy-notebook:python3.14.5-d7c65738a271
 FROM $BASE_IMAGE
 
 USER root

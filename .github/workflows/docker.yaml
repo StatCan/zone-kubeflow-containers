@@ -51,7 +51,11 @@ jobs:
       image: ${{ steps.ref.outputs.image }}
     env:
       DOCKER_STACKS_REF: d7c65738a271df758c4a6cfe683587a06fec3ea8
-      PYTHON_VERSION: "3.14"
+      # Exact pin: a bare "3.14" lets the conda solver drift to the newest
+      # 3.14.x on every fresh chain build; keep this in lockstep with the AVD
+      # desktop rollout (3.14.5). Bumping it changes the tag below, which
+      # triggers a one-off ~20 min chain rebuild.
+      PYTHON_VERSION: "3.14.5"
     steps:
       - name: Compute image ref
         id: ref
