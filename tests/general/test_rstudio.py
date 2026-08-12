@@ -45,11 +45,42 @@ def _select_system_r(package_helper):
     assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
 
 
+def _r_environment(package_helper, r_executable):
+    expression = (
+        'paths <- c(R_HOME = R.home(), R_SHARE_DIR = R.home("share"), '
+        'R_INCLUDE_DIR = R.home("include"), R_DOC_DIR = R.home("doc")); '
+        'cat(paste("RSESSION_R_ENV", names(paths), paths, sep = "\\t"), '
+        'sep = "\\n")'
+    )
+    result = _execute_on_container(
+        package_helper,
+        [r_executable, "--vanilla", "--slave", "-e", expression],
+    )
+    output = result.output.decode("utf-8", errors="replace")
+    assert result.exit_code == 0, output
+
+    expected_names = {"R_HOME", "R_SHARE_DIR", "R_INCLUDE_DIR", "R_DOC_DIR"}
+    environment = {}
+    for line in output.splitlines():
+        if not line.startswith("RSESSION_R_ENV\t"):
+            continue
+        _, name, value = line.split("\t", 2)
+        assert name in expected_names, output
+        assert name not in environment, output
+        assert value, output
+        environment[name] = value
+
+    assert environment.keys() == expected_names, output
+    return environment
+
+
 def test_system_r_rsession_reticulate_openssl(package_helper):
     _skip_if_no_rstudio(package_helper)
     _select_system_r(package_helper)
+    r_environment = _r_environment(package_helper, "/usr/bin/R")
 
     script = r'''
+cat("RSESSION_SCRIPT_ENTERED\\n")
 stopifnot(as.character(getRversion()) == "4.6.1")
 suppressPackageStartupMessages({
   library(gert)
@@ -103,13 +134,18 @@ quit(save = "no", status = 0)
     result = package_helper.running_container.exec_run(
         [
             "/opt/jupyter-custom-rstudio-proxy/rsession.sh",
+            "--log-stderr=1",
             f"--run-script={script}",
         ],
-        environment={"LD_LIBRARY_PATH": "/usr/lib/R/lib"},
+        environment={
+            **r_environment,
+            "LD_LIBRARY_PATH": "/usr/lib/R/lib",
+        },
     )
     output = result.output.decode("utf-8", errors="replace")
 
     assert result.exit_code == 0, output
+    assert "RSESSION_SCRIPT_ENTERED" in output
     assert "RSESSION_NATIVE_R_OK" in output
     assert "RSESSION_RETICULATE_OK" in output
 
@@ -136,8 +172,10 @@ def test_conda_r_rsession_activation_environment(package_helper):
     )
     assert setup.exit_code == 0, setup.output.decode("utf-8", errors="replace")
     conda_prefix = setup.output.decode("utf-8", errors="replace")
+    r_environment = _r_environment(package_helper, f"{conda_prefix}/bin/R")
 
     script = r'''
+cat("RSESSION_SCRIPT_ENTERED\\n")
 prefix <- Sys.getenv("CONDA_PREFIX")
 expected <- Sys.getenv("EXPECTED_CONDA_PREFIX")
 stopifnot(
@@ -155,9 +193,11 @@ quit(save = "no", status = 0)
     result = package_helper.running_container.exec_run(
         [
             "/opt/jupyter-custom-rstudio-proxy/rsession.sh",
+            "--log-stderr=1",
             f"--run-script={script}",
         ],
         environment={
+            **r_environment,
             "EXPECTED_CONDA_PREFIX": conda_prefix,
             "LD_LIBRARY_PATH": "/usr/lib/R/lib",
         },
@@ -165,6 +205,7 @@ quit(save = "no", status = 0)
     output = result.output.decode("utf-8", errors="replace")
 
     assert result.exit_code == 0, output
+    assert "RSESSION_SCRIPT_ENTERED" in output
     assert f"Activated Conda env: {conda_prefix}" in output
     assert "RSESSION_CONDA_R_ENV_OK" in output
 
@@ -172,6 +213,7 @@ quit(save = "no", status = 0)
 def test_system_r_rsession_fails_without_conda_openssl_pair(package_helper):
     _skip_if_no_rstudio(package_helper)
     _select_system_r(package_helper)
+    r_environment = _r_environment(package_helper, "/usr/bin/R")
 
     libssl = "/opt/conda/lib/libssl.so.3"
     hidden_libssl = f"{libssl}.test-hidden"
@@ -184,9 +226,13 @@ def test_system_r_rsession_fails_without_conda_openssl_pair(package_helper):
         result = package_helper.running_container.exec_run(
             [
                 "/opt/jupyter-custom-rstudio-proxy/rsession.sh",
+                "--log-stderr=1",
                 '--run-script=quit(save = "no", status = 0)',
             ],
-            environment={"LD_LIBRARY_PATH": "/usr/lib/R/lib"},
+            environment={
+                **r_environment,
+                "LD_LIBRARY_PATH": "/usr/lib/R/lib",
+            },
         )
         output = result.output.decode("utf-8", errors="replace")
         assert result.exit_code != 0, output
