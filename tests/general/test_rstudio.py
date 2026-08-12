@@ -51,7 +51,36 @@ def test_system_r_rsession_reticulate_openssl(package_helper):
 
     script = r'''
 stopifnot(as.character(getRversion()) == "4.6.1")
-suppressPackageStartupMessages(library(reticulate))
+suppressPackageStartupMessages({
+  library(gert)
+  library(curl)
+  library(openssl)
+  library(reticulate)
+})
+
+libgit2 <- gert::libgit2_config()
+stopifnot(
+  length(libgit2$version) == 1L,
+  nzchar(as.character(libgit2$version)),
+  libgit2$version >= package_version("1.7.0")
+)
+
+curl_config <- curl::curl_version()
+stopifnot(
+  length(curl_config$version) == 1L,
+  nzchar(curl_config$version),
+  length(curl_config$ssl_version) == 1L,
+  nzchar(curl_config$ssl_version),
+  grepl("OpenSSL", curl_config$ssl_version, fixed = TRUE)
+)
+
+digest <- openssl::sha256(charToRaw("rstudio-openssl-compatibility"))
+stopifnot(identical(
+  unclass(as.character(digest)),
+  "3d9fc8c3a1b7ee6a0b817bf0fea558bfd732230d3ea19cd3da8633694178f24e"
+))
+cat("RSESSION_NATIVE_R_OK\\n")
+
 cfg <- py_config()
 stopifnot(dirname(normalizePath(cfg$python)) == "/opt/conda/bin")
 py_run_string(
@@ -81,7 +110,63 @@ quit(save = "no", status = 0)
     output = result.output.decode("utf-8", errors="replace")
 
     assert result.exit_code == 0, output
+    assert "RSESSION_NATIVE_R_OK" in output
     assert "RSESSION_RETICULATE_OK" in output
+
+
+def test_conda_r_rsession_activation_environment(package_helper):
+    _skip_if_no_rstudio(package_helper)
+
+    setup = _execute_on_container(
+        package_helper,
+        [
+            "bash",
+            "-lc",
+            'set -euo pipefail; '
+            'prefix="$(mktemp -d "$HOME/rstudio-conda-smoke.XXXXXX")"; '
+            'mkdir -p "$prefix/bin" "$prefix/conda-meta" '
+            '"$prefix/lib/R/library" "$HOME/.local/share/rstudio"; '
+            'touch "$prefix/conda-meta/history"; '
+            'ln -s /usr/bin/R "$prefix/bin/R"; '
+            'ln -s /opt/conda/bin/python "$prefix/bin/python"; '
+            'printf "%s\\n" "$prefix" '
+            '> "$HOME/.local/share/rstudio/active_conda_env"; '
+            'printf "%s" "$prefix"',
+        ],
+    )
+    assert setup.exit_code == 0, setup.output.decode("utf-8", errors="replace")
+    conda_prefix = setup.output.decode("utf-8", errors="replace")
+
+    script = r'''
+prefix <- Sys.getenv("CONDA_PREFIX")
+expected <- Sys.getenv("EXPECTED_CONDA_PREFIX")
+stopifnot(
+  nzchar(prefix),
+  identical(normalizePath(prefix), normalizePath(expected)),
+  identical(Sys.getenv("RETICULATE_PYTHON"), file.path(prefix, "bin", "python")),
+  identical(Sys.getenv("R_LIBS_USER"), file.path(prefix, "lib", "R", "library")),
+  identical(Sys.getenv("R_LIBS_SITE"), file.path(prefix, "lib", "R", "library")),
+  identical(unname(Sys.which("R")), file.path(prefix, "bin", "R"))
+)
+cat("RSESSION_CONDA_R_ENV_OK\\n")
+quit(save = "no", status = 0)
+'''.strip()
+
+    result = package_helper.running_container.exec_run(
+        [
+            "/opt/jupyter-custom-rstudio-proxy/rsession.sh",
+            f"--run-script={script}",
+        ],
+        environment={
+            "EXPECTED_CONDA_PREFIX": conda_prefix,
+            "LD_LIBRARY_PATH": "/usr/lib/R/lib",
+        },
+    )
+    output = result.output.decode("utf-8", errors="replace")
+
+    assert result.exit_code == 0, output
+    assert f"Activated Conda env: {conda_prefix}" in output
+    assert "RSESSION_CONDA_R_ENV_OK" in output
 
 
 def test_system_r_rsession_fails_without_conda_openssl_pair(package_helper):

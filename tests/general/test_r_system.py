@@ -13,6 +13,7 @@ import logging
 import pytest
 
 from helpers import CondaPackageHelper
+from tests.general.wait_utils import wait_for_condition
 
 LOGGER = logging.getLogger(__name__)
 
@@ -131,6 +132,110 @@ def test_all_installed_r_namespaces_load(package_helper):
     assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
 
 
+def test_runtime_r_repositories_are_usable(package_helper):
+    """Startup configures a usable HTTPS CRAN repo without placeholders."""
+    _skip_unless_system_r(package_helper)
+    _skip_unless_r_packages(package_helper)
+
+    expression = r'''
+repos <- getOption("repos")
+cran <- unname(repos["CRAN"])
+valid <- (
+  length(cran) == 1L &&
+  !is.na(cran) &&
+  nzchar(cran) &&
+  grepl("^https://", cran) &&
+  !any(is.na(repos)) &&
+  !any(unname(repos) == "@CRAN@") &&
+  tryCatch({ contrib.url(repos); TRUE }, error = function(e) FALSE)
+)
+if (!isTRUE(valid)) {
+  stop("invalid runtime R repository configuration", call. = FALSE)
+}
+'''.strip()
+    def repositories_are_ready():
+        result = _execute_on_container(
+            package_helper, ["/usr/bin/R", "--slave", "-e", expression]
+        )
+        return result.exit_code == 0
+
+    assert wait_for_condition(
+        repositories_are_ready,
+        timeout=30,
+        initial_delay=0.5,
+        max_delay=3,
+        description="runtime R repository configuration",
+    ), "runtime R repository configuration did not become valid"
+
+
+def test_system_r_sparklyr_local_spark(package_helper):
+    """System R can drive the installed PySpark 4.2 runtime with sparklyr."""
+    _skip_unless_system_r(package_helper)
+    _skip_unless_r_packages(package_helper)
+
+    expression = r'''
+suppressPackageStartupMessages(library(sparklyr))
+
+run_sparklyr_smoke <- function() {
+  spark_home <- Sys.getenv("SPARK_HOME")
+  stopifnot(
+    identical(
+      normalizePath(spark_home),
+      "/opt/conda/lib/python3.14/site-packages/pyspark"
+    ),
+    file.exists(file.path(spark_home, "bin", "spark-submit"))
+  )
+
+  install_dir <- tempfile("sparklyr-install-")
+  dir.create(install_dir)
+  old_options <- options(spark.install.dir = install_dir)
+  on.exit(options(old_options), add = TRUE)
+  on.exit(unlink(install_dir, recursive = TRUE), add = TRUE)
+
+  install_info <- suppressWarnings(
+    sparklyr::spark_install_find(version = "4.2.0", latest = FALSE)
+  )
+  stopifnot(
+    file.symlink(spark_home, install_info$sparkVersionDir),
+    identical(normalizePath(install_info$sparkVersionDir), spark_home)
+  )
+
+  config <- sparklyr::spark_config()
+  config$`sparklyr.cores.local` <- 1
+  config$`sparklyr.shell.driver-memory` <- "1g"
+  config$`spark.ui.enabled` <- FALSE
+  config$`spark.sql.shuffle.partitions` <- 1
+  Sys.setenv(SPARK_LOCAL_IP = "127.0.0.1")
+
+  connection <- NULL
+  on.exit({
+    if (!is.null(connection)) sparklyr::spark_disconnect(connection)
+  }, add = TRUE)
+  connection <- sparklyr::spark_connect(
+    master = "local",
+    version = "4.2.0",
+    spark_home = spark_home,
+    config = config
+  )
+
+  stopifnot(
+    identical(as.character(sparklyr::spark_version(connection)), "4.2.0"),
+    sparklyr::sdf_nrow(sparklyr::sdf_len(connection, 5L)) == 5L
+  )
+}
+
+run_sparklyr_smoke()
+cat("SYSTEM_R_SPARKLYR_4_2_OK\\n")
+'''.strip()
+    result = _execute_on_container(
+        package_helper, ["/usr/bin/R", "--slave", "-e", expression]
+    )
+    output = result.output.decode("utf-8", errors="replace")
+    LOGGER.info(f"system R sparklyr smoke: {output[-1000:]}")
+    assert result.exit_code == 0, output[-3000:]
+    assert "SYSTEM_R_SPARKLYR_4_2_OK" in output
+
+
 def test_standalone_python_ssl(package_helper):
     """The pinned Conda Python uses its matching OpenSSL outside R."""
     _skip_unless_r_packages(package_helper)
@@ -162,12 +267,84 @@ def test_python_to_system_r_via_rpy2(package_helper):
     assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
 
 
-def test_r_kernelspec(package_helper):
-    """The Jupyter R kernel is registered against the system R"""
+def test_r_kernel_executes_system_r(package_helper):
+    """The registered Jupyter R kernel launches and executes system R 4.6.1."""
     _skip_unless_system_r(package_helper)
 
-    result = _execute_on_container(package_helper, ["jupyter", "kernelspec", "list"])
-    output = result.output.decode("utf-8")
-    LOGGER.info(f"kernelspec list: {output}")
-    assert result.exit_code == 0
-    assert "ir" in output.split()
+    kernel_test = r'''
+import os
+import subprocess
+import time
+
+from jupyter_client import KernelManager
+from jupyter_client.kernelspec import KernelSpecManager
+
+expected_argv_tail = [
+    "--slave",
+    "-e",
+    "IRkernel::main()",
+    "--args",
+    "{connection_file}",
+]
+spec = KernelSpecManager().get_kernel_spec("ir")
+assert os.path.isabs(spec.argv[0]), spec.argv
+assert spec.argv[1:] == expected_argv_tail, spec.argv
+assert spec.display_name == "R 4.6.1", spec.display_name
+assert spec.language == "R", spec.language
+
+r_home_command = ["--slave", "-e", "cat(normalizePath(R.home()))"]
+kernel_r_home = subprocess.check_output(
+    [spec.argv[0], *r_home_command], text=True
+).strip()
+system_r_home = subprocess.check_output(
+    ["/usr/bin/R", *r_home_command], text=True
+).strip()
+assert kernel_r_home == system_r_home, (spec.argv[0], kernel_r_home, system_r_home)
+
+manager = KernelManager(kernel_name="ir")
+client = None
+started = False
+try:
+    manager.start_kernel()
+    started = True
+    client = manager.client()
+    client.start_channels()
+    client.wait_for_ready(timeout=60)
+    message_id = client.execute(
+        'stopifnot(as.character(getRversion()) == "4.6.1"); '
+        'cat("IRKERNEL_R_4_6_1_OK\\n")'
+    )
+
+    stream_output = []
+    deadline = time.monotonic() + 60
+    while True:
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, "timed out waiting for the R kernel to become idle"
+        message = client.get_iopub_msg(timeout=remaining)
+        if message.get("parent_header", {}).get("msg_id") != message_id:
+            continue
+        message_type = message["header"]["msg_type"]
+        if message_type == "stream":
+            stream_output.append(message["content"]["text"])
+        elif message_type == "error":
+            traceback = "\n".join(message["content"].get("traceback", []))
+            raise AssertionError(traceback or repr(message["content"]))
+        elif message_type == "status" and message["content"]["execution_state"] == "idle":
+            break
+
+    output = "".join(stream_output)
+    assert "IRKERNEL_R_4_6_1_OK" in output, output
+    print("IRKERNEL_EXECUTION_OK")
+finally:
+    if client is not None:
+        client.stop_channels()
+    if started:
+        manager.shutdown_kernel(now=True)
+'''.strip()
+    result = _execute_on_container(
+        package_helper, ["/opt/conda/bin/python", "-c", kernel_test]
+    )
+    output = result.output.decode("utf-8", errors="replace")
+    LOGGER.info(f"system R kernel smoke: {output[-1000:]}")
+    assert result.exit_code == 0, output[-3000:]
+    assert "IRKERNEL_EXECUTION_OK" in output
