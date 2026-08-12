@@ -34,7 +34,19 @@ log "Loaded target Conda env: ${CONDA_ENV}"
 if [ "$CONDA_ENV" = "system" ]; then
   log "Using system R ($(/usr/bin/R --version | head -n 1))"
   export RETICULATE_PYTHON="/opt/conda/bin/python"
+
+  CONDA_LIBCRYPTO="/opt/conda/lib/libcrypto.so.3"
+  CONDA_LIBSSL="/opt/conda/lib/libssl.so.3"
+  for library in "$CONDA_LIBCRYPTO" "$CONDA_LIBSSL"; do
+    if [ ! -r "$library" ]; then
+      log "ERROR: Required Conda OpenSSL library is not readable: $library"
+      exit 1
+    fi
+  done
+
+  export LD_PRELOAD="${CONDA_LIBCRYPTO}:${CONDA_LIBSSL}${LD_PRELOAD:+:${LD_PRELOAD}}"
   log "RETICULATE_PYTHON=${RETICULATE_PYTHON}"
+  log "LD_PRELOAD=${LD_PRELOAD}"
   exec /usr/lib/rstudio-server/bin/rsession "$@"
 fi
 
