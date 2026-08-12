@@ -1,63 +1,141 @@
-# R 4.6 and Python 3.14 Reticulate/OpenSSL Compatibility Design
+# R 4.6 and Python 3.14 Reticulate Compatibility Design
 
-## Goal and canonical pull request
+## Goal and scope
 
-PR #292 (`feat/python-3.14`) is the sole canonical pull request for the R 4.6.1, Python 3.14.5, and reticulate/OpenSSL compatibility work. Its branch already contains the complete #288 and #290 ancestry. The implementation will update #292 only; it will not split the fix, merge or close #288/#290, or duplicate their changes elsewhere.
+PR #292 (`feat/python-3.14`, base `beta`) remains the canonical pull request
+for system R 4.6.1, Conda Python 3.14.5, restored R package parity, and the
+mixed-runtime compatibility correction. The result must preserve standalone
+system R, standalone `/opt/conda` Python, RStudio, Jupyter kernels, reticulate,
+rpy2, and user-selected Conda-R environments.
 
-The result must preserve the existing user experience: system R 4.6.1 and Posit Package Manager, Conda Python 3.14.5, standalone R and Python, RStudio, Jupyter kernels, user-created Conda environments, reticulate from R to Python, and rpy2 from Python to R. Moving from the upstream `datascience-notebook` image to `scipy-notebook` must not remove the R packages users previously received from that inherited layer.
+The compatibility overlay is RStudio-specific and is built in
+`images/rstudio/Dockerfile`. Base, mid, and Jupyter images retain their
+standalone Conda Python runtime unchanged.
 
-## Root cause
+RStudio's system-R process is the failing boundary and the only behavior this
+design changes. Terminal and VSCode sessions that invoke reticulate without
+setting `RETICULATE_PYTHON` continue to use their pre-existing
+reticulate/uv interpreter auto-discovery behavior; changing or guaranteeing
+that behavior is out of scope. Standalone Python and language-bridge checks
+are non-regression controls, not an expansion of the incident boundary.
 
-Commit `02b462ca89f7cef38b2d3a64c77590e63be739c2` moved R to the system installation while retaining `/opt/conda/bin/python` for reticulate. In the system-R path, `start_rstudio_server.sh` selects `/usr/bin/R` and `/usr/lib/R/lib`; `rsession.sh` then exports `RETICULATE_PYTHON=/opt/conda/bin/python` without making Conda's OpenSSL libraries resident before RStudio starts.
+## Evidence that rejected the preload design
 
-RStudio Server 2026.04.0+526 links `libssl.so.3` and `libcrypto.so.3`, so `rsession` loads Ubuntu's OpenSSL 3.0 libraries first. Reticulate later loads the Conda Python `_ssl` extension. The dynamic loader reuses the already-loaded libraries with the same SONAME, but Python 3.14.5's `_ssl.so` requires `OPENSSL_3.3.0`. Ubuntu's library does not export that symbol version; Conda OpenSSL 3.6.3 does. This produces the observed error even though standalone Conda Python succeeds.
+System RStudio loads Ubuntu OpenSSL 3.0 before reticulate embeds
+`/opt/conda/bin/python`. Conda Python 3.14.5's `_ssl` requires newer Conda
+OpenSSL symbols, so loading its unmodified extension into that process fails.
 
-The Python chain entered in `77e0a32d6efc0ecfff3bb3beaf4ed1c532894e1c` and was pinned to Python 3.14.5 in `dec228b9ee2c27b90cab6418f21b8b37180e9eda`. It exposed the mixed-runtime flaw; choosing the wrong interpreter is not the cause because reticulate reports `/opt/conda/bin/python`.
+The first proposed correction preloaded Conda
+`libcrypto.so.3`/`libssl.so.3` process-wide. Exact CI falsified that design.
+At head `a07bccb88950eb8114b2d5ae26cc74905a325a59`, GitHub Actions run
+`31598508807` reached the R banner and then the real system-R
+`rsession --run-script` probe exited with status 139 before
+`RSESSION_SCRIPT_ENTERED`. The same failure propagated through RStudio-bearing
+downstream test jobs. The no-preload synthetic Conda-R control and the
+fail-closed wrapper probe did not show that crash. A process-wide Conda
+OpenSSL pair therefore is not a safe compatibility boundary for native
+RStudio and R packages and must not be restored.
 
-## Implementation design
+## Compatibility-overlay architecture
 
-Only the `system` branch of `images/rstudio/customRStu/rsession.sh` will preload the coherent Conda OpenSSL pair before executing the real RStudio `rsession` binary:
+The RStudio image builds only CPython 3.14.5's `_ssl` and `_hashlib` extension
+modules from the checksum-pinned CPython source, using Ubuntu's system
+OpenSSL headers and libraries. The exact ABI artifacts are installed under:
 
-- `/opt/conda/lib/libcrypto.so.3`
-- `/opt/conda/lib/libssl.so.3`
+- `/opt/reticulate-compat/lib/python3.14/lib-dynload`
 
-The wrapper will validate that both files exist and are readable. If either is unavailable, it will log a precise error and exit before launching a partially configured session. It must not silently fall back to the incompatible system pair.
+Hash-pinned, self-contained manylinux wheels are installed under:
 
-The preload is deliberately process-scoped and limited to these two libraries. The implementation must not add all of `/opt/conda/lib` to the system-R loader path, replace files under `/usr/lib`, add global symlinks, or downgrade OpenSSL. Broad Conda library precedence already caused an unrelated ncurses collision in PR #239 and would expose RStudio and system R packages to unnecessary ABI risk.
+- `/opt/reticulate-compat/lib/python3.14/site-packages`
 
-The existing Conda-R branch remains unchanged: when a user explicitly selects a Conda environment that contains R, the current activation, `R_LIBS_USER`, `R_LIBS_SITE`, interpreter selection, and loader behavior continue to apply.
+The overlay distributions are `cryptography 50.0.0`, `h5py 3.16.0`,
+`pyarrow 25.0.0`, `py-rattler 0.25.0`, `pyzmq 27.1.0`, `tables 3.11.1`,
+and `zstandard 0.25.0`. Each overlay version must exactly match the
+corresponding installed Conda distribution, so a future package upgrade fails
+the image build instead of leaving a stale RStudio-only runtime.
 
-The system-R PPM installation will explicitly preserve the former upstream `datascience-notebook` R package surface in addition to this repository's existing package list. The restored direct packages are `caret`, `crayon`, `devtools`, `forecast`, `hexbin`, `htmltools`, `htmlwidgets`, `nycflights13`, `randomForest`, `RCurl`, `rmarkdown`, `RSQLite`, `shiny`, and `tidymodels`; `e1071`, `IRkernel`, `RODBC`, `tidyverse`, and rpy2 are already handled elsewhere in the new image. `reticulate` will become an explicit system-R package because the image's R-to-Python contract must not depend on a user's persisted personal library or a coincidental transitive dependency.
+Only the `system` branch of
+`images/rstudio/customRStu/rsession.sh` selects the overlay. It retains
+`RETICULATE_PYTHON=/opt/conda/bin/python`, prepends the two overlay directories
+to `PYTHONPATH`, and validates the build-audit sentinel plus the exact CPython
+ABI module filenames before launching `rsession`. It does not set
+`LD_PRELOAD`, preload either OpenSSL implementation, or add `/opt/conda/lib` to
+the loader path.
 
-## Compatibility and failure behavior
+`libmambapy` belongs to Conda's package-manager implementation rather than the
+declared embedded-reticulate application surface. It remains installed and is
+validated with standalone Conda Python and the `mamba` CLI, but it is not
+imported into the system-R RStudio process.
 
-The two preloaded libraries must come from the same `/opt/conda/lib` prefix. Conda OpenSSL 3.6.3 provides both RStudio's required `OPENSSL_3.0.0` symbols and Python's required `OPENSSL_3.3.0` symbols. Tests must prove the actual running session mapped the intended Conda libraries rather than inferring success from version strings alone.
+The non-system Conda-R branch remains unchanged: it activates the selected
+environment and preserves its `RETICULATE_PYTHON`, `R_LIBS_USER`,
+`R_LIBS_SITE`, and loader behavior.
 
-Other than restoring that lost inherited R package surface and making `reticulate` explicit, no package list, interpreter-selection rule, R repository configuration, Jupyter kernel registration, Spark/Java version, Banff artifact, or user-visible launcher workflow is changed by this fix.
+## Audited dependency closure and fail-closed gates
 
-## Verification design
+The final installed Python ELF graph has ten normalized roots that reach
+Conda OpenSSL:
 
-The regression must exercise the real RStudio wrapper/`rsession` boundary, not only a plain `Rscript` process. It will assert:
+- Overlay: `_ssl`, `_hashlib`, `cryptography`, `h5py`, `pyarrow`, `rattler`,
+  `tables`, and `zmq`.
+- Standalone-only package manager: `libmambapy`.
+- System-R provided: `rpy2` (normalizing `_rinterface_cffi_api*`).
 
-1. The system-R session selects `/usr/bin/R` and reticulate selects `/opt/conda/bin/python` 3.14.5.
-2. `reticulate::py_run_string("import ssl")` succeeds and reports the expected Conda OpenSSL runtime.
-3. `/proc/self/maps` or equivalent process evidence shows the Conda `libcrypto.so.3` and `libssl.so.3`, with no system copies of those SONAMEs resident in the session.
-4. Missing either member of the required pair makes the wrapper fail closed with an actionable error.
-5. The non-system Conda-R branch retains its existing environment activation behavior.
+`rattler` retains a self-contained overlay wheel to close the audited ELF
+graph, but is not treated as a declared embedded application entrypoint.
 
-Broader compatibility validation will cover:
+The build-time audit follows transitive `ldd` resolution, canonicalizes
+resolved paths, rejects unresolved or Conda-resolved overlay dependencies,
+and fails if the discovered root set or its coverage classification changes.
+It also verifies:
 
-- standalone `/opt/conda/bin/python`, including `ssl` and the existing declared Conda/Python import sweep;
-- system `/usr/bin/R`, including every package in the explicit PPM package list, the restored former upstream package list, `reticulate`, and `zonetokenbroker`;
-- R-to-Python operation through reticulate;
-- Python-to-R operation through rpy2;
-- RStudio startup, version, custom proxy, and a live session using the wrapper;
-- registered Python and R Jupyter kernels;
-- the existing Banff, SparkSession, notebook, package, and image health tests;
-- the complete existing CI matrix for base, mid, rstudio, sas-kernel, jupyterlab-cpu, and sas images.
+- exact CPython 3.14 ABI filenames for `_ssl` and `_hashlib`;
+- only `OPENSSL_3.0.0` requirements from the rebuilt modules;
+- exact overlay-to-Conda distribution version parity;
+- system-only OpenSSL resolution for the rebuilt modules;
+- no unexpected OpenSSL dependency from a wheel ELF;
+- embedded import and offline operation with Ubuntu crypto and SSL resident;
+- standalone `libmambapy` operations and exact-version parity with
+  `mamba info --json`; and
+- a sentinel written only after the complete audit succeeds.
 
-CI success is evidence for the rebuilt PR head only. The PR must not be presented as fixed until the exact-head image tests pass; if a private-image runtime limitation remains, it must be reported explicitly rather than inferred from static checks.
+The isolated build-audit subprocess preloads Ubuntu OpenSSL only to emulate
+the libraries already resident in system R; that preload is not installed in
+or inherited by the runtime wrapper.
 
-## Pull request handoff
+`zstandard` is included because broad embedded-runtime testing exposed a
+separate native zstd API collision even though it is not one of the ten
+OpenSSL-reaching roots.
 
-After implementation and exact-head validation, PR #292's title and description will be updated to describe the combined R 4.6.1, Python 3.14.5, and reticulate/OpenSSL compatibility change and its broader test evidence. The PR will remain targeted at `beta`. No merge is part of this work unless separately authorized.
+## Runtime verification
+
+The regression uses the real wrapper and RStudio `rsession` process. It loads
+native R `arrow`, `hdf5r`, `gert`, `curl`, and `openssl` before and after
+embedding Python, performs deterministic offline R operations, and exercises
+the overlay across SSL, hashing, cryptography, Arrow/Parquet, HDF5, PyTables,
+ZMQ, zstandard, rpy2, representative scientific operations, and declared
+user/application entrypoints. `/proc/self/maps` must contain only Ubuntu
+OpenSSL for the relevant SONAMEs.
+
+Separate controls prove standalone `/opt/conda/bin/python` still uses Conda
+OpenSSL 3.6.3 and Conda package files, exercise `libmambapy`, and require the
+standalone `mamba` and `libmamba` versions to match it exactly. They also prove
+that a selected
+non-system Conda-R environment retains its existing activation contract. These
+controls detect collateral regressions; they do not change terminal or VSCode
+interpreter selection. Missing the overlay sentinel or either rebuilt ABI
+module makes the system branch fail closed before R starts.
+
+## Evidence boundary
+
+The exit-139 result above is hosted evidence for the rejected preload design.
+The final no-preload overlay image has built successfully for `linux/amd64`,
+in addition to passing static syntax, collection, ELF, wheel, source, and
+fail-closed checks. A full system-R `Rscript`/reticulate surrogate passed the
+native-R-before, embedded-Python, system-only OpenSSL map, and
+native-R-after workloads on that exact image. This local surrogate does not
+prove the RStudio process seam: `rsession` does not complete reliably under
+the local amd64-on-arm64 Rosetta environment, so the hosted native-amd64
+`rsession` test is authoritative. No exact-head hosted CI result exists for
+the overlay yet. Compatibility must not be declared complete until the real
+RStudio session and full hosted PR matrix are green at the pushed head.

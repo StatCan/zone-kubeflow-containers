@@ -35,18 +35,26 @@ if [ "$CONDA_ENV" = "system" ]; then
   log "Using system R ($(/usr/bin/R --version | head -n 1))"
   export RETICULATE_PYTHON="/opt/conda/bin/python"
 
-  CONDA_LIBCRYPTO="/opt/conda/lib/libcrypto.so.3"
-  CONDA_LIBSSL="/opt/conda/lib/libssl.so.3"
-  for library in "$CONDA_LIBCRYPTO" "$CONDA_LIBSSL"; do
-    if [ ! -r "$library" ]; then
-      log "ERROR: Required Conda OpenSSL library is not readable: $library"
+  RETICULATE_COMPAT_ROOT="/opt/reticulate-compat"
+  RETICULATE_COMPAT_PYTHON="${RETICULATE_COMPAT_ROOT}/lib/python3.14"
+  RETICULATE_COMPAT_DYNLOAD="${RETICULATE_COMPAT_PYTHON}/lib-dynload"
+  RETICULATE_COMPAT_SITE="${RETICULATE_COMPAT_PYTHON}/site-packages"
+  RETICULATE_COMPAT_SSL="${RETICULATE_COMPAT_DYNLOAD}/_ssl.cpython-314-x86_64-linux-gnu.so"
+  RETICULATE_COMPAT_HASHLIB="${RETICULATE_COMPAT_DYNLOAD}/_hashlib.cpython-314-x86_64-linux-gnu.so"
+
+  for required_path in \
+    "${RETICULATE_COMPAT_ROOT}/.audit-passed" \
+    "$RETICULATE_COMPAT_SSL" \
+    "$RETICULATE_COMPAT_HASHLIB"; do
+    if [ ! -r "$required_path" ]; then
+      log "ERROR: Required reticulate compatibility path is not readable: $required_path"
       exit 1
     fi
   done
 
-  export LD_PRELOAD="${CONDA_LIBCRYPTO}:${CONDA_LIBSSL}${LD_PRELOAD:+:${LD_PRELOAD}}"
+  export PYTHONPATH="${RETICULATE_COMPAT_DYNLOAD}:${RETICULATE_COMPAT_SITE}${PYTHONPATH:+:${PYTHONPATH}}"
   log "RETICULATE_PYTHON=${RETICULATE_PYTHON}"
-  log "LD_PRELOAD=${LD_PRELOAD}"
+  log "RETICULATE_COMPAT_PYTHON=${RETICULATE_COMPAT_PYTHON}"
   exec /usr/lib/rstudio-server/bin/rsession "$@"
 fi
 
