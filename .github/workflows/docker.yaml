@@ -11,6 +11,7 @@ on:
       - "!images/*/README.md"
       - "tests/**"
       - "!tests/README.md"
+      - "docker-bake.hcl"
       - "requirements-dev.txt"
   pull_request:
     paths:
@@ -20,6 +21,7 @@ on:
       - "!images/*/README.md"
       - "tests/**"
       - "!tests/README.md"
+      - "docker-bake.hcl"
       - "requirements-dev.txt"
 
 jobs:
@@ -37,7 +39,10 @@ jobs:
           chmod +x ./make_helpers/get_branch_name.sh
           BRANCH_NAME=$(./make_helpers/get_branch_name.sh)
           echo "branch-name=$BRANCH_NAME"
-          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Validate runtime configuration
+        run: python3 .github/scripts/validate_runtime_configuration.py
 
   # Upstream jupyter/docker-stacks publishes no Python 3.14 images, so build
   # its foundation -> base-notebook -> minimal-notebook -> scipy-notebook
@@ -49,6 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.ref.outputs.image }}
+      is-diff: ${{ steps.upstream-diff.outputs.is-diff }}
     env:
       DOCKER_STACKS_REF: d7c65738a271df758c4a6cfe683587a06fec3ea8
       # Exact pin: a bare "3.14" lets the conda solver drift to the newest
@@ -57,9 +63,34 @@ jobs:
       # triggers a one-off ~20 min chain rebuild.
       PYTHON_VERSION: "3.14.5"
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Compute image ref
         id: ref
-        run: echo "image=${{ needs.vars.outputs.REGISTRY_NAME }}/scipy-notebook:python${PYTHON_VERSION}-${DOCKER_STACKS_REF:0:12}" >> $GITHUB_OUTPUT
+        run: echo "image=${{ needs.vars.outputs.REGISTRY_NAME }}/scipy-notebook:python${PYTHON_VERSION}-${DOCKER_STACKS_REF:0:12}" >> "$GITHUB_OUTPUT"
+
+      - name: Detect upstream definition changes
+        id: definition-diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "${EVENT_NAME}" != "pull_request" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "${BASE_SHA}" ] || ! git cat-file -e "${BASE_SHA}^{commit}"; then
+            echo "PR base commit unavailable; forcing a downstream rebuild"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --unified=0 "${BASE_SHA}" HEAD -- .github/workflows/docker.yaml \
+            | grep -Eq '^[+-][[:space:]]+(DOCKER_STACKS_REF|PYTHON_VERSION):'; then
+            echo "Upstream ref or Python version differs from the PR base"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream ref and Python version match the PR base"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Login to ACR
         uses: azure/docker-login@v1
@@ -72,9 +103,21 @@ jobs:
         id: exists
         run: |
           if docker manifest inspect "${{ steps.ref.outputs.image }}" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine whether downstream images must rebuild
+        id: upstream-diff
+        env:
+          DEFINITION_CHANGED: ${{ steps.definition-diff.outputs.changed }}
+          IMAGE_EXISTS: ${{ steps.exists.outputs.exists }}
+        run: |
+          if [ "${IMAGE_EXISTS}" != "true" ] || [ "${DEFINITION_CHANGED}" == "true" ]; then
+            echo "is-diff=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is-diff=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout jupyter/docker-stacks
@@ -83,14 +126,15 @@ jobs:
         with:
           repository: jupyter/docker-stacks
           ref: ${{ env.DOCKER_STACKS_REF }}
+          path: docker-stacks
 
       - name: Build the docker-stacks chain
         if: steps.exists.outputs.exists == 'false'
         run: |
-          docker build ./images/docker-stacks-foundation -t local/docker-stacks-foundation --build-arg PYTHON_VERSION="${PYTHON_VERSION}"
-          docker build ./images/base-notebook -t local/base-notebook --build-arg BASE_IMAGE=local/docker-stacks-foundation
-          docker build ./images/minimal-notebook -t local/minimal-notebook --build-arg BASE_IMAGE=local/base-notebook
-          docker build ./images/scipy-notebook -t "${{ steps.ref.outputs.image }}" --build-arg BASE_IMAGE=local/minimal-notebook
+          docker build ./docker-stacks/images/docker-stacks-foundation -t local/docker-stacks-foundation --build-arg PYTHON_VERSION="${PYTHON_VERSION}"
+          docker build ./docker-stacks/images/base-notebook -t local/base-notebook --build-arg BASE_IMAGE=local/docker-stacks-foundation
+          docker build ./docker-stacks/images/minimal-notebook -t local/minimal-notebook --build-arg BASE_IMAGE=local/base-notebook
+          docker build ./docker-stacks/images/scipy-notebook -t "${{ steps.ref.outputs.image }}" --build-arg BASE_IMAGE=local/minimal-notebook
 
       - name: Push
         if: steps.exists.outputs.exists == 'false'
@@ -105,6 +149,7 @@ jobs:
       # CI-built scipy-notebook (Python 3.14, Julia-free): R comes from CRAN
       # apt + Posit Package Manager inside images/base and images/mid.
       base-image: "${{ needs.upstream-scipy.outputs.image }}"
+      parent-image-is-diff: "${{ needs.upstream-scipy.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:

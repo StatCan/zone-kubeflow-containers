@@ -3,7 +3,6 @@
 [![codecov](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg)](https://codecov.io/gh/StatCan/zone-kubeflow-containers)
 [![Python Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=python-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=python-tests)
 [![R Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=r-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=r-tests)
-[![Julia Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=julia-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=julia-tests)
 [![SAS Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=sas-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=sas-tests)
 [![Kubeflow Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=kubeflow-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=kubeflow-tests)
 
@@ -117,7 +116,7 @@ These are the final images from our build process and are intended to be used on
 
 Image | Notes | Installations
 --- | --- | ---
-[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, RStudio, R, Python, Julia, Sas kernel
+[jupyterlab-cpu](./images/jupyterlab) | The base experience. A jupyterlab notebook with various | Jupyter, VsCode, RStudio, R, Python, Sas kernel
 [sas](./images/sas) | Similar to our jupyterlab-cpu image, except with SAS Studios | RStudio, Sas Studios
 
 ### Overview of Images
@@ -129,7 +128,7 @@ The relationship between the stages and the final product is as shown below.
 
 ```mermaid
 graph TD
-  upstream_nb["(upstream) datascience-notebook"]
+  upstream_nb["(upstream) scipy-notebook"]
   upstream_nb --> base
   base --> mid
   mid --> sas_kernel
@@ -196,7 +195,6 @@ Testing is organized into two categories:
     └── jupyterlab-cpu                      # Data science package tests for jupyterlab-cpu image
         ├── test_pandas.py                  # Pandas functionality and integration tests
         ├── test_matplotlib.py              # Matplotlib plotting functionality
-        ├── test_julia.py                   # Julia language and packages functionality
         ├── test_extensions.py              # JupyterLab extension checks
         └── data/                           # Test data files
             ├── matplotlib_1.py
@@ -204,7 +202,7 @@ Testing is organized into two categories:
 ```
 
 Where `tests/general` tests verify infrastructure functionality (health checks, environment, kernels, etc.) across all images,
-and `tests/jupyterlab-cpu` tests verify user-facing data science packages (Python, R, Julia, SAS).
+and `tests/jupyterlab-cpu` tests verify user-facing data science packages (Python, R, SAS).
 Pytest will start the image locally and then run the provided tests to determine if JupyterLab is running, data science packages are working properly, etc.
 Tests are formatted using typical pytest formats
 (python files with `def test_SOMETHING()` functions).
@@ -219,10 +217,9 @@ Our test suite ensures images work correctly using pytest. Tests are organized b
   - `test_packages.py` - Package import verification
   - `test_rstudio.py` - RStudio server functionality
   - `helpers.py` - Helper functions and configuration for tests
-- `tests/jupyterlab-cpu/` - Data science package tests (Python/R/Julia functionality) for jupyterlab-cpu image
+- `tests/jupyterlab-cpu/` - Data science package tests (Python/R functionality) for jupyterlab-cpu image
   - `test_pandas.py` - Pandas functionality and integration tests
   - `test_matplotlib.py` - Matplotlib plotting functionality
-  - `test_julia.py` - Julia language and packages functionality
   - `test_extensions.py` - JupyterLab extension checks
 - `tests/sas/` - SAS-specific tests (SAS functionality and SAS Studio) for sas image
 
@@ -256,7 +253,7 @@ make test-coverage/jupyterlab-cpu
 Our images are built in stages, starting from upstream Jupyter Docker Stacks:
 
 ```
-upstream datascience-notebook → base → mid → sas-kernel → [jupyterlab-cpu | sas]
+upstream scipy-notebook → base → mid → sas-kernel → [jupyterlab-cpu | sas]
 ```
 
 ### Building Images
@@ -374,7 +371,7 @@ and increasing that size would negatively impact the time it takes up for a work
       with:
         image: "stage-name"                                             # The name of the current stage/image
         directory: "directory-name"                                     # The name of the directory in the /images/ folder. /images/base would be "base"
-        base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
+        base-image: "quay.io/jupyter/scipy-notebook:2025-08-15"         # used if the stage is built from an upstream image. Omit if stage has a local parent
         parent-image: "parent"                                          # The name of the parent stage/image. Omit if stage uses an upsteam image
         parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
         # The following values are static between differnt stages
@@ -606,7 +603,7 @@ change your CPU allocation in your Linux VM settings to >= 3.
 │   └── sas/                   # Final SAS image
 ├── tests/                     # Automated tests
 │   ├── general/               # Infrastructure and core functionality tests (run on all images)
-│   ├── jupyterlab-cpu/        # Data science package tests (Python/R/Julia)
+│   ├── jupyterlab-cpu/        # Data science package tests (Python/R)
 │   └── sas/                   # SAS-specific tests (SAS functionality and SAS Studio)
 ├── make_helpers/              # Helper scripts for Makefile
 └── docs/                      # Documentation files

@@ -55,7 +55,7 @@ else
 
 local({
     r <- getOption("repos")
-    r["ppm"] <- "$PPM_URL"
+    r["CRAN"] <- "$PPM_URL"
     r["cran-local"] <- "$CRAN_LOCAL_URL"
     options(repos = r)
 })
