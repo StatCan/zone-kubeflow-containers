@@ -25,17 +25,32 @@ R_PACKAGES = [
     "arrow",
     "aws.s3",
     "caTools",
+    "caret",
+    "crayon",
+    "devtools",
     "e1071",
+    "forecast",
     "hdf5r",
+    "hexbin",
+    "htmltools",
+    "htmlwidgets",
     "httr",
     "jsonlite",
     "markdown",
+    "nycflights13",
     "odbc",
+    "randomForest",
+    "RCurl",
     "renv",
     "RODBC",
+    "reticulate",
+    "rmarkdown",
+    "RSQLite",
+    "shiny",
     "sf",
     "sparklyr",
     "tidyverse",
+    "tidymodels",
     "languageserver",
     "zonetokenbroker",
 ]
@@ -94,6 +109,54 @@ def test_r_packages_load(package_helper):
         if result.exit_code != 0:
             failures[package] = result.output.decode("utf-8")[-500:]
     assert not failures, f"R packages failed to load: {failures}"
+
+
+def test_all_installed_r_namespaces_load(package_helper):
+    """Every installed R package can load its namespace in system R."""
+    _skip_unless_system_r(package_helper)
+    _skip_unless_r_packages(package_helper)
+
+    expression = (
+        'pkgs <- rownames(installed.packages()); '
+        'ok <- vapply(pkgs, requireNamespace, logical(1), quietly = TRUE); '
+        'if (any(!ok)) stop("R namespaces failed to load: ", '
+        'paste(pkgs[!ok], collapse = ", "))'
+    )
+    result = _execute_on_container(
+        package_helper, ["/usr/bin/R", "--slave", "-e", expression]
+    )
+    assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
+
+
+def test_standalone_python_ssl(package_helper):
+    """The pinned Conda Python uses its matching OpenSSL outside R."""
+    _skip_unless_r_packages(package_helper)
+
+    code = (
+        "import ssl, sys; "
+        "assert sys.version_info[:3] == (3, 14, 5); "
+        "assert ssl.OPENSSL_VERSION.startswith('OpenSSL 3.6.3')"
+    )
+    result = _execute_on_container(
+        package_helper, ["/opt/conda/bin/python", "-c", code]
+    )
+    assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
+
+
+def test_python_to_system_r_via_rpy2(package_helper):
+    """The Conda Python-to-system-R bridge remains operational."""
+    _skip_unless_system_r(package_helper)
+    _skip_unless_r_packages(package_helper)
+
+    code = (
+        "from rpy2 import robjects; "
+        "version = str(robjects.r('R.version.string')[0]); "
+        "assert version.startswith('R version 4.6.1'), version"
+    )
+    result = _execute_on_container(
+        package_helper, ["/opt/conda/bin/python", "-c", code]
+    )
+    assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
 
 
 def test_r_kernelspec(package_helper):
