@@ -131,9 +131,11 @@ RUN mamba install --quiet --yes -c conda-forge \
 # set landed before the layer is accepted.
 ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
 RUN Rscript -e "options(HTTPUserAgent = sprintf('R/%s R (%s)', getRversion(), paste(getRversion(), R.version['platform'], R.version['arch'], R.version['os']))); \
-                pkgs <- c('arrow', 'aws.s3', 'caTools', 'e1071', 'hdf5r', 'httr', 'jsonlite', \
-                          'markdown', 'odbc', 'renv', 'RODBC', 'sf', 'sparklyr', 'tidyverse', \
-                          'languageserver'); \
+                pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', \
+                          'forecast', 'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', \
+                          'jsonlite', 'languageserver', 'markdown', 'nycflights13', 'odbc', \
+                          'randomForest', 'RCurl', 'renv', 'reticulate', 'rmarkdown', 'RODBC', \
+                          'RSQLite', 'sf', 'shiny', 'sparklyr', 'tidymodels', 'tidyverse'); \
                 install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
                 missing <- setdiff(pkgs, rownames(installed.packages())); \
                 if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
