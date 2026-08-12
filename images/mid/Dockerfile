@@ -49,6 +49,7 @@ RUN apt-get update \
         libabsl-dev \
         libgdal-dev \
         libgeos-dev \
+        libgit2-dev \
         libhdf5-dev \
         libicu-dev \
         libproj-dev \

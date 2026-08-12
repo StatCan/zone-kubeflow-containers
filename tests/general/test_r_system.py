@@ -118,9 +118,12 @@ def test_all_installed_r_namespaces_load(package_helper):
 
     expression = (
         'pkgs <- rownames(installed.packages()); '
-        'ok <- vapply(pkgs, requireNamespace, logical(1), quietly = TRUE); '
-        'if (any(!ok)) stop("R namespaces failed to load: ", '
-        'paste(pkgs[!ok], collapse = ", "))'
+        'errors <- vapply(pkgs, function(pkg) tryCatch({ '
+        'loadNamespace(pkg); "" }, '
+        'error = function(e) conditionMessage(e)), character(1)); '
+        'failed <- nzchar(errors); '
+        'if (any(failed)) stop("R namespaces failed to load:\n", '
+        'paste(paste0(pkgs[failed], ": ", errors[failed]), collapse = "\n"))'
     )
     result = _execute_on_container(
         package_helper, ["/usr/bin/R", "--slave", "-e", expression]
