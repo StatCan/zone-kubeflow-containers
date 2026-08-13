@@ -138,6 +138,15 @@ ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
 
 # Configure container startup
 COPY pip.conf /etc/pip.conf
+# Persist `pip install` in the base conda env onto the workspace volume (ZONE-543).
+# Site scope, so venvs and user conda envs are unaffected -- see the file header.
+# Two consequences for anything that builds on this image:
+#   * `pip install` as root in a downstream stage would land in the image's
+#     /home/jovyan/.local, which the workspace PVC hides at runtime. Those calls
+#     must pass --no-user (see images/rstudio, images/sas_kernel, images/sas).
+#   * `pip config set` targets the site file once it exists, and this one is
+#     root-owned, so scripted config writes must pass --user (02-start-custom).
+COPY pip-base-env.conf /opt/conda/pip.conf
 COPY --chmod=755 keep-alive.sh /usr/local/bin/
 
 # SSL Certs
@@ -213,7 +222,7 @@ RUN set -eu \
     } >> "${HOME_TMP}/.bashrc"
 
 # Copy over various files that should be restored into HOME on first boot.
-COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md azure-sign-in.md ${HOME_TMP}/
+COPY --chown=${NB_USER}:${NB_GID} .Rprofile .profile .condarc connect-to-filer.md azure-sign-in.md installing-packages.md ${HOME_TMP}/
 COPY --chown=${NB_USER}:${NB_GID} gpg-agent.conf ${HOME_TMP}/.gnupg/gpg-agent.conf
 
 # Set Python interpreter path for VSCode

@@ -7,6 +7,12 @@
 # chains can fall through instead of hanging on a dead endpoint.
 echo "--------------------starting zone-msi-shim--------------------"
 exec 2>&1
+#
+# Run under `python -s -P` for the same reason as the jupyter service: user pip
+# installs now persist on the workspace volume (ZONE-543), and this daemon needs
+# nothing from them. Sealing it means a broken user package cannot take down
+# `az login --identity` and leave credentials failing for reasons that point
+# nowhere near the package that caused it.
 exec \
   s6-envdir /run/s6-env \
-  /opt/conda/bin/zone-msi-shim
+  /opt/conda/bin/python -s -P /opt/conda/bin/zone-msi-shim
