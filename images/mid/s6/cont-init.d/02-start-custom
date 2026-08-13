@@ -30,7 +30,12 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --remove channels 'defaults'
 conda config --remove channels conda-forge --system
 
-pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+# --user is required, not cosmetic: `pip config set` picks the user file only
+# while no site file exists, and silently switches to the site file
+# (/opt/conda/pip.conf, shipped read-only by the image for ZONE-543) as soon as
+# one does. Without the flag this write fails with EACCES and the notebook
+# server is left pointing at PyPI instead of Artifactory.
+pip config --user set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
 
 # create pixi config to change default channel
 if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
