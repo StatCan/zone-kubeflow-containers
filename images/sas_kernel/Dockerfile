@@ -61,7 +61,11 @@ EXPOSE 8561 8591 38080
 # SASPY
 ENV SASPY_VERSION="5.4.0"
 
-RUN pip install sas_kernel
+# --no-user: mid ships /opt/conda/pip.conf with [install] user = true. HOME is
+# /home/jovyan even while building as root, so without it this build-time install
+# would land in the image's /home/jovyan/.local -- which the workspace PVC hides
+# at runtime, making the package vanish in production but not in `docker run`.
+RUN pip install --no-user sas_kernel
 
 # Stage SASPy config for user-level configuration
 # This will be copied to $HOME at runtime by 01-copy-tmp-home
