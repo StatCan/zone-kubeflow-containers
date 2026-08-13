@@ -63,6 +63,15 @@ echo 'raise RuntimeError("user broke traitlets")' > "$US/traitlets.py"
 printf 'import sys; sys.stderr.write("POISONED\\n")\\n' > "$US/zzz_poison.pth"
 """
 
+# The service does `cd "${HOME}"` before exec'ing, and `python -m` prepends the
+# working directory to sys.path. A stray file in the home directory is therefore
+# a second, independent route to the same lock-out that -s closes -- and one an
+# ordinary user hits by accident, not by installing anything at all.
+POISON_HOME_CWD = """
+set -e
+echo 'raise RuntimeError("user shadowed traitlets from $HOME")' > /home/jovyan/traitlets.py
+"""
+
 
 def _shell(container, script, **kwargs):
     """Start the image with a plain shell instead of s6 and run `script` in it.
@@ -398,3 +407,45 @@ def test_jupyter_starts_with_a_broken_user_site(
         )
 
     LOGGER.info("JupyterLab started despite a poisoned user site directory")
+
+
+@pytest.mark.integration
+@pytest.mark.slow
+def test_jupyter_starts_with_a_module_shadowed_from_the_home_directory(
+    container, http_client, workspace_volumes, url="http://localhost:8888"
+):
+    """A stray .py file in $HOME must not take the server down either.
+
+    Regression test for the -P flag. The service runs `python -m` from $HOME, so
+    without -P the working directory is sys.path[0] and `~/traitlets.py` is
+    imported in preference to the real module -- no pip install required, and
+    the pod is unreachable. -s alone does not close this.
+    """
+    server_a, _ = workspace_volumes
+
+    exit_code, output = _shell(
+        container, POISON_HOME_CWD, volumes=_mount(server_a)
+    )
+    assert exit_code == 0, f"failed to plant the shadowing module:\n{output}"
+    container.remove()
+
+    nb_prefix = container.kwargs["environment"]["NB_PREFIX"]
+    container.run(volumes=_mount(server_a))
+
+    responsive = wait_for_http_response(
+        http_client=http_client,
+        url=f"{url}{nb_prefix}/api/status",
+        expected_status=200,
+        timeout=120,
+        initial_delay=0.5,
+        max_delay=3.0,
+    )
+
+    if not responsive:
+        logs = container.container.logs(stdout=True, stderr=True).decode("utf-8")
+        raise AssertionError(
+            "JupyterLab did not start with a module shadowed from $HOME.\n"
+            f"Container logs (tail):\n{logs[-2000:]}"
+        )
+
+    LOGGER.info("JupyterLab started despite a shadowing module in $HOME")
