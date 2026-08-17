@@ -103,6 +103,9 @@ RUN apt-get update --yes \
 # interpreter out of conda decouples Zone R upgrades from conda-forge's r-*
 # rebuild cycle: R package binaries come from Posit Package Manager instead
 # (see images/mid), which publishes builds for new R versions immediately.
+# Reticulate compatibility for embedding the Conda interpreter into these
+# system-R processes is also provided downstream: images/mid builds the
+# audited /opt/reticulate-compat overlay and its activation hook.
 # R_APT_VERSION is the CRAN apt package revision for Ubuntu 24.04 (noble).
 ARG R_APT_VERSION=4.6.1-1.2404.1
 # Public PPM, used ONLY at build time (passed explicitly as repos= to the
