@@ -267,6 +267,103 @@ def test_python_to_system_r_via_rpy2(package_helper):
     assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
 
 
+def _skip_unless_reticulate_overlay(package_helper):
+    """Skip when the image does not ship the audited reticulate overlay"""
+    result = _execute_on_container(
+        package_helper, ["test", "-e", "/opt/reticulate-compat/.audit-passed"]
+    )
+    if result.exit_code != 0:
+        pytest.skip("reticulate compatibility overlay not present in this image")
+
+
+def test_system_r_reticulate_uses_conda_python_with_overlay(package_helper):
+    """Plain system-R sessions embed Conda Python through the audited overlay.
+
+    Renviron.site (images/mid) defaults RETICULATE_PYTHON to the image's Conda
+    interpreter and puts /opt/reticulate-compat first on PYTHONPATH, so
+    reticulate works from terminal R/Rscript, the Jupyter IR kernel, and R in
+    VSCode terminals -- not only through the RStudio rsession wrapper.
+    """
+    _skip_unless_system_r(package_helper)
+    _skip_unless_r_packages(package_helper)
+    _skip_unless_reticulate_overlay(package_helper)
+
+    expression = r'''
+suppressPackageStartupMessages(library(reticulate))
+
+stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/opt/conda/bin/python"))
+compat_paths <- strsplit(Sys.getenv("PYTHONPATH"), ":", fixed = TRUE)[[1]]
+stopifnot(identical(
+  compat_paths[1:2],
+  c(
+    "/opt/reticulate-compat/lib/python3.14/lib-dynload",
+    "/opt/reticulate-compat/lib/python3.14/site-packages"
+  )
+))
+
+cfg <- py_config()
+stopifnot(dirname(normalizePath(cfg$python)) == "/opt/conda/bin")
+
+ssl <- import("ssl")
+stopifnot(grepl("^OpenSSL 3\\.0\\.", ssl$OPENSSL_VERSION))
+
+hashlib <- import("hashlib")
+digest <- hashlib$sha256(charToRaw("system-r-reticulate"))$hexdigest()
+stopifnot(nchar(digest) == 64L)
+
+np <- import("numpy")
+stopifnot(np$arange(5L)$sum() == 10)
+
+os <- import("os")
+pa <- import("pyarrow")
+stopifnot(startsWith(
+  os$path$realpath(pa$`__file__`),
+  "/opt/reticulate-compat/"
+))
+tbl <- pa$table(list(a = c(1, 2, 3)))
+stopifnot(tbl$num_rows == 3L)
+
+maps <- readLines("/proc/self/maps")
+stopifnot(
+  !any(grepl("/opt/conda/lib/libssl", maps, fixed = TRUE)),
+  !any(grepl("/opt/conda/lib/libcrypto", maps, fixed = TRUE))
+)
+
+cat("SYSTEM_R_RETICULATE_OK\n")
+'''.strip()
+    result = _execute_on_container(
+        package_helper, ["/usr/bin/Rscript", "-e", expression]
+    )
+    output = result.output.decode("utf-8", errors="replace")
+    LOGGER.info(f"system R reticulate smoke: {output[-1000:]}")
+    assert result.exit_code == 0, output[-3000:]
+    assert "SYSTEM_R_RETICULATE_OK" in output
+
+
+def test_system_r_reticulate_env_overrides_win(package_helper):
+    """Explicit RETICULATE_PYTHON/PYTHONPATH beat the Renviron.site defaults."""
+    _skip_unless_system_r(package_helper)
+    _skip_unless_r_packages(package_helper)
+    _skip_unless_reticulate_overlay(package_helper)
+
+    expression = (
+        'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/custom/python"), '
+        'identical(Sys.getenv("PYTHONPATH"), "/custom/pythonpath"))'
+    )
+    result = _execute_on_container(
+        package_helper,
+        [
+            "/usr/bin/env",
+            "RETICULATE_PYTHON=/custom/python",
+            "PYTHONPATH=/custom/pythonpath",
+            "/usr/bin/Rscript",
+            "-e",
+            expression,
+        ],
+    )
+    assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
+
+
 def test_r_kernel_executes_system_r(package_helper):
     """The registered Jupyter R kernel launches and executes system R 4.6.1."""
     _skip_unless_system_r(package_helper)
