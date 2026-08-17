@@ -169,7 +169,7 @@ RUN set -eux; \
 # the published images -- terminal R/Rscript, the Jupyter IR kernel, R in
 # VSCode terminals, and RStudio downstream -- shares one overlay. Standalone
 # /opt/conda Python is unchanged: the overlay is selected only through the
-# R-session environment (Renviron.site below and the rsession wrapper in
+# R-session environment (Rprofile.site below and the rsession wrapper in
 # images/rstudio), never for Python started outside R.
 ARG CPYTHON_VERSION=3.14.5
 ARG CPYTHON_SHA256=7e32597b99e5d9a39abed35de4693fa169df3e5850d4c334337ffd6a19a36db6
@@ -221,16 +221,30 @@ RUN set -eux; \
 # provides: embed the image's Conda Python deterministically instead of
 # letting reticulate auto-provision an interpreter (uv is unreachable
 # in-cluster), and put the OpenSSL-compatible overlay ahead of the Conda
-# native modules that cannot load next to Ubuntu OpenSSL. The ${VAR-...}
-# guards keep any value already present in the environment -- a user's
-# explicit RETICULATE_PYTHON/PYTHONPATH, or the rsession wrapper's own
-# fail-closed exports -- authoritative over these defaults. Conda-R
-# environments read their own Renviron.site and are unaffected.
+# native modules that cannot load next to Ubuntu OpenSSL. Interpreter and
+# overlay are coupled: the CPython-3.14 overlay is only injected together
+# with the default /opt/conda interpreter it was built for. A pre-set
+# RETICULATE_PYTHON -- a user's explicit choice, or the rsession wrapper's
+# fail-closed exports -- skips the block entirely (no overlay for foreign
+# interpreters), while a user PYTHONPATH is preserved as a suffix behind the
+# overlay. Conda-R environments read their own Rprofile.site and are
+# unaffected.
 RUN printf '%s\n' \
+    '' \
     '# Reticulate defaults for system-R sessions; see images/mid/Dockerfile.' \
-    'RETICULATE_PYTHON=${RETICULATE_PYTHON-/opt/conda/bin/python}' \
-    'PYTHONPATH=${PYTHONPATH-/opt/reticulate-compat/lib/python3.14/lib-dynload:/opt/reticulate-compat/lib/python3.14/site-packages}' \
-    >> /etc/R/Renviron.site
+    'local({' \
+    '    if (!nzchar(Sys.getenv("RETICULATE_PYTHON"))) {' \
+    '        Sys.setenv(RETICULATE_PYTHON = "/opt/conda/bin/python")' \
+    '        overlay <- paste(' \
+    '            "/opt/reticulate-compat/lib/python3.14/lib-dynload",' \
+    '            "/opt/reticulate-compat/lib/python3.14/site-packages",' \
+    '            sep = ":"' \
+    '        )' \
+    '        existing <- Sys.getenv("PYTHONPATH")' \
+    '        Sys.setenv(PYTHONPATH = if (nzchar(existing)) paste(overlay, existing, sep = ":") else overlay)' \
+    '    }' \
+    '})' \
+    >> /etc/R/Rprofile.site
 
 # App Service managed-identity emulation: azure-identity and MSAL (so
 # `az login --identity` too) detect these env vars and speak the 2019-08-01

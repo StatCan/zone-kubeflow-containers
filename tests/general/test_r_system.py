@@ -279,7 +279,7 @@ def _skip_unless_reticulate_overlay(package_helper):
 def test_system_r_reticulate_uses_conda_python_with_overlay(package_helper):
     """Plain system-R sessions embed Conda Python through the audited overlay.
 
-    Renviron.site (images/mid) defaults RETICULATE_PYTHON to the image's Conda
+    Rprofile.site (images/mid) defaults RETICULATE_PYTHON to the image's Conda
     interpreter and puts /opt/reticulate-compat first on PYTHONPATH, so
     reticulate works from terminal R/Rscript, the Jupyter IR kernel, and R in
     VSCode terminals -- not only through the RStudio rsession wrapper.
@@ -341,27 +341,49 @@ cat("SYSTEM_R_RETICULATE_OK\n")
 
 
 def test_system_r_reticulate_env_overrides_win(package_helper):
-    """Explicit RETICULATE_PYTHON/PYTHONPATH beat the Renviron.site defaults."""
+    """Explicit environment configuration beats the Rprofile.site defaults.
+
+    Interpreter and overlay stay coupled: a user-chosen RETICULATE_PYTHON
+    suppresses the CPython-3.14 overlay entirely (it only fits the default
+    /opt/conda interpreter), while a user PYTHONPATH alone keeps the default
+    interpreter and is preserved behind the overlay.
+    """
     _skip_unless_system_r(package_helper)
     _skip_unless_r_packages(package_helper)
     _skip_unless_reticulate_overlay(package_helper)
 
-    expression = (
-        'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/custom/python"), '
-        'identical(Sys.getenv("PYTHONPATH"), "/custom/pythonpath"))'
+    overlay = (
+        "/opt/reticulate-compat/lib/python3.14/lib-dynload:"
+        "/opt/reticulate-compat/lib/python3.14/site-packages"
     )
-    result = _execute_on_container(
-        package_helper,
-        [
-            "/usr/bin/env",
-            "RETICULATE_PYTHON=/custom/python",
-            "PYTHONPATH=/custom/pythonpath",
-            "/usr/bin/Rscript",
-            "-e",
-            expression,
-        ],
-    )
-    assert result.exit_code == 0, result.output.decode("utf-8", errors="replace")
+    cases = [
+        # A custom interpreter must not receive the cp314-specific overlay.
+        (
+            ["RETICULATE_PYTHON=/custom/python"],
+            'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/custom/python"), '
+            'identical(Sys.getenv("PYTHONPATH"), ""))',
+        ),
+        # A custom PYTHONPATH keeps the default interpreter and survives as a
+        # suffix behind the overlay.
+        (
+            ["PYTHONPATH=/custom/pythonpath"],
+            'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/opt/conda/bin/python"), '
+            f'identical(Sys.getenv("PYTHONPATH"), "{overlay}:/custom/pythonpath"))',
+        ),
+        # Both set: nothing is touched.
+        (
+            ["RETICULATE_PYTHON=/custom/python", "PYTHONPATH=/custom/pythonpath"],
+            'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/custom/python"), '
+            'identical(Sys.getenv("PYTHONPATH"), "/custom/pythonpath"))',
+        ),
+    ]
+    for env_settings, expression in cases:
+        result = _execute_on_container(
+            package_helper,
+            ["/usr/bin/env", *env_settings, "/usr/bin/Rscript", "-e", expression],
+        )
+        output = result.output.decode("utf-8", errors="replace")
+        assert result.exit_code == 0, f"env={env_settings}: {output}"
 
 
 def test_r_kernel_executes_system_r(package_helper):

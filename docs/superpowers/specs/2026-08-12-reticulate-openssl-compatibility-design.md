@@ -154,18 +154,22 @@ terminal/VSCode reticulate auto-discovery is out of scope.
 The overlay build is unchanged (same CPython modules, pinned wheels, audit,
 and sentinel) but now runs in `images/mid/Dockerfile`, after the final pip
 installs of that image, so `/opt/reticulate-compat` is inherited by every
-downstream image. `/etc/R/Renviron.site` gains guarded defaults:
-
-    RETICULATE_PYTHON=${RETICULATE_PYTHON-/opt/conda/bin/python}
-    PYTHONPATH=${PYTHONPATH-<overlay lib-dynload>:<overlay site-packages>}
-
-The `${VAR-...}` form preserves any value already in the environment, so a
-user's explicit configuration and the rsession wrapper's fail-closed exports
-remain authoritative; Conda-R environments read their own `Renviron.site` and
-are unaffected. `rsession.sh` is unchanged. Standalone `/opt/conda` Python
-remains unchanged (Renviron applies only to R processes); the one accepted
-side effect is that an rpy2-embedded R will set these variables into its host
-Python's environment, where the overlay is import-compatible by construction
+downstream image. `/etc/R/Rprofile.site` gains one coupled block: only when
+`RETICULATE_PYTHON` is absent does it set
+`RETICULATE_PYTHON=/opt/conda/bin/python` and prepend the two overlay
+directories to `PYTHONPATH` (preserving any user `PYTHONPATH` as a suffix).
+Interpreter and overlay are deliberately inseparable -- the overlay's cp314
+artifacts only fit the default Conda interpreter, so a user-chosen
+`RETICULATE_PYTHON` suppresses the overlay entirely, and a user `PYTHONPATH`
+alone cannot strip the overlay from the default interpreter. (Renviron-style
+`${VAR-...}` defaults were rejected because they cannot express this
+coupling.) The rsession wrapper's fail-closed exports pre-set both variables
+and therefore skip the block; Conda-R environments read their own site
+profile and are unaffected. `rsession.sh` is unchanged. Standalone
+`/opt/conda` Python remains unchanged (the site profile applies only to R
+processes); the one accepted side effect is that an rpy2-embedded R with no
+`RETICULATE_PYTHON` will set these variables into its host Python's
+environment, where the overlay is import-compatible by construction
 (system-OpenSSL modules resolve against Conda OpenSSL 3.6's `OPENSSL_3.0.0`
 symbols, and overlay wheel versions are audit-pinned to the Conda ones).
 
