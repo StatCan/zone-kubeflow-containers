@@ -139,3 +139,40 @@ the local amd64-on-arm64 Rosetta environment, so the hosted native-amd64
 `rsession` test is authoritative. No exact-head hosted CI result exists for
 the overlay yet. Compatibility must not be declared complete until the real
 RStudio session and full hosted PR matrix are green at the pushed head.
+
+## Addendum (2026-08-17): overlay promoted to images/mid
+
+Beta testing showed the RStudio-only boundary above was too narrow. The
+published `mid` image is user-facing, and R sessions outside RStudio --
+terminal `R`/`Rscript`, the Jupyter IR kernel, and R in VSCode terminals --
+embed Conda Python through reticulate with no overlay and no configured
+interpreter, reproducing exactly the OpenSSL failure this design corrects
+("the link between Python libraries and R is broken"). This supersedes the
+earlier scope statements that the overlay is RStudio-specific and that
+terminal/VSCode reticulate auto-discovery is out of scope.
+
+The overlay build is unchanged (same CPython modules, pinned wheels, audit,
+and sentinel) but now runs in `images/mid/Dockerfile`, after the final pip
+installs of that image, so `/opt/reticulate-compat` is inherited by every
+downstream image. `/etc/R/Renviron.site` gains guarded defaults:
+
+    RETICULATE_PYTHON=${RETICULATE_PYTHON-/opt/conda/bin/python}
+    PYTHONPATH=${PYTHONPATH-<overlay lib-dynload>:<overlay site-packages>}
+
+The `${VAR-...}` form preserves any value already in the environment, so a
+user's explicit configuration and the rsession wrapper's fail-closed exports
+remain authoritative; Conda-R environments read their own `Renviron.site` and
+are unaffected. `rsession.sh` is unchanged. Standalone `/opt/conda` Python
+remains unchanged (Renviron applies only to R processes); the one accepted
+side effect is that an rpy2-embedded R will set these variables into its host
+Python's environment, where the overlay is import-compatible by construction
+(system-OpenSSL modules resolve against Conda OpenSSL 3.6's `OPENSSL_3.0.0`
+symbols, and overlay wheel versions are audit-pinned to the Conda ones).
+
+The same beta round showed the pinned VSCode Python tooling predates the
+3.14 interpreter: `ms-python.python 2025.4.0` mis-drives the 3.14 PyREPL
+("Run Python File" pastes the shell command into the REPL, producing
+`SyntaxError`), and `ms-python.debugpy 2025.4.0` bundles a debugpy without
+3.14 support. Both pins move to 3.14-capable releases (2026.4.0 / 2026.6.0),
+which still target VS Code >=1.95 and therefore run on the shipped
+code-server 4.99.4 without a code-server upgrade.
