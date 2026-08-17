@@ -156,9 +156,17 @@ and sentinel) but now runs in `images/mid/Dockerfile`, after the final pip
 installs of that image, so `/opt/reticulate-compat` is inherited by every
 downstream image. Wiring splits into two independent halves:
 
-1. Interpreter default. `/etc/R/Rprofile.site` sets
-   `RETICULATE_PYTHON_FALLBACK=/opt/conda/bin/python` when that variable is
-   absent. The fallback is reticulate's weakest hint: `RETICULATE_PYTHON`,
+1. Interpreter default. `/etc/R/Renviron.site` sets
+   `RETICULATE_PYTHON_FALLBACK=${RETICULATE_PYTHON_FALLBACK-/opt/conda/bin/python}`
+   (the guarded form keeps a pre-set value). An `Rprofile.site`
+   `Sys.setenv()` block was tried first and withdrawn: RStudio's rsession is
+   already multithreaded when R sources the site profile, and glibc
+   `setenv()` there races concurrent `getenv()` from rsession's worker
+   threads -- observed as `corrupted double-linked list` aborts in the
+   embedded Python on the env-heavy sas images (an exact-content rebuild of
+   the parent branch passed the same matrix, isolating the trigger to this
+   block). Renviron entries are applied during early R engine
+   initialisation, the same path the s6 startup script already uses safely. The fallback is reticulate's weakest hint: `RETICULATE_PYTHON`,
    `RETICULATE_PYTHON_ENV`, `use_python()`/`use_virtualenv()`, `VIRTUAL_ENV`,
    and project-local environments all outrank it, but it still outranks the
    ephemeral uv-managed environment, which is unreachable in-cluster. A hard

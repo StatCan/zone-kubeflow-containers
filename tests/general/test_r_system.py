@@ -279,7 +279,7 @@ def _skip_unless_reticulate_overlay(package_helper):
 def test_system_r_reticulate_uses_conda_python_with_overlay(package_helper):
     """Plain system-R sessions embed Conda Python through the audited overlay.
 
-    Rprofile.site (images/mid) provides RETICULATE_PYTHON_FALLBACK so a bare
+    Renviron.site (images/mid) provides RETICULATE_PYTHON_FALLBACK so a bare
     library(reticulate) resolves the image's Conda interpreter (instead of an
     unreachable uv-managed environment), and the in-interpreter .pth hook
     activates /opt/reticulate-compat because the process runs under R. This
@@ -349,7 +349,7 @@ cat("SYSTEM_R_RETICULATE_OK\n")
 
 
 def test_system_r_reticulate_env_overrides_win(package_helper):
-    """Explicit interpreter configuration outranks the Rprofile.site default.
+    """Explicit interpreter configuration outranks the Renviron.site default.
 
     RETICULATE_PYTHON_FALLBACK is reticulate's weakest hint, so every
     explicit mechanism (RETICULATE_PYTHON here as representative) wins, and a
