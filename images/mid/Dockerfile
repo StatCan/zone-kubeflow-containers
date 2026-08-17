@@ -153,8 +153,14 @@ RUN Rscript -e "options(HTTPUserAgent = sprintf('R/%s R (%s)', getRversion(), pa
 # adlfs provides the fsspec adapter for pandas/read_csv("az://...") workflows
 # that pass zone_token_broker.async_credential(...).
 COPY zone-token-broker /opt/zone-token-broker
+# orjson pin: 3.12.0 (released after PR #292's green matrix on 2026-08-12)
+# heap-corrupts the RStudio rsession-embedded Python -- glibc aborts with
+# "corrupted double-linked list" during the dvc import chain on the
+# sas-kernel/sas images. 3.11.9 is the last version validated green by the
+# full downstream matrix; it satisfies dvc's requirement so the [zone-dvc]
+# extras below keep it.
 RUN set -eux; \
-    pip install --no-cache-dir 'adlfs==2026.5.0'; \
+    pip install --no-cache-dir 'adlfs==2026.5.0' 'orjson==3.11.9'; \
     pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc]'; \
     pip wheel --no-cache-dir --no-deps --no-build-isolation --wheel-dir /opt/zone-token-broker/dist /opt/zone-token-broker; \
     /usr/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
