@@ -154,24 +154,39 @@ terminal/VSCode reticulate auto-discovery is out of scope.
 The overlay build is unchanged (same CPython modules, pinned wheels, audit,
 and sentinel) but now runs in `images/mid/Dockerfile`, after the final pip
 installs of that image, so `/opt/reticulate-compat` is inherited by every
-downstream image. `/etc/R/Rprofile.site` gains one coupled block: only when
-`RETICULATE_PYTHON` is absent does it set
-`RETICULATE_PYTHON=/opt/conda/bin/python` and prepend the two overlay
-directories to `PYTHONPATH` (preserving any user `PYTHONPATH` as a suffix).
-Interpreter and overlay are deliberately inseparable -- the overlay's cp314
-artifacts only fit the default Conda interpreter, so a user-chosen
-`RETICULATE_PYTHON` suppresses the overlay entirely, and a user `PYTHONPATH`
-alone cannot strip the overlay from the default interpreter. (Renviron-style
-`${VAR-...}` defaults were rejected because they cannot express this
-coupling.) The rsession wrapper's fail-closed exports pre-set both variables
-and therefore skip the block; Conda-R environments read their own site
-profile and are unaffected. `rsession.sh` is unchanged. Standalone
-`/opt/conda` Python remains unchanged (the site profile applies only to R
-processes); the one accepted side effect is that an rpy2-embedded R with no
-`RETICULATE_PYTHON` will set these variables into its host Python's
-environment, where the overlay is import-compatible by construction
-(system-OpenSSL modules resolve against Conda OpenSSL 3.6's `OPENSSL_3.0.0`
-symbols, and overlay wheel versions are audit-pinned to the Conda ones).
+downstream image. Wiring splits into two independent halves:
+
+1. Interpreter default. `/etc/R/Rprofile.site` sets
+   `RETICULATE_PYTHON_FALLBACK=/opt/conda/bin/python` when that variable is
+   absent. The fallback is reticulate's weakest hint: `RETICULATE_PYTHON`,
+   `RETICULATE_PYTHON_ENV`, `use_python()`/`use_virtualenv()`, `VIRTUAL_ENV`,
+   and project-local environments all outrank it, but it still outranks the
+   ephemeral uv-managed environment, which is unreachable in-cluster. A hard
+   `RETICULATE_PYTHON` default (and Renviron-style `${VAR-...}` defaults)
+   were rejected in review: they override supported selection mechanisms and
+   cannot keep the overlay coupled to the interpreter.
+
+2. Overlay activation. A `.pth` hook inside the Conda interpreter's
+   site-packages (`zone_reticulate_compat.py`) prepends the overlay to
+   `sys.path` at `site` time, only when the process runs under R (`R_HOME`
+   set, exported by every R front end and rsession) and the audit sentinel
+   exists; `ZONE_RETICULATE_COMPAT=0` opts out. Because the hook lives in
+   the cp314 interpreter itself, a foreign interpreter selected through any
+   mechanism can never receive the cp314-specific modules, and the default
+   interpreter cannot lose them -- the coupling is structural rather than
+   environmental.
+
+`rsession.sh` is unchanged; its fail-closed `RETICULATE_PYTHON`/`PYTHONPATH`
+exports remain authoritative in RStudio, and the hook tolerates the
+resulting `sys.path` duplicates. Conda-R environments read their own site
+profile and are unaffected. Standalone `/opt/conda` Python without `R_HOME`
+is byte-for-byte unaffected; a Conda Python spawned *from* an R session
+(inheriting `R_HOME`) receives the overlay, which is import-compatible by
+construction (the rebuilt modules require only `OPENSSL_3.0.0` symbol
+versions, satisfied by both Ubuntu and Conda OpenSSL 3, and overlay wheel
+versions are audit-pinned to the Conda ones). Known unchanged gap: a venv
+derived from the Conda interpreter skips base site-packages, so under system
+R it still fails on Conda `_ssl` exactly as in the RStudio-only design.
 
 The same beta round showed the pinned VSCode Python tooling predates the
 3.14 interpreter: `ms-python.python 2025.4.0` mis-drives the 3.14 PyREPL

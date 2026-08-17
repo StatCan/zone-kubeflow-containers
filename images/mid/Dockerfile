@@ -168,9 +168,9 @@ RUN set -eux; \
 # Built here in mid (rather than images/rstudio) so every R entry point in
 # the published images -- terminal R/Rscript, the Jupyter IR kernel, R in
 # VSCode terminals, and RStudio downstream -- shares one overlay. Standalone
-# /opt/conda Python is unchanged: the overlay is selected only through the
-# R-session environment (Rprofile.site below and the rsession wrapper in
-# images/rstudio), never for Python started outside R.
+# /opt/conda Python is unchanged: the overlay engages only under an R process
+# (the in-interpreter hook below and the rsession wrapper in images/rstudio),
+# never for Python started outside R.
 ARG CPYTHON_VERSION=3.14.5
 ARG CPYTHON_SHA256=7e32597b99e5d9a39abed35de4693fa169df3e5850d4c334337ffd6a19a36db6
 COPY reticulate-compat-requirements.txt audit-reticulate-compat.py /opt/reticulate-compat-build/
@@ -216,32 +216,33 @@ RUN set -eux; \
     cd /; \
     rm -rf "${build_dir}" /opt/reticulate-compat-build
 
-# Give every system-R session (terminal R/Rscript, Jupyter IR kernel, R in
-# VSCode terminals) the same reticulate contract the RStudio rsession wrapper
-# provides: embed the image's Conda Python deterministically instead of
-# letting reticulate auto-provision an interpreter (uv is unreachable
-# in-cluster), and put the OpenSSL-compatible overlay ahead of the Conda
-# native modules that cannot load next to Ubuntu OpenSSL. Interpreter and
-# overlay are coupled: the CPython-3.14 overlay is only injected together
-# with the default /opt/conda interpreter it was built for. A pre-set
-# RETICULATE_PYTHON -- a user's explicit choice, or the rsession wrapper's
-# fail-closed exports -- skips the block entirely (no overlay for foreign
-# interpreters), while a user PYTHONPATH is preserved as a suffix behind the
-# overlay. Conda-R environments read their own Rprofile.site and are
-# unaffected.
+# Reticulate in system-R sessions (terminal R/Rscript, Jupyter IR kernel, R
+# in VSCode terminals), two independent halves:
+#
+# 1. Interpreter default: RETICULATE_PYTHON_FALLBACK is reticulate's weakest
+#    hint -- every explicit selection (RETICULATE_PYTHON, RETICULATE_PYTHON_ENV,
+#    use_python()/use_virtualenv(), VIRTUAL_ENV, project envs) outranks it --
+#    but it still beats the ephemeral uv-managed environment, which is
+#    unreachable in-cluster. So a bare library(reticulate) embeds the image's
+#    Conda Python while user choices keep working.
+#
+# 2. Overlay activation: the cp314 overlay is applied by a .pth hook inside
+#    the Conda interpreter itself (zone_reticulate_compat.py), active only
+#    when the process runs under R (R_HOME set). Coupling the overlay to the
+#    interpreter that executes it -- rather than to PYTHONPATH -- means a
+#    foreign interpreter selected through any mechanism can never receive
+#    the cp314-specific modules, and the default interpreter cannot lose
+#    them. Conda-R environments read their own Rprofile.site and are
+#    unaffected; the RStudio rsession wrapper's fail-closed exports are
+#    preserved (a pre-set RETICULATE_PYTHON_FALLBACK is not clobbered, and
+#    the hook tolerates the wrapper's PYTHONPATH duplicates).
+COPY zone-reticulate-compat.pth zone_reticulate_compat.py /opt/conda/lib/python3.14/site-packages/
 RUN printf '%s\n' \
     '' \
-    '# Reticulate defaults for system-R sessions; see images/mid/Dockerfile.' \
+    '# Reticulate default interpreter for system-R sessions; see images/mid/Dockerfile.' \
     'local({' \
-    '    if (!nzchar(Sys.getenv("RETICULATE_PYTHON"))) {' \
-    '        Sys.setenv(RETICULATE_PYTHON = "/opt/conda/bin/python")' \
-    '        overlay <- paste(' \
-    '            "/opt/reticulate-compat/lib/python3.14/lib-dynload",' \
-    '            "/opt/reticulate-compat/lib/python3.14/site-packages",' \
-    '            sep = ":"' \
-    '        )' \
-    '        existing <- Sys.getenv("PYTHONPATH")' \
-    '        Sys.setenv(PYTHONPATH = if (nzchar(existing)) paste(overlay, existing, sep = ":") else overlay)' \
+    '    if (!nzchar(Sys.getenv("RETICULATE_PYTHON_FALLBACK"))) {' \
+    '        Sys.setenv(RETICULATE_PYTHON_FALLBACK = "/opt/conda/bin/python")' \
     '    }' \
     '})' \
     >> /etc/R/Rprofile.site

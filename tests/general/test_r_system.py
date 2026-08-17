@@ -279,10 +279,12 @@ def _skip_unless_reticulate_overlay(package_helper):
 def test_system_r_reticulate_uses_conda_python_with_overlay(package_helper):
     """Plain system-R sessions embed Conda Python through the audited overlay.
 
-    Rprofile.site (images/mid) defaults RETICULATE_PYTHON to the image's Conda
-    interpreter and puts /opt/reticulate-compat first on PYTHONPATH, so
-    reticulate works from terminal R/Rscript, the Jupyter IR kernel, and R in
-    VSCode terminals -- not only through the RStudio rsession wrapper.
+    Rprofile.site (images/mid) provides RETICULATE_PYTHON_FALLBACK so a bare
+    library(reticulate) resolves the image's Conda interpreter (instead of an
+    unreachable uv-managed environment), and the in-interpreter .pth hook
+    activates /opt/reticulate-compat because the process runs under R. This
+    covers terminal R/Rscript, the Jupyter IR kernel, and R in VSCode
+    terminals -- not only the RStudio rsession wrapper.
     """
     _skip_unless_system_r(package_helper)
     _skip_unless_r_packages(package_helper)
@@ -291,18 +293,24 @@ def test_system_r_reticulate_uses_conda_python_with_overlay(package_helper):
     expression = r'''
 suppressPackageStartupMessages(library(reticulate))
 
-stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/opt/conda/bin/python"))
-compat_paths <- strsplit(Sys.getenv("PYTHONPATH"), ":", fixed = TRUE)[[1]]
-stopifnot(identical(
-  compat_paths[1:2],
-  c(
-    "/opt/reticulate-compat/lib/python3.14/lib-dynload",
-    "/opt/reticulate-compat/lib/python3.14/site-packages"
-  )
-))
+stopifnot(identical(Sys.getenv("RETICULATE_PYTHON_FALLBACK"), "/opt/conda/bin/python"))
 
 cfg <- py_config()
 stopifnot(dirname(normalizePath(cfg$python)) == "/opt/conda/bin")
+
+sys <- import("sys")
+overlay_paths <- c(
+  "/opt/reticulate-compat/lib/python3.14/lib-dynload",
+  "/opt/reticulate-compat/lib/python3.14/site-packages"
+)
+stopifnot(all(overlay_paths %in% sys$path))
+
+os <- import("os")
+underscore_ssl <- import("_ssl")
+stopifnot(startsWith(
+  os$path$realpath(underscore_ssl$`__file__`),
+  "/opt/reticulate-compat/"
+))
 
 ssl <- import("ssl")
 stopifnot(grepl("^OpenSSL 3\\.0\\.", ssl$OPENSSL_VERSION))
@@ -314,7 +322,6 @@ stopifnot(nchar(digest) == 64L)
 np <- import("numpy")
 stopifnot(np$arange(5L)$sum() == 10)
 
-os <- import("os")
 pa <- import("pyarrow")
 stopifnot(startsWith(
   os$path$realpath(pa$`__file__`),
@@ -341,40 +348,42 @@ cat("SYSTEM_R_RETICULATE_OK\n")
 
 
 def test_system_r_reticulate_env_overrides_win(package_helper):
-    """Explicit environment configuration beats the Rprofile.site defaults.
+    """Explicit interpreter configuration outranks the Rprofile.site default.
 
-    Interpreter and overlay stay coupled: a user-chosen RETICULATE_PYTHON
-    suppresses the CPython-3.14 overlay entirely (it only fits the default
-    /opt/conda interpreter), while a user PYTHONPATH alone keeps the default
-    interpreter and is preserved behind the overlay.
+    RETICULATE_PYTHON_FALLBACK is reticulate's weakest hint, so every
+    explicit mechanism (RETICULATE_PYTHON here as representative) wins, and a
+    pre-set fallback is never clobbered. Overlay activation is coupled to the
+    interpreter itself: explicitly selecting the default Conda Python still
+    engages the overlay, while the R session's environment is never polluted
+    for foreign interpreters.
     """
     _skip_unless_system_r(package_helper)
     _skip_unless_r_packages(package_helper)
     _skip_unless_reticulate_overlay(package_helper)
 
-    overlay = (
-        "/opt/reticulate-compat/lib/python3.14/lib-dynload:"
-        "/opt/reticulate-compat/lib/python3.14/site-packages"
-    )
     cases = [
-        # A custom interpreter must not receive the cp314-specific overlay.
+        # A custom interpreter wins over the fallback, and the R session env
+        # carries no overlay a foreign interpreter could pick up.
         (
             ["RETICULATE_PYTHON=/custom/python"],
             'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/custom/python"), '
             'identical(Sys.getenv("PYTHONPATH"), ""))',
         ),
-        # A custom PYTHONPATH keeps the default interpreter and survives as a
-        # suffix behind the overlay.
+        # A pre-set fallback is preserved.
         (
-            ["PYTHONPATH=/custom/pythonpath"],
-            'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/opt/conda/bin/python"), '
-            f'identical(Sys.getenv("PYTHONPATH"), "{overlay}:/custom/pythonpath"))',
+            ["RETICULATE_PYTHON_FALLBACK=/custom/python"],
+            'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON_FALLBACK"), "/custom/python"))',
         ),
-        # Both set: nothing is touched.
+        # Explicitly selecting the default Conda interpreter (not via the
+        # fallback) still activates the overlay: it is bound to the
+        # interpreter, not to how the interpreter was chosen.
         (
-            ["RETICULATE_PYTHON=/custom/python", "PYTHONPATH=/custom/pythonpath"],
-            'stopifnot(identical(Sys.getenv("RETICULATE_PYTHON"), "/custom/python"), '
-            'identical(Sys.getenv("PYTHONPATH"), "/custom/pythonpath"))',
+            ["RETICULATE_PYTHON=/opt/conda/bin/python"],
+            'suppressPackageStartupMessages(library(reticulate)); '
+            'os <- import("os"); '
+            'underscore_ssl <- import("_ssl"); '
+            'stopifnot(startsWith(os$path$realpath(underscore_ssl$`__file__`), '
+            '"/opt/reticulate-compat/"))',
         ),
     ]
     for env_settings, expression in cases:
@@ -384,6 +393,56 @@ def test_system_r_reticulate_env_overrides_win(package_helper):
         )
         output = result.output.decode("utf-8", errors="replace")
         assert result.exit_code == 0, f"env={env_settings}: {output}"
+
+
+def test_reticulate_overlay_hook_scopes_to_r_processes(package_helper):
+    """The .pth hook applies the overlay only to Conda Python under R.
+
+    zone_reticulate_compat activates on R_HOME (exported by every R process,
+    so reticulate-embedded and R-spawned Pythons are covered), stays inert
+    for standalone Python, and honours the ZONE_RETICULATE_COMPAT=0 opt-out.
+    """
+    _skip_unless_r_packages(package_helper)
+    _skip_unless_reticulate_overlay(package_helper)
+
+    overlay_probe = (
+        "import sys; "
+        "print(any(p.startswith('/opt/reticulate-compat') for p in sys.path))"
+    )
+    cases = [
+        # Standalone Python: overlay must stay out of sys.path.
+        (["-u", "R_HOME"], "False"),
+        # Under an R process: overlay paths precede the Conda ones.
+        (["R_HOME=/usr/lib/R"], "True"),
+        # Explicit opt-out wins even under R.
+        (["R_HOME=/usr/lib/R", "ZONE_RETICULATE_COMPAT=0"], "False"),
+    ]
+    for env_settings, expected in cases:
+        result = _execute_on_container(
+            package_helper,
+            ["/usr/bin/env", *env_settings, "/opt/conda/bin/python", "-c", overlay_probe],
+        )
+        output = result.output.decode("utf-8", errors="replace")
+        assert result.exit_code == 0, f"env={env_settings}: {output}"
+        assert output.strip().splitlines()[-1] == expected, f"env={env_settings}: {output}"
+
+    # With the overlay active, its system-OpenSSL _ssl must be importable in
+    # a fresh (not R-embedded) Conda Python too: the rebuilt module's
+    # OPENSSL_3.0.0 symbol requirements are satisfied by whichever OpenSSL 3
+    # the loader resolves.
+    ssl_probe = (
+        "import os, ssl, _ssl; "
+        "assert os.path.realpath(_ssl.__file__).startswith('/opt/reticulate-compat/'), _ssl.__file__; "
+        "ssl.create_default_context(); "
+        "print('OVERLAY_SSL_OK')"
+    )
+    result = _execute_on_container(
+        package_helper,
+        ["/usr/bin/env", "R_HOME=/usr/lib/R", "/opt/conda/bin/python", "-c", ssl_probe],
+    )
+    output = result.output.decode("utf-8", errors="replace")
+    assert result.exit_code == 0, output
+    assert "OVERLAY_SSL_OK" in output
 
 
 def test_r_kernel_executes_system_r(package_helper):
