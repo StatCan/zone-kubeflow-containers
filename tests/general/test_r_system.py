@@ -320,7 +320,8 @@ digest <- hashlib$sha256(charToRaw("system-r-reticulate"))$hexdigest()
 stopifnot(nchar(digest) == 64L)
 
 np <- import("numpy")
-stopifnot(np$arange(5L)$sum() == 10)
+# np$arange() auto-converts to an R vector, so sum in R rather than chaining.
+stopifnot(sum(np$arange(5L)) == 10)
 
 pa <- import("pyarrow")
 stopifnot(startsWith(
