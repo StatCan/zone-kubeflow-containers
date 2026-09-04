@@ -34,13 +34,21 @@ COPY --chown=${NB_USER}:${NB_GID} vscode-overrides.json ${HOME_TMP}/.local/share
 # Sets the default workspace for vscode
 COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.local/share/code-server/
 
+# Internal wheels installed from file in the pip step below (GitHub CI cannot
+# reach StatCan Artifactory/GitLab); kept in the image so users can install
+# them into their own environments too. See vendor/README.md.
+COPY vendor/ /opt/vendor/
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
 RUN mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
-        'joblib==1.2.0' \
+        # banff dependency: PyPI publishes no cp314 wheels inside banff's
+        # nanoarrow<0.9 pin, but conda-forge ships py314 builds of 0.8.0
+        'nanoarrow' \
+        'joblib==1.5.3' \
         's3fs' \
         'fire' \
         'mkl' \
@@ -55,7 +63,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'ipympl' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
-        'jupyter-server-proxy==4.2.0' \
+        'jupyter-server-proxy==4.5.0' \
         'jupyterlab-language-pack-fr-fr' \
         'jupyterlab_execute_time' \
         'nb_conda_kernels' \
@@ -83,9 +91,15 @@ RUN mamba install --quiet --yes -c conda-forge \
     && pip install --no-cache-dir \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
-        'pyspark[ml]==3.5.5' \
-        'banff' \
-        'banffprocessor' \
+        # PySpark 4.x is required on Python 3.14 (3.5.x supports <=3.11).
+        # NOTE: Spark major-version jump -- also affects r-sparklyr users.
+        'pyspark[ml]==4.2.0' \
+        # banff + banffprocessor: vendored internal wheels (see
+        # vendor/README.md); their public PyPI releases pin pyarrow<19,
+        # unsatisfiable on Python 3.14. banffprocessor requires banff>=3.2.0,
+        # satisfied by the wheel alongside it.
+        /opt/vendor/banff-*.whl \
+        /opt/vendor/banffprocessor-*.whl \
     && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
@@ -133,7 +147,9 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
+# Python version: tracks the CI-built datascience-notebook chain (Python 3.14
+# -- see the upstream-datascience job in .github/workflows/docker.yaml).
+ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
 # Configure container startup
@@ -176,8 +192,13 @@ RUN install -d -m 0775 \
     "${HOME_TMP}/workspace/repositories" \
     && export HOME="${HOME_TMP}" \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix -O "${HOME_TMP}/cpptools-linux.vsix" \
-    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.python@2025.4.0 \
-    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.debugpy@2025.4.0 \
+    # ms-python/debugpy releases that support Python 3.14: 2025.4.0 predates
+    # the 3.14 interpreter and mis-drives its new REPL ("Run Python File"
+    # pastes the shell command into the PyREPL -> SyntaxError), and its
+    # bundled debugpy has no 3.14 support. Both still target VS Code >=1.95,
+    # within this code-server (1.99).
+    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.python@2026.4.0 \
+    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.debugpy@2026.6.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension Posit.air-vscode@0.22.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension adamviola.parquet-explorer@1.2.1 \

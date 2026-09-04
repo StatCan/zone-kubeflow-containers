@@ -91,9 +91,8 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-lsp",
     # Other
 
-    # library is decoded incorrectly "conda-forge::blas=[build=openblas]"
-    # previously "blas=", which didn't work
-    "blas=[build",
+    # blas is a metapackage with no importable module
+    "blas",
 
     "protobuf",
     "r-irkernel",

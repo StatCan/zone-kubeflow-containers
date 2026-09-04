@@ -66,9 +66,18 @@ class CondaPackageHelper:
         )
 
     def _conda_export_command(self, from_history=False):
-        """Return the conda export command with or without history"""
-        # self._execute_command(["conda", "config", "--add", "channels", "defaults"])
-        cmd = ["conda", "env", "export", "-n", "base", "--json", "--no-builds"]
+        """Return the environment export command with or without history"""
+        # mamba rather than conda: conda 26.x builds the export's
+        # `explicit_packages` by dropping every record its pip-interoperability
+        # scan classifies as a Python distribution, then rejects any
+        # history-requested spec missing from that set. The base image's
+        # conda-forge `rpy2` is detected as pip-installed (it ships an
+        # rpy2_robjects dist-info with its own version), so
+        # `conda env export --from-history` aborts with
+        # "Requested package 'rpy2' is not found in 'explicit_packages'".
+        # mamba's exporter reads the same history and emits the same JSON shape
+        # without that check.
+        cmd = ["mamba", "env", "export", "-n", "base", "--json", "--no-builds"]
         if from_history:
             cmd.append("--from-history")
         return self._execute_command(cmd)
@@ -120,18 +129,17 @@ class CondaPackageHelper:
         # Since we only manage packages installed through conda here
         dependencies = filter(lambda x: isinstance(x, str), dependencies)
         packages_dict = dict()
-        for split in map(lambda x: re.split("=?=", x), dependencies):
-            # default values
-            package = split[0]
-            version = set()
-            # checking if it's a proper version by testing if the first char is a digit
-            if len(split) > 1:
-                if split[1][0].isdigit():
-                    # package + version case
-                    version = set(split[1:])
-                else:
-                    # The split was incorrect and the package shall not be splitted
-                    package = f"{split[0]}={split[1]}"
+        for dependency in dependencies:
+            # Specs carry their channel ("conda-forge::blas=*") and any kind of
+            # constraint ("notebook>=7.4.5", "blas=[build=openblas]"), none of
+            # which belongs to the package name the import checks and the
+            # exclusion list are keyed on.
+            dependency = dependency.rsplit("::", 1)[-1]
+            package, _, constraint = re.match(
+                r"([^=<>!~ ]+)([=<>!~ ]*)(.*)", dependency
+            ).groups()
+            # Keep the constraint only when it is a plain version
+            version = {constraint} if constraint[:1].isdigit() else set()
             packages_dict[package] = version
         return packages_dict
 

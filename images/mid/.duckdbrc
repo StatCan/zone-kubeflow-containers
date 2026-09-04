@@ -2,5 +2,9 @@
 -- Sets the extension directory for air-gapped environments
 SET extension_directory='/home/jovyan/.duckdb/extensions';
 
--- Allow unsigned extensions for custom extension loading
-SET allow_unsigned_extensions=true;
+-- NOTE: allow_unsigned_extensions is startup-only as of DuckDB 1.4+ and can
+-- no longer be SET from this rc file (doing so aborts every CLI start with
+-- "Cannot change allow_unsigned_extensions setting while database is
+-- running"). To load unsigned custom extensions, start the CLI with
+-- `duckdb -unsigned` or pass config={'allow_unsigned_extensions': 'true'}
+-- to duckdb.connect() in Python.
