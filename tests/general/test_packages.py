@@ -91,10 +91,11 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-lsp",
     # Other
 
-    # blas is a metapackage with no importable module. Bases decode its
-    # build-pinned spec differently: the upstream image yields "blas=[build",
-    # the CI-built scipy chain yields "blas[build=openblas]" (normalised to
-    # "blas" by excluded_package_predicate). Both spellings listed.
+    # blas is a metapackage with no importable module. Its build-pinned spec
+    # is recorded differently depending on the base: older images yield
+    # "blas=[build", the CI-built Python 3.14 chain yields
+    # "blas[build=openblas]" (normalised to "blas" by
+    # excluded_package_predicate). Both spellings listed.
     "blas=[build",
     "blas",
 

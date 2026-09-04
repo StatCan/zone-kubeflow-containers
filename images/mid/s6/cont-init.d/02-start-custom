@@ -13,14 +13,14 @@ export JWT="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 echo ${JWT} > ${S6_ENV}/JWT
 
 # Setup environment variables for R and Rstudio
-echo "NB_PREFIX=${NB_PREFIX}" >> /etc/R/Renviron.site
-echo "NB_NAMESPACE=$NB_NAMESPACE" >> /etc/R/Renviron.site
-echo "NLS_LANG=$NLS_LANG" >> /etc/R/Renviron.site
-printenv | grep KUBERNETES >> /etc/R/Renviron.site
-echo "SPARK_HOME=${SPARK_HOME}" >> /etc/R/Renviron.site
-echo "R_ZIPCMD=zip" >> /etc/R/Renviron.site
+echo "NB_PREFIX=${NB_PREFIX}" >> /opt/conda/lib/R/etc/Renviron
+echo "NB_NAMESPACE=$NB_NAMESPACE" >> /opt/conda/lib/R/etc/Renviron
+echo "NLS_LANG=$NLS_LANG" >> /opt/conda/lib/R/etc/Renviron
+printenv | grep KUBERNETES >> /opt/conda/lib/R/etc/Renviron
+echo "SPARK_HOME=${SPARK_HOME}" >> /opt/conda/lib/R/etc/Renviron
+echo "R_ZIPCMD=zip" >> /opt/conda/lib/R/etc/Renviron
 # Filer related env vars for R & Rstudio
-printenv | grep svm >> /etc/R/Renviron.site
+printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
 
 # Retrieve service account details
 serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
@@ -51,11 +51,11 @@ else
     PPM_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/zone-r-ppm-bin-${UBUNTU_CODENAME}-${R_VERSION}-remote"
     CRAN_LOCAL_URL="https://${serviceaccountname}:${serviceaccounttoken}@artifactory.cloud.statcan.ca/artifactory/cran-local"
 
-    cat >> /etc/R/Rprofile.site << EOF
+    cat >> /opt/conda/lib/R/etc/Rprofile.site << EOF
 
 local({
     r <- getOption("repos")
-    r["CRAN"] <- "$PPM_URL"
+    r["ppm"] <- "$PPM_URL"
     r["cran-local"] <- "$CRAN_LOCAL_URL"
     options(repos = r)
 })

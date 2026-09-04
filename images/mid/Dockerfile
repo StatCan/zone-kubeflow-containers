@@ -39,33 +39,8 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 # them into their own environments too. See vendor/README.md.
 COPY vendor/ /opt/vendor/
 
-# System libraries required by the R packages installed further below (union
-# of Posit Package Manager's sysreqs for that package set on Ubuntu 24.04,
-# minus what images/base already installs). -dev variants so source installs
-# of related CRAN packages also work for users.
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        gdal-bin \
-        libabsl-dev \
-        libgdal-dev \
-        libgeos-dev \
-        libgit2-dev \
-        libhdf5-dev \
-        libicu-dev \
-        libproj-dev \
-        libsqlite3-dev \
-        libudunits2-dev \
-        libuv1-dev \
-        libwebp-dev \
-        libx11-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
-# NOTE: R is deliberately absent here -- the interpreter comes from CRAN's apt
-# repository (images/base) and R packages from Posit Package Manager (below),
-# so R upgrades no longer wait on conda-forge's r-* migration cycle.
 RUN mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
@@ -95,6 +70,21 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
+        'r-arrow' \
+        'r-aws.s3' \
+        'r-base=4.5.1' \
+        'r-catools' \
+        'r-e1071' \
+        'r-hdf5r' \
+        'r-httr' \
+        'r-jsonlite' \
+        'r-markdown' \
+        'r-odbc' \
+        'r-renv' \
+        'r-rodbc' \
+        'r-sf' \
+        'r-sparklyr' \
+        'r-tidyverse' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
@@ -110,9 +100,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         # satisfied by the wheel alongside it.
         /opt/vendor/banff-*.whl \
         /opt/vendor/banffprocessor-*.whl \
-        # Python<->R bridge; previously shipped by the datascience-notebook
-        # base via conda, now built here against the system R.
-        'rpy2' \
+    && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
     && jupyter lab clean \
@@ -126,30 +114,13 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
 
-# R packages as prebuilt Linux binaries from Posit Package Manager -- the same
-# set that previously came from conda-forge. Installed into the system R's
-# site library; install.packages() does not fail on error, so verify the full
-# set landed before the layer is accepted.
-ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
-RUN Rscript -e "options(HTTPUserAgent = sprintf('R/%s R (%s)', getRversion(), paste(getRversion(), R.version['platform'], R.version['arch'], R.version['os']))); \
-                pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', \
-                          'forecast', 'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', \
-                          'jsonlite', 'languageserver', 'markdown', 'nycflights13', 'odbc', \
-                          'randomForest', 'RCurl', 'renv', 'reticulate', 'rmarkdown', 'RODBC', \
-                          'RSQLite', 'sf', 'shiny', 'sparklyr', 'tidymodels', 'tidyverse'); \
-                install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
-                missing <- setdiff(pkgs, rownames(installed.packages())); \
-                if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
-    && rm -rf /tmp/downloaded_packages /tmp/Rtmp*
-
 # Zone AuthService delegated-token helper — Python package + R wrapper.
 # Provides `import zone_token_broker` in Python and `library(zonetokenbroker)`
 # in R for any downstream consumer (OneLake DFS, Fabric REST, etc.) that needs
 # to call the in-cluster AuthService getPassthroughToken endpoint.
 # Installed here in mid, after the mamba install, so it targets the final conda
 # env and leaves source/wheel artifacts under /opt/zone-token-broker for
-# user-created Python and R environments. httr is provided by the Posit
-# Package Manager install above.
+# user-created Python and R environments. httr is provided by conda-forge.
 # adlfs provides the fsspec adapter for pandas/read_csv("az://...") workflows
 # that pass zone_token_broker.async_credential(...).
 COPY zone-token-broker /opt/zone-token-broker
@@ -157,7 +128,7 @@ RUN set -eux; \
     pip install --no-cache-dir 'adlfs==2026.5.0'; \
     pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc]'; \
     pip wheel --no-cache-dir --no-deps --no-build-isolation --wheel-dir /opt/zone-token-broker/dist /opt/zone-token-broker; \
-    /usr/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
+    /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
     fix-permissions "${CONDA_DIR}"; \
     fix-permissions /opt/zone-token-broker
 
@@ -176,10 +147,8 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-# Python version: tracks the CI-built scipy-notebook chain (Python 3.14 --
-# see the upstream-scipy job in .github/workflows/docker.yaml). banff comes
-# from the vendored internal 3.2.x wheel; public PyPI banff/banffprocessor
-# pins (pyarrow<19) cannot be satisfied on 3.14.
+# Python version: tracks the CI-built datascience-notebook chain (Python 3.14
+# -- see the upstream-datascience job in .github/workflows/docker.yaml).
 ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
     R_ZIPCMD="zip"
 

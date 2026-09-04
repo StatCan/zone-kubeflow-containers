@@ -19,20 +19,15 @@ DB_DIR="${RUNTIME_DIR}/${USER_NAME}_database"
 
 TARGET_CONDA_ENV="${CONDA_PREFIX:-/opt/conda}"
 if [ ! -x "${TARGET_CONDA_ENV}/bin/R" ]; then
-  # No R in the active Conda env: fall back to the image's system R.
-  log "No R in ${TARGET_CONDA_ENV}; RStudio will use system R"
-  TARGET_CONDA_ENV="system"
+  log "ERROR: Current CONDA_PREFIX does not contain R: ${TARGET_CONDA_ENV}"
+  exit 1
 fi
 
 log "USER_NAME=${USER_NAME}"
 log "HOME_DIR=${HOME_DIR}"
 log "STATE_FILE=${STATE_FILE}"
 log "TARGET_CONDA_ENV=${TARGET_CONDA_ENV}"
-if [ "$TARGET_CONDA_ENV" = "system" ]; then
-  log "Current R => $(/usr/bin/R --version | head -n 1)"
-else
-  log "Current R => $("${TARGET_CONDA_ENV}/bin/R" --version | head -n 1)"
-fi
+log "Current R => $("${TARGET_CONDA_ENV}/bin/R" --version | head -n 1)"
 
 mkdir -p "$STATE_DIR"
 printf '%s\n' "$TARGET_CONDA_ENV" > "$STATE_FILE"
