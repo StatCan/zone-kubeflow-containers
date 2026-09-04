@@ -77,8 +77,6 @@ OpenSSL 3, manylinux wheels, pytest, GitHub Actions.
 
 - Create: `images/rstudio/reticulate-compat-requirements.txt`
 - Create: `images/rstudio/audit-reticulate-compat.py`
-  (both later moved to `images/mid/` when the overlay was promoted image-wide;
-  see the design addendum)
 - Modify: `images/rstudio/Dockerfile`
 
 **Interfaces:**
@@ -176,7 +174,7 @@ OpenSSL 3, manylinux wheels, pytest, GitHub Actions.
   ```bash
   bash -n images/rstudio/customRStu/rsession.sh
   python3 -m py_compile \
-    images/mid/audit-reticulate-compat.py \
+    images/rstudio/audit-reticulate-compat.py \
     tests/general/test_rstudio.py \
     tests/general/test_r_system.py
   python3 -m pytest --collect-only \
