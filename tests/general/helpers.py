@@ -66,9 +66,18 @@ class CondaPackageHelper:
         )
 
     def _conda_export_command(self, from_history=False):
-        """Return the conda export command with or without history"""
-        # self._execute_command(["conda", "config", "--add", "channels", "defaults"])
-        cmd = ["conda", "env", "export", "-n", "base", "--json", "--no-builds"]
+        """Return the environment export command with or without history"""
+        # mamba rather than conda: conda 26.x builds the export's
+        # `explicit_packages` by dropping every record its pip-interoperability
+        # scan classifies as a Python distribution, then rejects any
+        # history-requested spec missing from that set. The base image's
+        # conda-forge `rpy2` is detected as pip-installed (it ships an
+        # rpy2_robjects dist-info with its own version), so
+        # `conda env export --from-history` aborts with
+        # "Requested package 'rpy2' is not found in 'explicit_packages'".
+        # mamba's exporter reads the same history and emits the same JSON shape
+        # without that check.
+        cmd = ["mamba", "env", "export", "-n", "base", "--json", "--no-builds"]
         if from_history:
             cmd.append("--from-history")
         return self._execute_command(cmd)
