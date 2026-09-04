@@ -129,18 +129,17 @@ class CondaPackageHelper:
         # Since we only manage packages installed through conda here
         dependencies = filter(lambda x: isinstance(x, str), dependencies)
         packages_dict = dict()
-        for split in map(lambda x: re.split("=?=", x), dependencies):
-            # default values
-            package = split[0]
-            version = set()
-            # checking if it's a proper version by testing if the first char is a digit
-            if len(split) > 1:
-                if split[1][0].isdigit():
-                    # package + version case
-                    version = set(split[1:])
-                else:
-                    # The split was incorrect and the package shall not be splitted
-                    package = f"{split[0]}={split[1]}"
+        for dependency in dependencies:
+            # Specs carry their channel ("conda-forge::blas=*") and any kind of
+            # constraint ("notebook>=7.4.5", "blas=[build=openblas]"), none of
+            # which belongs to the package name the import checks and the
+            # exclusion list are keyed on.
+            dependency = dependency.rsplit("::", 1)[-1]
+            package, _, constraint = re.match(
+                r"([^=<>!~ ]+)([=<>!~ ]*)(.*)", dependency
+            ).groups()
+            # Keep the constraint only when it is a plain version
+            version = {constraint} if constraint[:1].isdigit() else set()
             packages_dict[package] = version
         return packages_dict
 

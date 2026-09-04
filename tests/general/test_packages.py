@@ -91,12 +91,7 @@ EXCLUDED_PACKAGES = [
     "jupyterlab-lsp",
     # Other
 
-    # blas is a metapackage with no importable module. Its build-pinned spec
-    # is recorded differently depending on the base: older images yield
-    # "blas=[build", the CI-built Python 3.14 chain yields
-    # "blas[build=openblas]" (normalised to "blas" by
-    # excluded_package_predicate). Both spellings listed.
-    "blas=[build",
+    # blas is a metapackage with no importable module
     "blas",
 
     "protobuf",
@@ -143,13 +138,8 @@ def package_map(package):
     return _package
 
 def excluded_package_predicate(package):
-    """Return whether a package is excluded from the list (i.e. a package that cannot be tested with standard imports)
-
-    Matches both the raw spec and its mapped name, so an entry like "blas"
-    also excludes build-pinned spellings such as "blas[build=openblas]" --
-    which is the name the import is attempted under anyway.
-    """
-    return package in EXCLUDED_PACKAGES or package_map(package) in EXCLUDED_PACKAGES
+    """Return whether a package is excluded from the list (i.e. a package that cannot be tested with standard imports)"""
+    return package in EXCLUDED_PACKAGES
 
 
 def python_package_predicate(package):
