@@ -192,8 +192,13 @@ RUN install -d -m 0775 \
     "${HOME_TMP}/workspace/repositories" \
     && export HOME="${HOME_TMP}" \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix -O "${HOME_TMP}/cpptools-linux.vsix" \
-    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.python@2025.4.0 \
-    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.debugpy@2025.4.0 \
+    # ms-python/debugpy releases that support Python 3.14: 2025.4.0 predates
+    # the 3.14 interpreter and mis-drives its new REPL ("Run Python File"
+    # pastes the shell command into the PyREPL -> SyntaxError), and its
+    # bundled debugpy has no 3.14 support. Both still target VS Code >=1.95,
+    # within this code-server (1.99).
+    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.python@2026.4.0 \
+    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.debugpy@2026.6.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension Posit.air-vscode@0.22.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension adamviola.parquet-explorer@1.2.1 \
