@@ -22,7 +22,8 @@ rm(existing_r_package_dirs)
 #options(stringsAsFactors = FALSE)
 #options(prompt = "AAW> ")
 
-# using wget because https://github.com/StatCan/aaw-kubeflow-containers/issues/569
-# https://stackoverflow.com/questions/70559397/r-internet-routines-cannot-be-loaded-when-starting-from-rstudio
-options(download.file.method="wget")
+# download.file.method is left at R's default (libcurl): the old
+# `options(download.file.method="wget")` workaround (aaw-kubeflow-containers#569)
+# hides R's HTTP user agent, which Posit Package Manager keys off to serve
+# prebuilt binaries instead of source packages.
 
