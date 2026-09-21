@@ -89,6 +89,8 @@ RUN apt-get update --yes \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
+        # for password complexity requirement
+        libpam-pwquality \
         # Use headless Java to save space. 21 (noble's default LTS): Spark 4
         # requires Java 17+, so pyspark 4.x cannot start a JVM on Java 8.
         openjdk-21-jre-headless \
