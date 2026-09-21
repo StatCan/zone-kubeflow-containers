@@ -91,12 +91,16 @@ RUN apt-get update --yes \
         libfribidi-dev \
         # for password complexity requirement
         libpam-pwquality \
+        cracklib-runtime \
         # Use headless Java to save space. 21 (noble's default LTS): Spark 4
         # requires Java 17+, so pyspark 4.x cannot start a JVM on Java 8.
         openjdk-21-jre-headless \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
+
+# Set the rules for password complexity
+COPY pwquality.conf /etc/security/pwquality.conf
 
 # adds utility scripts
 # add script for kerberos keytab creation
