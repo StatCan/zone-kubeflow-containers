@@ -47,6 +47,11 @@ RUN mkdir -pv ${HOME_TMP} \
  && chmod 2775 ${HOME_TMP} \
  && chown -R ${NB_USER}:${USERS_GID} ${HOME_TMP}
 
+# setup jovyan password 
+# only used for the basic sas studios authentication
+# jovyan does not have sudo permissions
+RUN echo "jovyan:jovyan" | chpasswd
+
 # System updates and installations
 RUN apt-get update --yes \
     && apt-get install --yes --no-install-recommends \
