@@ -47,11 +47,6 @@ RUN mkdir -pv ${HOME_TMP} \
  && chmod 2775 ${HOME_TMP} \
  && chown -R ${NB_USER}:${USERS_GID} ${HOME_TMP}
 
-# setup jovyan password 
-# only used for the basic sas studios authentication
-# jovyan does not have sudo permissions
-RUN echo "jovyan:jovyan" | chpasswd
-
 # System updates and installations
 RUN apt-get update --yes \
     && apt-get install --yes --no-install-recommends \
@@ -103,6 +98,16 @@ RUN apt-get update --yes \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
+
+# Setup password rotation
+RUN sed -r 's/PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
+
+# Setup jovyan password 
+# Only used for the basic SASStudio authentication
+# jovyan does not have sudo permissions
+RUN echo "jovyan:jovyan" | chpasswd
+# Also disable password rotation for jovyan password
+RUN chage --maxdays -1 jovyan
 
 # Set the rules for password complexity
 COPY pwquality.conf /etc/security/pwquality.conf
