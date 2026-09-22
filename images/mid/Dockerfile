@@ -22,6 +22,11 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
     && apt-get update \
     && apt-get install -y --no-install-recommends nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
+        # System libraries linked by the Posit Package Manager R binaries
+        # installed further below (PPM sysreqs for that package set on
+        # Ubuntu 24.04, minus what images/base already installs).
+        gdal-bin libabsl-dev libgdal-dev libgeos-dev libgit2-dev libhdf5-dev libicu-dev libproj-dev \
+        libsqlite3-dev libudunits2-dev libuv1-dev libwebp-dev libx11-dev libzmq3-dev \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
@@ -41,7 +46,14 @@ COPY vendor/ /opt/vendor/
 
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
-RUN mamba install --quiet --yes -c conda-forge \
+#
+# R: conda-forge publishes r-base 4.6.1 but has not rebuilt its r-* packages
+# for it (every r-* package, and rpy2, still pins r-base <4.6), so the R
+# stack inherited from the datascience-notebook base is removed first and
+# only the interpreter comes from conda. R packages are installed from Posit
+# Package Manager below, and rpy2 is built against this R via pip.
+RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
+    && mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
@@ -70,21 +82,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-arrow' \
-        'r-aws.s3' \
-        'r-base=4.5.1' \
-        'r-catools' \
-        'r-e1071' \
-        'r-hdf5r' \
-        'r-httr' \
-        'r-jsonlite' \
-        'r-markdown' \
-        'r-odbc' \
-        'r-renv' \
-        'r-rodbc' \
-        'r-sf' \
-        'r-sparklyr' \
-        'r-tidyverse' \
+        'r-base=4.6.1' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
@@ -100,7 +98,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         # satisfied by the wheel alongside it.
         /opt/vendor/banff-*.whl \
         /opt/vendor/banffprocessor-*.whl \
-    && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
+        # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
+        'rpy2' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
     && jupyter lab clean \
@@ -114,13 +113,39 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
 
+# R packages as prebuilt Linux binaries from Posit Package Manager: the set
+# that came from conda-forge (datascience-notebook base + the list above)
+# plus languageserver. PPM only serves binaries when R's HTTP user agent
+# carries the R version, so that option is also written to Rprofile.site for
+# user installs through the Artifactory PPM remote configured at startup
+# (s6/cont-init.d/02-start-custom). install.packages() does not fail on
+# error, so verify the full set landed before the layer is accepted.
+ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
+RUN printf '%s\n' \
+        '# Posit Package Manager serves prebuilt binaries only to clients that advertise their R version.' \
+        'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
+        >> /opt/conda/lib/R/etc/Rprofile.site \
+    && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
+                             'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
+                             'languageserver', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
+                             'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'tidymodels', \
+                             'tidyverse'); \
+                    install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
+                    missing <- setdiff(pkgs, rownames(installed.packages())); \
+                    if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
+    # Re-register the Jupyter R kernel (the conda r-irkernel kernelspec went with the package)
+    && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
+    && rm -rf /tmp/downloaded_packages /tmp/Rtmp* \
+    && fix-permissions $CONDA_DIR
+
 # Zone AuthService delegated-token helper — Python package + R wrapper.
 # Provides `import zone_token_broker` in Python and `library(zonetokenbroker)`
 # in R for any downstream consumer (OneLake DFS, Fabric REST, etc.) that needs
 # to call the in-cluster AuthService getPassthroughToken endpoint.
 # Installed here in mid, after the mamba install, so it targets the final conda
 # env and leaves source/wheel artifacts under /opt/zone-token-broker for
-# user-created Python and R environments. httr is provided by conda-forge.
+# user-created Python and R environments. httr is provided by the Posit
+# Package Manager install above.
 # adlfs provides the fsspec adapter for pandas/read_csv("az://...") workflows
 # that pass zone_token_broker.async_credential(...).
 COPY zone-token-broker /opt/zone-token-broker
