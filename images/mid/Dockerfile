@@ -26,7 +26,7 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
         # installed further below (PPM sysreqs for that package set on
         # Ubuntu 24.04, minus what images/base already installs).
         gdal-bin libabsl-dev libgdal-dev libgeos-dev libgit2-dev libhdf5-dev libicu-dev libproj-dev \
-        libsqlite3-dev libudunits2-dev libuv1-dev libwebp-dev libx11-dev libzmq3-dev \
+        libsqlite3-dev libudunits2-dev poppler=24.02.0 libuv1-dev libwebp-dev libx11-dev libzmq3-dev \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
