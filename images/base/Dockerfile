@@ -100,7 +100,7 @@ RUN apt-get update --yes \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup password rotation
-RUN sed -r 's/PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
+RUN sed -i 's/PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
 
 # Setup jovyan password 
 # Only used for the basic SASStudio authentication
@@ -111,6 +111,15 @@ RUN chage --maxdays -1 jovyan
 
 # Set the rules for password complexity
 COPY pwquality.conf /etc/security/pwquality.conf
+
+# Setup faillock for password lockouts
+COPY faillock.conf /etc/security/faillock.conf
+RUN sed -i 's/auth\s\[success=1 default=ignore\]\spam_unix.so nullok/auth  required  pam_faillock.so preauth\n\
+auth  [success=1 default=ignore]  pam_unix.so nullok\n\
+auth  [default=die]  pam_faillock.so authfail\n\
+auth  sufficient  pam_faillock.so authsucc/' /etc/pam.d/common-auth
+# pam_faillock account phase enforces the lockout
+RUN echo 'account  required  pam_faillock.so' >> /etc/pam.d/common-account
 
 # adds utility scripts
 # add script for kerberos keytab creation
