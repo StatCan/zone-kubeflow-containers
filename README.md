@@ -1,5 +1,7 @@
 # Zone Kubeflow Containers
 
+## NOTE THIS IS A PURPOSELY FROZEN BRANCH!
+
 [![codecov](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg)](https://codecov.io/gh/StatCan/zone-kubeflow-containers)
 [![Python Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=python-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=python-tests)
 [![R Tests Coverage](https://codecov.io/gh/StatCan/zone-kubeflow-containers/branch/master/graph/badge.svg?flag=r-tests)](https://app.codecov.io/gh/StatCan/zone-kubeflow-containers/tree/master?flags=r-tests)
