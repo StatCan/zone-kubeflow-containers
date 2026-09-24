@@ -33,7 +33,7 @@ COPY --chown=jovyan:sasstaff --from=stcthezoneacr.azurecr.io/sasm8:updated /usr/
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
 # MinIO Client install
-COPY --from=quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z /bin/mc /usr/local/bin/mc
+COPY --from=stcthezoneacr.azurecr.io/minio/mc:RELEASE.2025-08-13T08-35-41Z /bin/mc /usr/local/bin/mc
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
