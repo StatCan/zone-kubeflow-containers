@@ -25,8 +25,7 @@ RUN wget -q ${QUARTO_URL} -O /tmp/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz &&
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1002 sasstaff && \
-    usermod -a -G sasstaff jovyan && \
-    echo "jovyan:jovyan" | chpasswd
+    usermod -a -G sasstaff jovyan
 
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
 COPY --chown=jovyan:sasstaff --from=stcthezoneacr.azurecr.io/sasm8:updated /usr/local/SASHome /usr/local/SASHome
