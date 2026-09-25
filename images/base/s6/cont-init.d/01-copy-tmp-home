@@ -20,4 +20,7 @@ if [[ "$availableHomeSpace" -gt "$tmpHomeSpace" ]]; then
     cp --update=none -r -T "$HOME_TMP" "$HOME"
     # Want to update any relevant VScode extensions, see ZONE-600
     cp -r -T "$HOME_TMP/.local/share/code-server" "$HOME/.local/share/code-server"
+    # Remove old versions of python extension (REVISIT)
+    if [ -d "$HOME/.local/share/code-server/extensions/ms-python.debugpy-2025.4.0-linux-x64" ]; then rm -Rf $HOME/.local/share/code-server/extensions/ms-python.debugpy-2025.4.0-linux-x64; fi
+    if [ -d "$HOME/.local/share/code-server/extensions/ms-python.python-2025.4.0-universal" ]; then rm -Rf $HOME/.local/share/code-server/extensions/ms-python.python-2025.4.0-universal; fi
 fi
