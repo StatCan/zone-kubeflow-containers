@@ -22,9 +22,21 @@ export JUPYTER_RUNTIME_DIR="/tmp/jupyter_runtime"
 cd "${HOME}" || { echo "ERROR: failed to cd to ${HOME}"; exit 1; }
 echo "--------------------starting jupyter--------------------"
 exec 2>&1
+# `python -s -P -m jupyterlab` rather than `jupyter lab`: -s keeps
+# ~/.local/lib/pythonX.Y/site-packages off *this* process's sys.path, so a package the
+# user pip-installed onto the workspace volume cannot stop the server from starting.
+# Without it a single broken or incompatible user package leaves the pod unreachable
+# with no way in to remove it. -s is not inherited by child processes, so kernels and
+# terminals still see everything the user installed.
+#
+# -P is required alongside it, not optional: we `cd "${HOME}"` above, and `-m` prepends
+# the working directory to sys.path. Without -P a file the user happens to leave in
+# their home directory -- traitlets.py, jupyter_server.py -- shadows the real module and
+# takes the server down at startup, which is the same lock-out through a different door.
+# https://jirab.statcan.ca/browse/ZONE-543
 exec \
   s6-envdir /run/s6-env \
-  /opt/conda/bin/jupyter lab \
+  /opt/conda/bin/python -s -P -m jupyterlab \
   --notebook-dir="${HOME}" \
   --ip=0.0.0.0 \
   --no-browser \

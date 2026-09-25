@@ -27,10 +27,14 @@ COPY rsession.conf /etc/rstudio/
 
 # Jupyter RStudio Proxy
 COPY customRStu/ /opt/jupyter-custom-rstudio-proxy/
+# --no-user: mid ships /opt/conda/pip.conf with [install] user = true. HOME is
+# /home/jovyan even while building as root, so without it this build-time install
+# would land in the image's /home/jovyan/.local -- which the workspace PVC hides
+# at runtime, making the package vanish in production but not in `docker run`.
 RUN chmod 755 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rsession.sh \
     && chmod 755 /opt/jupyter-custom-rstudio-proxy/rstudio-use-current-conda.sh \
-    && pip install --no-cache-dir /opt/jupyter-custom-rstudio-proxy/ \
+    && pip install --no-cache-dir --no-user /opt/jupyter-custom-rstudio-proxy/ \
     && fix-permissions $CONDA_DIR
 
 # Terminal helper to save the current Conda env and stop any running RStudio
