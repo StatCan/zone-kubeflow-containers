@@ -18,4 +18,6 @@ if [[ "$availableHomeSpace" -gt "$tmpHomeSpace" ]]; then
     # NOTE: -T ensures that the CONTENTS of $HOME_TMP are copied, and not the directory itself
     echo "INFO: Copying contents of '$HOME_TMP' to '$HOME'..."
     cp --update=none -r -T "$HOME_TMP" "$HOME"
+    # Want to update any relevant VScode extensions, see ZONE-600
+    cp -r -T "$HOME_TMP/.local/share/code-server" "$HOME/.local/share/code-server"
 fi
