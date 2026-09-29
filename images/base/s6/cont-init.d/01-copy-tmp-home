@@ -18,4 +18,7 @@ if [[ "$availableHomeSpace" -gt "$tmpHomeSpace" ]]; then
     # NOTE: -T ensures that the CONTENTS of $HOME_TMP are copied, and not the directory itself
     echo "INFO: Copying contents of '$HOME_TMP' to '$HOME'..."
     cp --update=none -r -T "$HOME_TMP" "$HOME"
+    # Remove old versions of python extension (REVISIT) see ZONE-600
+    if [ -d "$HOME/.local/share/code-server/extensions/ms-python.debugpy-2025.4.0-linux-x64" ]; then rm -Rf $HOME/.local/share/code-server/extensions/ms-python.debugpy-2025.4.0-linux-x64; fi
+    if [ -d "$HOME/.local/share/code-server/extensions/ms-python.python-2025.4.0-universal" ]; then rm -Rf $HOME/.local/share/code-server/extensions/ms-python.python-2025.4.0-universal; fi
 fi
