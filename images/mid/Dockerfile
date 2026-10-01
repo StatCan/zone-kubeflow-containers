@@ -73,6 +73,7 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'ipywidgets' \
         'markupsafe' \
         'ipympl' \
+        'ipykernel<7' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
         'jupyter-server-proxy==4.5.0' \
