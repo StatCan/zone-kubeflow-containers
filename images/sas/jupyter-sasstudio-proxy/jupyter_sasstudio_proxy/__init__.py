@@ -12,12 +12,12 @@ def setup_sasstudio():
       "/usr/local/SASHome/studioconfig/sasstudio.sh start && cat"
     ]
 
-  def _rewrite_response(response):
-    if 'Location' in response.headers:
-      response.headers['Location'] = response.headers['Location'].replace('/SASStudio', os.environ.get('NB_PREFIX') + '/sasstudio/SASStudio')
+  # def _rewrite_response(response):
+  #   if 'Location' in response.headers:
+  #     response.headers['Location'] = response.headers['Location'].replace('/SASStudio', os.environ.get('NB_PREFIX') + '/sasstudio/SASStudio')
 
-    if 'Set-Cookie' in response.headers:
-      response.headers['Set-Cookie'] = response.headers['Set-Cookie'].replace('/SASStudio', os.environ.get('NB_PREFIX') + '/sasstudio/SASStudio')
+  #   if 'Set-Cookie' in response.headers:
+  #     response.headers['Set-Cookie'] = response.headers['Set-Cookie'].replace('/SASStudio', os.environ.get('NB_PREFIX') + '/sasstudio/SASStudio')
 
   return {
     "command": _get_cmd,
@@ -26,5 +26,5 @@ def setup_sasstudio():
     "launcher_entry": {
       "title": "SAS Studio"
     },
-    "rewrite_response": _rewrite_response,
+    # "rewrite_response": _rewrite_response,
   }
