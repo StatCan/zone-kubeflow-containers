@@ -12,6 +12,7 @@ def setup_sasstudio():
       "/usr/local/SASHome/studioconfig/sasstudio.sh start && cat"
     ]
 
+  # Commit to force build
   # def _rewrite_response(response):
   #   if 'Location' in response.headers:
   #     response.headers['Location'] = response.headers['Location'].replace('/SASStudio', os.environ.get('NB_PREFIX') + '/sasstudio/SASStudio')
