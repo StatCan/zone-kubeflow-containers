@@ -86,6 +86,7 @@ RUN apt-get update --yes \
         libxml2-dev \
         libfontconfig1-dev \
         libpq-dev \
+        fuse3 \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
