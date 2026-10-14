@@ -1,0 +1,26 @@
+#!/command/with-contenv bash
+
+# TEMPORARY: remove once existing notebooks have restarted on this image.
+# 01-copy-tmp-home never overwrites an existing ~/.Rprofile, so notebooks
+# created before R 4.6.1 still carry two settings the template has dropped:
+#  - options(download.file.method="wget") hides R's HTTP user agent, so Posit
+#    Package Manager serves source packages instead of prebuilt binaries
+#  - the block that added older ~/R/r-packages-* libraries to .libPaths()
+# Remove just those old template lines (keeping a backup), leave the rest of
+# the user's file alone, and never block startup.
+
+rprofile="$HOME/.Rprofile"
+
+if grep -qsE 'existing_r_package_dirs|^options\(download\.file\.method="wget"\)' "$rprofile"; then
+    echo "INFO: Removing outdated R settings from '$rprofile' (backup: '$rprofile.pre-r4.6')"
+    sed -i.pre-r4.6 --follow-symlinks \
+        -e 's/^\.libPaths(c(package_dir, existing_r_package_dirs.*/.libPaths(new = package_dir)/' \
+        -e '/all_r_package_dirs\|existing_r_package_dirs/d' \
+        -e '/^# Include any existing older R package directories/d' \
+        -e '/^# Set library paths with current directory first, then any existing older/d' \
+        -e '/^options(download\.file\.method="wget")/d' \
+        -e '/^# using wget because/d' \
+        -e '/^# https:\/\/stackoverflow\.com\/questions\/70559397/d' \
+        "$rprofile" \
+        || echo "WARNING: Could not update '$rprofile'"
+fi
