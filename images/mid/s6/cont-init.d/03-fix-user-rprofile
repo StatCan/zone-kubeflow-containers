@@ -6,8 +6,9 @@
 #  - options(download.file.method="wget") hides R's HTTP user agent, so Posit
 #    Package Manager serves source packages instead of prebuilt binaries
 #  - the block that added older ~/R/r-packages-* libraries to .libPaths()
-# Remove just those old template lines (keeping a backup), leave the rest of
-# the user's file alone, and never block startup.
+# Only a ~/.Rprofile that still has those lines is edited; every other
+# notebook is left untouched. Remove just those old template lines (keeping a
+# backup), leave the rest of the user's file alone, and never block startup.
 
 rprofile="$HOME/.Rprofile"
 
