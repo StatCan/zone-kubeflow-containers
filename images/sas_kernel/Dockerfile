@@ -26,27 +26,13 @@ RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan && \
     echo "jovyan:jovyan" | chpasswd
 
-# BlobPorter
-ARG ACCOUNT_NAME=${ACCOUNT_NAME}
-ARG SRC_ACCOUNT_KEY=${SRC_ACCOUNT_KEY}
+# Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
+COPY --chown=jovyan:sasstaff --from=stcthezoneacr.azurecr.io/sasm8:updated /usr/local/SASHome /usr/local/SASHome
 
-RUN curl -L https://github.com/Azure/blobporter/releases/download/v0.6.20/bp_linux.tar.gz -o /tmp/blobporter.tar.gz && \
-    tar -xf /tmp/blobporter.tar.gz -C /tmp linux_amd64/blobporter && \
-    mv /tmp/linux_amd64/blobporter /usr/local/bin/blobporter && \
-    rm -rf /tmp/* && \
-    chmod a+x /usr/local/bin/blobporter
-
-# cd to ROOT and not /usr/local, because the way this was zipped was to include /usr/local
-RUN cd / && \
-    blobporter -f https://zonesasoct2025.blob.core.windows.net/sasblobcontainer/October2025SAS.tar.gz -c sasblobcontainer -n October2025SAS.tar.gz -t blob-file && \
-    tar -xzpf October2025SAS.tar.gz && \
-    rm October2025SAS.tar.gz && \
-    chown -R jovyan:sasstaff /usr/local/SASHome && \
-    ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas && \
-    rm /usr/local/bin/blobporter
+RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
 # MinIO Client install
-COPY --from=minio/mc:RELEASE.2025-04-16T18-13-26Z /bin/mc /usr/local/bin/mc
+COPY --from=stcthezoneacr.azurecr.io/minio/mc:RELEASE.2025-08-13T08-35-41Z /bin/mc /usr/local/bin/mc
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
