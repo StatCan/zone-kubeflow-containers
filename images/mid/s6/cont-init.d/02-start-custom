@@ -30,7 +30,13 @@ conda config --add channels https://$serviceaccountname:$serviceaccounttoken@art
 conda config --remove channels 'defaults'
 conda config --remove channels conda-forge --system
 
-pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+# Point pip to Artifactory repository (user scope, so venvs use it too)
+pip config --user set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+
+# Persist `pip install` on the workspace volume (ZONE-543). The site file
+# (/opt/conda/pip.conf) is only read by the base env, so installs there go to
+# ~/.local while venvs and conda envs keep installing into themselves.
+pip config --site set install.user true
 
 # create pixi config to change default channel
 if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
