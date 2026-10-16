@@ -22,6 +22,11 @@ RUN wget -q "${VSCODE_URL}" -O ./vscode.deb \
     && echo "${VSCODE_SHA}  ./vscode.deb" | sha256sum -c - \
     && apt-get update \
     && apt-get install -y --no-install-recommends nginx build-essential gdb sqlite3 openmpi-bin libopenmpi-dev \
+        # System libraries linked by the Posit Package Manager R binaries
+        # installed further below (PPM sysreqs for that package set on
+        # Ubuntu 24.04, minus what images/base already installs).
+        gdal-bin libabsl-dev libgdal-dev libgeos-dev libgit2-dev libhdf5-dev libicu-dev libproj-dev \
+        libsqlite3-dev libudunits2-dev libuv1-dev libwebp-dev libx11-dev libzmq3-dev \
     && dpkg -i ./vscode.deb \
     && rm ./vscode.deb \
     && rm -f /etc/apt/sources.list.d/vscode.list \
@@ -34,13 +39,28 @@ COPY --chown=${NB_USER}:${NB_GID} vscode-overrides.json ${HOME_TMP}/.local/share
 # Sets the default workspace for vscode
 COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.local/share/code-server/
 
+# Internal wheels installed from file in the pip step below (GitHub CI cannot
+# reach StatCan Artifactory/GitLab); kept in the image so users can install
+# them into their own environments too. See vendor/README.md.
+COPY vendor/ /opt/vendor/
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
-RUN mamba install --quiet --yes -c conda-forge \
+#
+# R: conda-forge publishes r-base 4.6.1 but has not rebuilt its r-* packages
+# for it (every r-* package, and rpy2, still pins r-base <4.6), so the R
+# stack inherited from the datascience-notebook base is removed first and
+# only the interpreter comes from conda. R packages are installed from Posit
+# Package Manager below, and rpy2 is built against this R via pip.
+RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
+    && mamba install --quiet --yes -c conda-forge \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
-        'joblib==1.2.0' \
+        # banff dependency: PyPI publishes no cp314 wheels inside banff's
+        # nanoarrow<0.9 pin, but conda-forge ships py314 builds of 0.8.0
+        'nanoarrow' \
+        'joblib==1.5.3' \
         's3fs' \
         'fire' \
         'mkl' \
@@ -55,38 +75,31 @@ RUN mamba install --quiet --yes -c conda-forge \
         'ipympl' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
-        'jupyter-server-proxy==4.2.0' \
+        'jupyter-server-proxy==4.5.0' \
         'jupyterlab-language-pack-fr-fr' \
         'jupyterlab_execute_time' \
         'nb_conda_kernels' \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-arrow' \
-        'r-aws.s3' \
-        'r-base=4.5.1' \
-        'r-catools' \
-        'r-e1071' \
-        'r-hdf5r' \
-        'r-httr' \
-        'r-jsonlite' \
-        'r-markdown' \
-        'r-odbc' \
-        'r-renv' \
-        'r-rodbc' \
-        'r-sf' \
-        'r-sparklyr' \
-        'r-tidyverse' \
+        'r-base=4.6.1' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
     && pip install --no-cache-dir \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
-        'pyspark[ml]==3.5.5' \
-        'banff' \
-        'banffprocessor' \
-    && /opt/conda/bin/R --silent --slave --no-save --no-restore -e 'install.packages("languageserver", repos="https://cran.r-project.org/")' \
+        # PySpark 4.x is required on Python 3.14 (3.5.x supports <=3.11).
+        # NOTE: Spark major-version jump -- also affects r-sparklyr users.
+        'pyspark[ml]==4.2.0' \
+        # banff + banffprocessor: vendored internal wheels (see
+        # vendor/README.md); their public PyPI releases pin pyarrow<19,
+        # unsatisfiable on Python 3.14. banffprocessor requires banff>=3.2.0,
+        # satisfied by the wheel alongside it.
+        /opt/vendor/banff-*.whl \
+        /opt/vendor/banffprocessor-*.whl \
+        # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
+        'rpy2' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
     && jupyter lab clean \
@@ -100,13 +113,39 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
 
+# R packages as prebuilt Linux binaries from Posit Package Manager: the set
+# that came from conda-forge (datascience-notebook base + the list above)
+# plus languageserver. PPM only serves binaries when R's HTTP user agent
+# carries the R version, so that option is also written to Rprofile.site for
+# user installs through the Artifactory PPM remote configured at startup
+# (s6/cont-init.d/02-start-custom). install.packages() does not fail on
+# error, so verify the full set landed before the layer is accepted.
+ARG PPM_CRAN_URL=https://packagemanager.posit.co/cran/__linux__/noble/latest
+RUN printf '%s\n' \
+        '# Posit Package Manager serves prebuilt binaries only to clients that advertise their R version.' \
+        'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
+        >> /opt/conda/lib/R/etc/Rprofile.site \
+    && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
+                             'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
+                             'languageserver', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
+                             'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'tidymodels', \
+                             'tidyverse'); \
+                    install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
+                    missing <- setdiff(pkgs, rownames(installed.packages())); \
+                    if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
+    # Re-register the Jupyter R kernel (the conda r-irkernel kernelspec went with the package)
+    && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
+    && rm -rf /tmp/downloaded_packages /tmp/Rtmp* \
+    && fix-permissions $CONDA_DIR
+
 # Zone AuthService delegated-token helper — Python package + R wrapper.
 # Provides `import zone_token_broker` in Python and `library(zonetokenbroker)`
 # in R for any downstream consumer (OneLake DFS, Fabric REST, etc.) that needs
 # to call the in-cluster AuthService getPassthroughToken endpoint.
 # Installed here in mid, after the mamba install, so it targets the final conda
 # env and leaves source/wheel artifacts under /opt/zone-token-broker for
-# user-created Python and R environments. httr is provided by conda-forge.
+# user-created Python and R environments. httr is provided by the Posit
+# Package Manager install above.
 # adlfs provides the fsspec adapter for pandas/read_csv("az://...") workflows
 # that pass zone_token_broker.async_credential(...).
 COPY zone-token-broker /opt/zone-token-broker
@@ -133,7 +172,9 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-ENV SPARK_HOME="/opt/conda/lib/python3.13/site-packages/pyspark" \
+# Python version: tracks the CI-built datascience-notebook chain (Python 3.14
+# -- see the upstream-datascience job in .github/workflows/docker.yaml).
+ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
 # Configure container startup
@@ -185,8 +226,13 @@ RUN install -d -m 0775 \
     "${HOME_TMP}/workspace/repositories" \
     && export HOME="${HOME_TMP}" \
     && wget -q https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix -O "${HOME_TMP}/cpptools-linux.vsix" \
-    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.python@2025.4.0 \
-    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.debugpy@2025.4.0 \
+    # ms-python/debugpy releases that support Python 3.14: 2025.4.0 predates
+    # the 3.14 interpreter and mis-drives its new REPL ("Run Python File"
+    # pastes the shell command into the PyREPL -> SyntaxError), and its
+    # bundled debugpy has no 3.14 support. Both still target VS Code >=1.95,
+    # within this code-server (1.99).
+    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.python@2026.4.0 \
+    && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-python.debugpy@2026.6.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension Posit.air-vscode@0.22.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension ms-ceintl.vscode-language-pack-fr@1.99.0 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension adamviola.parquet-explorer@1.2.1 \

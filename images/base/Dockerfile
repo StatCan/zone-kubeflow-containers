@@ -1,7 +1,13 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
+# Same upstream image as before (datascience-notebook, Conda R and Julia
+# included), rebuilt on Python 3.14 because upstream publishes no 3.14 tag.
+# The default is that CI-built chain from the ACR (produced by the
+# upstream-datascience job in .github/workflows/docker.yaml), so a bare local
+# build matches CI without rebuilding the upstream chain. docker-bake.hcl
+# passes the same ref explicitly -- keep the two in sync.
+ARG BASE_IMAGE=stcthezoneacr.azurecr.io/datascience-notebook:python3.14.5-d7c65738a271
 FROM $BASE_IMAGE
 
 USER root
@@ -83,8 +89,9 @@ RUN apt-get update --yes \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
-        # Use headless Java to save space
-        openjdk-8-jre-headless \
+        # Use headless Java to save space. 21 (noble's default LTS): Spark 4
+        # requires Java 17+, so pyspark 4.x cannot start a JVM on Java 8.
+        openjdk-21-jre-headless \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*

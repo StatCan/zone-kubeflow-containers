@@ -98,4 +98,36 @@ def test_vscode_extensions_installed(container):
         LOGGER.error(f"All extensions found: {extensions_output}")
         assert False, f"Missing expected VSCode extensions: {missing_extensions}"
 
+    # The Python and debugpy extensions must be recent enough for the image's
+    # Python 3.14 interpreter: older releases mis-drive the 3.14 REPL ("Run
+    # Python File" pastes the command into the PyREPL) and bundle a debugpy
+    # without 3.14 support. Floors match the pins in images/mid/Dockerfile.
+    minimum_extension_versions = {
+        "ms-python.python": (2026, 4, 0),
+        "ms-python.debugpy": (2026, 6, 0),
+    }
+    result = container.container.exec_run(
+        ["code-server", "--list-extensions", "--show-versions"]
+    )
+    versions_output = result.output.decode('utf-8')
+    installed_versions = {}
+    for line in versions_output.splitlines():
+        if "@" not in line:
+            continue
+        name, _, version = line.strip().rpartition("@")
+        numeric_parts = []
+        for part in version.split("."):
+            if not part.isdigit():
+                break
+            numeric_parts.append(int(part))
+        installed_versions[name] = tuple(numeric_parts)
+
+    for name, minimum in minimum_extension_versions.items():
+        installed = installed_versions.get(name)
+        assert installed, f"{name} missing from --show-versions output:\n{versions_output}"
+        assert installed >= minimum, (
+            f"{name} is too old for Python 3.14: installed {installed}, "
+            f"need at least {minimum}"
+        )
+
     LOGGER.info("All expected VSCode extensions are installed successfully")
