@@ -52,8 +52,12 @@ COPY vendor/ /opt/vendor/
 # stack inherited from the datascience-notebook base is removed first and
 # only the interpreter comes from conda. R packages are installed from Posit
 # Package Manager below, and rpy2 is built against this R via pip.
-RUN mamba remove -n base --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
-    && mamba install --yes -c conda-forge \
+RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
+    && mamba install --quiet --yes -c conda-forge \
+        # Keep the base image's Python. Unpinned, a new conda-forge patch
+        # release (3.14.5 -> 3.14.8) upgrades it here and relinks every noarch
+        # package, which fails on the base image's package cache.
+        "python=$(python -c 'import platform; print(platform.python_version())')" \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
