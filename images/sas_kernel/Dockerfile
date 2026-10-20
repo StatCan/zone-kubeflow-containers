@@ -28,7 +28,7 @@ RUN groupadd -g 1002 sasstaff && \
     usermod -a -G sasstaff jovyan
 
 # Dockerfile GIST: https://gist.github.com/Jose-Matsuda/c66dbf758620e4ae6bbd811a7b6471f1 
-COPY --chown=jovyan:sasstaff --from=stcthezoneacr.azurecr.io/sasm8:updated /usr/local/SASHome /usr/local/SASHome
+COPY --chown=jovyan:sasstaff --from=stcthezoneacr.azurecr.io/sasm8:oct2026update /usr/local/SASHome /usr/local/SASHome
 
 RUN ln -s /usr/local/SASHome/SASFoundation/9.4/bin/sas_en /usr/local/bin/sas 
 
