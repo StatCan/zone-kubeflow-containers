@@ -64,6 +64,22 @@ EOF
     echo "Rprofile.site updated successfully."
 fi
 
+# Persistent R library, one per R version, on the workspace volume. Set here
+# because ~/.Rprofile is skipped when the working directory has its own
+# .Rprofile or RStudio resumes a session, and install.packages() then falls back
+# to /opt/conda/lib/R/library, which is lost on restart.
+# The user agent lets older ~/.Rprofile files that force download.file.method
+# "wget" still get binary packages from Posit Package Manager.
+cat >> /opt/conda/lib/R/etc/Rprofile.site << 'EOF'
+
+local({
+    lib <- file.path(Sys.getenv("HOME"), "R", paste0("r-packages-", getRversion()))
+    dir.create(lib, recursive = TRUE, showWarnings = FALSE)
+    .libPaths(c(lib, .libPaths()))
+})
+options(download.file.extra = paste("--user-agent", shQuote(getOption("HTTPUserAgent"))))
+EOF
+
 # Configure the language
 if [ -n "${KF_LANG}" ]; then
     if [ "${KF_LANG}" = "en" ]; then
