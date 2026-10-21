@@ -73,6 +73,10 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'ipywidgets' \
         'markupsafe' \
         'ipympl' \
+        # downgrading ipykernel to solve issue with jupyter notebooks just
+        # hanging there when trying to view variables or running cells in vscode
+        # https://jirab.statcan.ca/browse/ZONE-503
+        'ipykernel<7' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
         'jupyter-server-proxy==4.5.0' \
