@@ -46,6 +46,12 @@ mkdir -p "$RSTUDIO_RUNTIME_DIR"
 mkdir -p "$RSTUDIO_SERVER_CONFIG_DIR"
 mkdir -p "$RSTUDIO_CONFIG_DIR" || true
 
+# A session suspended at the last shutdown resumes without running the R
+# profiles and with its saved .libPaths(), which after an R upgrade point at the
+# previous version's library. Drop the saved paths so the resumed session keeps
+# the persistent library that Rprofile.site sets.
+find "$RSTUDIO_STATE_DIR" -path '*/suspended-session-data/libpaths' -print -delete || true
+
 if [ ! -w "$RSTUDIO_CONFIG_DIR" ]; then
   log "WARNING: ${RSTUDIO_CONFIG_DIR} is not writable"
 else
