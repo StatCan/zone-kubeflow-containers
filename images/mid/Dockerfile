@@ -55,7 +55,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'ipympl' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
-        'jupyter-server-proxy==4.2.0' \
+        'jupyter-server-proxy==4.5.0' \
         'jupyterlab-language-pack-fr-fr' \
         'jupyterlab_execute_time' \
         'nb_conda_kernels' \
