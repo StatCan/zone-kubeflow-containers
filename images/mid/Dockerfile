@@ -95,8 +95,6 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'jupyter-lsp' \
         'python-lsp-server' \
         'r-base=4.6.1' \
-        # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
-        'rpy2' \
         'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
@@ -113,6 +111,8 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         # satisfied by the wheel alongside it.
         /opt/vendor/banff-*.whl \
         /opt/vendor/banffprocessor-*.whl \
+        # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
+        'rpy2' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
     && jupyter lab clean \
