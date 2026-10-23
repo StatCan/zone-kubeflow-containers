@@ -44,6 +44,14 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 # them into their own environments too. See vendor/README.md.
 COPY vendor/ /opt/vendor/
 
+# R pre-requisites
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+    fonts-dejavu \
+    gfortran \
+    gcc && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
 #
@@ -87,6 +95,9 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'jupyter-lsp' \
         'python-lsp-server' \
         'r-base=4.6.1' \
+        # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
+        'rpy2' \
+        'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
@@ -102,8 +113,6 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         # satisfied by the wheel alongside it.
         /opt/vendor/banff-*.whl \
         /opt/vendor/banffprocessor-*.whl \
-        # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
-        'rpy2' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
     && jupyter lab build --dev-build=False --minimize=False \
     && jupyter lab clean \

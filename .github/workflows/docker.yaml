@@ -73,7 +73,7 @@ jobs:
 
       - name: Compute image ref
         id: ref
-        run: echo "image=${{ needs.vars.outputs.REGISTRY_NAME }}/datascience-notebook:python${PYTHON_VERSION}-${DOCKER_STACKS_REF:0:12}" >> "$GITHUB_OUTPUT"
+        run: echo "image=${{ needs.vars.outputs.REGISTRY_NAME }}/scipy-notebook:python${PYTHON_VERSION}-${DOCKER_STACKS_REF:0:12}" >> "$GITHUB_OUTPUT"
 
       - name: Detect upstream definition changes
         id: definition-diff
@@ -137,8 +137,7 @@ jobs:
           docker build ./docker-stacks/images/docker-stacks-foundation -t local/docker-stacks-foundation --build-arg PYTHON_VERSION="${PYTHON_VERSION}"
           docker build ./docker-stacks/images/base-notebook -t local/base-notebook --build-arg BASE_IMAGE=local/docker-stacks-foundation
           docker build ./docker-stacks/images/minimal-notebook -t local/minimal-notebook --build-arg BASE_IMAGE=local/base-notebook
-          docker build ./docker-stacks/images/scipy-notebook -t local/scipy-notebook --build-arg BASE_IMAGE=local/minimal-notebook
-          docker build ./docker-stacks/images/datascience-notebook -t "${{ steps.ref.outputs.image }}" --build-arg BASE_IMAGE=local/scipy-notebook
+          docker build ./docker-stacks/images/scipy-notebook -t "${{ steps.ref.outputs.image }}" --build-arg BASE_IMAGE=local/minimal-notebook
 
       - name: Push
         if: steps.exists.outputs.exists == 'false'
