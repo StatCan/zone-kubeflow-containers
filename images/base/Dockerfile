@@ -7,7 +7,7 @@
 # upstream-datascience job in .github/workflows/docker.yaml), so a bare local
 # build matches CI without rebuilding the upstream chain. docker-bake.hcl
 # passes the same ref explicitly -- keep the two in sync.
-ARG BASE_IMAGE=stcthezoneacr.azurecr.io/datascience-notebook:python3.14.5-d7c65738a271
+ARG BASE_IMAGE=stcthezoneacr.azurecr.io/scipy-notebook:python3.14.5-d7c65738a271
 FROM $BASE_IMAGE
 
 USER root

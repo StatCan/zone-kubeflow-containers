@@ -44,6 +44,14 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 # them into their own environments too. See vendor/README.md.
 COPY vendor/ /opt/vendor/
 
+# R pre-requisites
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+    fonts-dejavu \
+    gfortran \
+    gcc && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
 #
@@ -87,6 +95,7 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'jupyter-lsp' \
         'python-lsp-server' \
         'r-base=4.6.1' \
+        'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
