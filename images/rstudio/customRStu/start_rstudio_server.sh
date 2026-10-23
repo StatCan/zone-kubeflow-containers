@@ -70,6 +70,10 @@ log "Persisted target env to ${RSTUDIO_CONDA_ENV_FILE}"
 
 # set a user-specific secure cookie key
 COOKIE_KEY_PATH="${RSTUDIO_RUNTIME_DIR}/${USER}_secure-cookie-key"
+rm -rf "$RSTUDIO_DATA_DIR"
+log "Cleared stale runtime state ${RSTUDIO_DATA_DIR})"
+
+rm -f "${HOME}/.RData" "${HOME}/.Rhistory" "${HOME}/.rstudio-desktop" "${HOME}/.rstudio" || true
 rm -f "$COOKIE_KEY_PATH"
 mkdir -p "$(dirname "$COOKIE_KEY_PATH")"
 
