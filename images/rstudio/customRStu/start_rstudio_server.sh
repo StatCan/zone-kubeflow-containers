@@ -82,6 +82,8 @@ mkdir -p "$(dirname "$COOKIE_KEY_PATH")"
 python3 -c 'import uuid; print(uuid.uuid4())' > "$COOKIE_KEY_PATH"
 chmod 600 "$COOKIE_KEY_PATH"
 export RETICULATE_PYTHON="${TARGET_CONDA_ENV}/bin/python"
+# feat (rstudio): force console to clear and start quietly on launch.
+export R_ARGUMENTS="--no-save --no-restore --no-site-file --no-init-file --quiet"
 log "COOKIE_KEY_PATH=${COOKIE_KEY_PATH}"
 log "RETICULATE_PYTHON=${RETICULATE_PYTHON}"
 
