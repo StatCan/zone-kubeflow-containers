@@ -54,6 +54,10 @@ COPY vendor/ /opt/vendor/
 # Package Manager below, and rpy2 is built against this R via pip.
 RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
     && mamba install --quiet --yes -c conda-forge \
+        # Keep the base image's Python. Unpinned, a new conda-forge patch
+        # release (3.14.5 -> 3.14.8) upgrades it here and relinks every noarch
+        # package, which fails on the base image's package cache.
+        "python=$(python -c 'import platform; print(platform.python_version())')" \
         'sqlite>=3.45' \
         'pillow' \
         'pyyaml' \
@@ -73,6 +77,10 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'ipywidgets' \
         'markupsafe' \
         'ipympl' \
+        # downgrading ipykernel to solve issue with jupyter notebooks just
+        # hanging there when trying to view variables or running cells in vscode
+        # https://jirab.statcan.ca/browse/ZONE-503
+        'ipykernel<7' \
         'pexpect==4.9.0' \
         'jupyter-resource-usage' \
         'jupyter-server-proxy==4.5.0' \
