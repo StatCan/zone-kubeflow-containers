@@ -83,7 +83,6 @@ EXCLUDED_PACKAGES = [
     'jupyterlab-translate',
     'python-lsp-server',
     "jupyter-lsp",
-    "jupyter-pluto-proxy",
     "jupyter-resource-usage",
     "jupyter-server-proxy",
     "jupyterlab-git",
