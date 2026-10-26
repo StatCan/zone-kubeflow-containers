@@ -76,8 +76,8 @@ log "Cleared stale runtime state ${RSTUDIO_DATA_DIR})"
 rm -f "${HOME}/.RData" "${HOME}/.Rhistory" "${HOME}/.rstudio-desktop" "${HOME}/.rstudio" || true
 find /workspace -name ".RData" -delete || true
 find /workspace -name ".Rhistory" -delete || true
-# rm -rf "${HOME}/.local/share/rstudio/sessions/active/*"
-# rm -rf "${HOME}/.local/share/rstudio/sessions/historic/*"
+rm -rf "${HOME}/.local/share/rstudio/sessions/active/*"
+rm -rf "${HOME}/.local/share/rstudio/sessions/historic/*"
 rm -f "$COOKIE_KEY_PATH"
 mkdir -p "$(dirname "$COOKIE_KEY_PATH")"
 
