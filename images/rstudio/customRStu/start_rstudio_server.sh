@@ -70,12 +70,16 @@ log "Persisted target env to ${RSTUDIO_CONDA_ENV_FILE}"
 
 # set a user-specific secure cookie key
 COOKIE_KEY_PATH="${RSTUDIO_RUNTIME_DIR}/${USER}_secure-cookie-key"
+# Remove stale RStudio runtime data to prevent session recovery issues
 rm -rf "$RSTUDIO_DATA_DIR"
 log "Cleared stale runtime state ${RSTUDIO_DATA_DIR})"
-
+# Remove user workspace, history, and RStudio state files to ensure each session starts from a clean environment
 rm -f "${HOME}/.RData" "${HOME}/.Rhistory" "${HOME}/.rstudio-desktop" "${HOME}/.rstudio" || true
+# Remove any saved R workspaces and history files from the workspace volume to prevent automatic restoration of previous sessions
 find /workspace -name ".RData" -delete || true
 find /workspace -name ".Rhistory" -delete || true
+
+# Clear active and historical RStudio session metadata to avoid restoring stale sessions after restart
 rm -rf "${HOME}/.local/share/rstudio/sessions/active/*"
 rm -rf "${HOME}/.local/share/rstudio/sessions/historic/*"
 rm -f "$COOKIE_KEY_PATH"
@@ -85,6 +89,11 @@ python3 -c 'import uuid; print(uuid.uuid4())' > "$COOKIE_KEY_PATH"
 chmod 600 "$COOKIE_KEY_PATH"
 export RETICULATE_PYTHON="${TARGET_CONDA_ENV}/bin/python"
 # feat (rstudio): force console to clear and start quietly on launch.
+# Force R to start in a clean, non-interactive state:
+# - do not save workspace on exit
+# - do not restore previous workspace
+# - ignore site and user startup files
+# - suppress startup messages
 export R_ARGUMENTS="--no-save --no-restore --no-site-file --no-init-file --quiet"
 log "COOKIE_KEY_PATH=${COOKIE_KEY_PATH}"
 log "RETICULATE_PYTHON=${RETICULATE_PYTHON}"
