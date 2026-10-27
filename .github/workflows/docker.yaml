@@ -45,14 +45,12 @@ jobs:
         run: python3 .github/scripts/validate_runtime_configuration.py
 
   # Upstream jupyter/docker-stacks publishes no Python 3.14 images, so build
-  # its foundation -> base-notebook -> minimal-notebook -> scipy-notebook ->
-  # datascience-notebook chain at a pinned commit with PYTHON_VERSION
-  # overridden, and push the result to the ACR. datascience-notebook is the
-  # same upstream image the previous base tracked, so this is a Python
-  # version bump and nothing else -- the Conda R and Julia stacks it layers
-  # on scipy are unchanged. The tag encodes the commit + python version, so
+  # its foundation -> base-notebook -> minimal-notebook -> scipy-notebook
+  # chain at a pinned commit with PYTHON_VERSION overridden,
+  # and push the result to the ACR. this is a Pythonversion bump and nothing else.
+  # The tag encodes the commit + python version, so
   # this job is a fast no-op whenever that tag already exists.
-  upstream-datascience:
+  upstream-scipy:
     needs: [vars]
     runs-on: ubuntu-latest
     outputs:
@@ -144,15 +142,15 @@ jobs:
         run: docker push "${{ steps.ref.outputs.image }}"
 
   base:
-    needs: [vars, upstream-datascience]
+    needs: [vars, upstream-scipy]
     uses: ./.github/workflows/docker-steps.yaml
     with:
       image: "base"
       directory: "base"
-      # The CI-built datascience-notebook: the same upstream image as before,
+      # The CI-built scipy-notebook: the same upstream image as before,
       # rebuilt on Python 3.14 because upstream publishes no 3.14 tag.
-      base-image: "${{ needs.upstream-datascience.outputs.image }}"
-      parent-image-is-diff: "${{ needs.upstream-datascience.outputs.is-diff }}"
+      base-image: "${{ needs.upstream-scipy.outputs.image }}"
+      parent-image-is-diff: "${{ needs.upstream-scipy.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:

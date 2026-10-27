@@ -1,7 +1,7 @@
 target "base" {
     args = {
-        # The CI-built Python 3.14 datascience-notebook chain (see the
-        # upstream-datascience job in .github/workflows/docker.yaml, which
+        # The CI-built Python 3.14 scipy-notebook chain (see the
+        # upstream-scipy job in .github/workflows/docker.yaml, which
         # produces this exact tag), so local builds start from the same base
         # as CI and skip rebuilding the upstream chain. Requires `az acr login
         # --name stcthezoneacr` first. Keep the tag in lockstep with that

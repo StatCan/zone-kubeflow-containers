@@ -128,7 +128,7 @@ The relationship between the stages and the final product is as shown below.
 
 ```mermaid
 graph TD
-  upstream_nb["(upstream) datascience-notebook"]
+  upstream_nb["(upstream) scipy-notebook"]
   upstream_nb --> base
   base --> mid
   mid --> sas_kernel
@@ -253,7 +253,7 @@ make test-coverage/jupyterlab-cpu
 Our images are built in stages, starting from upstream Jupyter Docker Stacks:
 
 ```
-upstream datascience-notebook → base → mid → sas-kernel → [jupyterlab-cpu | sas]
+upstream scipy-notebook → base → mid → sas-kernel → [jupyterlab-cpu | sas]
 ```
 
 ### Building Images
@@ -371,7 +371,7 @@ and increasing that size would negatively impact the time it takes up for a work
       with:
         image: "stage-name"                                             # The name of the current stage/image
         directory: "directory-name"                                     # The name of the directory in the /images/ folder. /images/base would be "base"
-        base-image: "quay.io/jupyter/datascience-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
+        base-image: "quay.io/jupyter/scipy-notebook:2024-06-17"   # used if the stage is built from an upsteam image. Omit if stage has a local parent
         parent-image: "parent"                                          # The name of the parent stage/image. Omit if stage uses an upsteam image
         parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
         # The following values are static between differnt stages
