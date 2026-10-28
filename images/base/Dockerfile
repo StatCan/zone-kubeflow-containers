@@ -1,13 +1,13 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-# Same upstream image as before (datascience-notebook, Conda R and Julia
-# included), rebuilt on Python 3.14 because upstream publishes no 3.14 tag.
+# Using the scipy-notebook image from upstream (offers Conda, no R) 
+# but rebuilt on Python 3.14 because upstream publishes no 3.14 tag.
 # The default is that CI-built chain from the ACR (produced by the
-# upstream-datascience job in .github/workflows/docker.yaml), so a bare local
+# upstream-scipy job in .github/workflows/docker.yaml), so a bare local
 # build matches CI without rebuilding the upstream chain. docker-bake.hcl
 # passes the same ref explicitly -- keep the two in sync.
-ARG BASE_IMAGE=stcthezoneacr.azurecr.io/datascience-notebook:python3.14.5-d7c65738a271
+ARG BASE_IMAGE=stcthezoneacr.azurecr.io/scipy-notebook:python3.14.5-d7c65738a271
 FROM $BASE_IMAGE
 
 USER root
@@ -89,12 +89,37 @@ RUN apt-get update --yes \
         zlib1g-dev \
         libharfbuzz-dev \
         libfribidi-dev \
+        # for password complexity requirement
+        libpam-pwquality \
+        cracklib-runtime \
         # Use headless Java to save space. 21 (noble's default LTS): Spark 4
         # requires Java 17+, so pyspark 4.x cannot start a JVM on Java 8.
         openjdk-21-jre-headless \
         smbclient \
     && apt-get upgrade --yes libwebp7 \
     && rm -rf /var/lib/apt/lists/*
+
+# Setup password rotation
+RUN sed -i 's/PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
+
+# Setup jovyan password 
+# Only used for the basic SASStudio authentication
+# jovyan does not have sudo permissions
+RUN echo "jovyan:jovyan" | chpasswd
+# Also disable password rotation for jovyan password
+RUN chage --maxdays -1 jovyan
+
+# Set the rules for password complexity
+COPY pwquality.conf /etc/security/pwquality.conf
+
+# Setup faillock for password lockouts
+COPY faillock.conf /etc/security/faillock.conf
+RUN sed -i 's/auth\s\[success=1 default=ignore\]\spam_unix.so nullok/auth  required  pam_faillock.so preauth\n\
+auth  [success=1 default=ignore]  pam_unix.so nullok\n\
+auth  [default=die]  pam_faillock.so authfail\n\
+auth  sufficient  pam_faillock.so authsucc/' /etc/pam.d/common-auth
+# pam_faillock account phase enforces the lockout
+RUN echo 'account  required  pam_faillock.so' >> /etc/pam.d/common-account
 
 # adds utility scripts
 # add script for kerberos keytab creation
