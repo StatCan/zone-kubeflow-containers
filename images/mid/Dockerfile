@@ -54,14 +54,7 @@ RUN apt-get update --yes && \
 
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
-#
-# R: conda-forge publishes r-base 4.6.1 but has not rebuilt its r-* packages
-# for it (every r-* package, and rpy2, still pins r-base <4.6), so the R
-# stack inherited from the scipy-notebook base is removed first and
-# only the interpreter comes from conda. R packages are installed from Posit
-# Package Manager below, and rpy2 is built against this R via pip.
-RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
-    && mamba install --quiet --yes -c conda-forge \
+RUN mamba install --quiet --yes -c conda-forge \
         # Keep the base image's Python. Unpinned, a new conda-forge patch
         # release (3.14.5 -> 3.14.8) upgrades it here and relinks every noarch
         # package, which fails on the base image's package cache.
