@@ -44,16 +44,17 @@ COPY --chown=${NB_USER}:${NB_GID} languagepacks.json coder.json ${HOME_TMP}/.loc
 # them into their own environments too. See vendor/README.md.
 COPY vendor/ /opt/vendor/
 
+# R pre-requisites
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+    fonts-dejavu \
+    gfortran \
+    gcc && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
-#
-# R: conda-forge publishes r-base 4.6.1 but has not rebuilt its r-* packages
-# for it (every r-* package, and rpy2, still pins r-base <4.6), so the R
-# stack inherited from the datascience-notebook base is removed first and
-# only the interpreter comes from conda. R packages are installed from Posit
-# Package Manager below, and rpy2 is built against this R via pip.
-RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "rpy2" {print $1}') \
-    && mamba install --quiet --yes -c conda-forge \
+RUN mamba install --quiet --yes -c conda-forge \
         # Keep the base image's Python. Unpinned, a new conda-forge patch
         # release (3.14.5 -> 3.14.8) upgrades it here and relinks every noarch
         # package, which fails on the base image's package cache.
@@ -91,6 +92,7 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
         'jupyter-lsp' \
         'python-lsp-server' \
         'r-base=4.6.1' \
+        'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
@@ -122,7 +124,7 @@ RUN mamba remove -n base --quiet --yes $(conda list | awk '$1 ~ /^r-/ || $1 == "
     && fix-permissions $CONDA_DIR
 
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
-# that came from conda-forge (datascience-notebook base + the list above)
+# that came from conda-forge (scipy-notebook base + the list above)
 # plus languageserver. PPM only serves binaries when R's HTTP user agent
 # carries the R version, so that option is also written to Rprofile.site for
 # user installs through the Artifactory PPM remote configured at startup
@@ -180,8 +182,8 @@ COPY --chown=${NB_USER}:${NB_GID} .duckdbrc ${HOME_TMP}/.duckdbrc
 # Solarized Theme and Cell Execution Time
 COPY jupyterlab-overrides.json /opt/conda/share/jupyter/lab/settings/overrides.json
 
-# Python version: tracks the CI-built datascience-notebook chain (Python 3.14
-# -- see the upstream-datascience job in .github/workflows/docker.yaml).
+# Python version: tracks the CI-built scipy-notebook chain (Python 3.14
+# -- see the upstream-scipy job in .github/workflows/docker.yaml).
 ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
     R_ZIPCMD="zip"
 
@@ -255,7 +257,7 @@ RUN set -eu \
     && for entry in "${HOME}"/* "${HOME}"/.[!.]* "${HOME}"/..?*; do \
         [ -e "${entry}" ] || continue; \
         case "$(basename "${entry}")" in \
-            .cache|.conda|.duckdb|.duckdbrc|.gnupg|.julia|.local|.mamba|.npm|.pixi|workspace) continue ;; \
+            .cache|.conda|.duckdb|.duckdbrc|.gnupg|.local|.mamba|.npm|.pixi|workspace) continue ;; \
         esac; \
         cp -r --update=none "${entry}" "${HOME_TMP}/"; \
     done \

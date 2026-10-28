@@ -40,7 +40,6 @@ make test/base
 - **`jupyterlab-cpu/`** — Data science package tests for jupyterlab-cpu image
   - `test_pandas.py` — Pandas functionality and integration tests
   - `test_matplotlib.py` — Matplotlib plotting functionality
-  - `test_julia.py` — Julia language and packages functionality
   - `test_extensions.py` — JupyterLab extension checks
 - **`sas/`** — SAS-specific tests for sas image
 
