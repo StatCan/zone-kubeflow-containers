@@ -1,9 +1,5 @@
 # Jupyter Docker Stacks Upstream images
 target "docker-stacks-foundation" {
-    args = {
-        ROOT_IMAGE="ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852"
-        PYTHON_VERSION="3.14.5"
-    }
     context = "./images/upstream/docker-stacks-foundation"
     tags = ["docker-stacks-foundation"]
 }
