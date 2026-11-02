@@ -43,10 +43,8 @@ jobs:
 
   upstream-scipy:
     needs: [vars]
-    uses: ./.github/workflows/docker-steps.yaml
+    uses: ./.github/workflows/docker-build-upstream.yaml
     with:
-      image: "scipy-notebook"
-      directory: "upstream/scipy-notebook"
       base-image: "ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"

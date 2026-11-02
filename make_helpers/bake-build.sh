@@ -22,4 +22,4 @@ if [[ -n "${TAGS}" ]]; then
     ARGS+=( "${TAG_LIST[@]}" )
 fi
 
-docker buildx bake ${IMAGE_NAME} ${DARGS} ${ARGS[@]} --no-cache --progress=plain
+docker buildx bake ${IMAGE_NAME} ${DARGS} ${ARGS[@]}

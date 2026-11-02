@@ -1,0 +1,91 @@
+name: Build and Push upstream image if needed
+
+env:
+  HADOLINT_VERSION: "2.12.0"
+
+on:
+  workflow_call:
+    inputs:
+      base-image:
+        description: The base image to build from if not located on our own repo
+        required: false
+        type: string
+      registry-name:
+        description: url of the registry <registy-name>
+        required: true
+        type: string
+      branch-name:
+        description: The name of the current branch 
+        required: true
+        type: string
+    secrets:
+      REGISTRY_USERNAME:
+        description: The username for the container registry
+        required: true
+      REGISTRY_PASSWORD:
+        description: The password for the container registry
+        required: true
+
+jobs:
+  build-upload:
+    runs-on: ubuntu-latest
+    # services:
+    #   registry:
+    #     image: registry:2
+    #     ports:
+    #       - 5000:5000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        run: |
+          sudo curl -L https://github.com/hadolint/hadolint/releases/download/v${{ env.HADOLINT_VERSION }}/hadolint-Linux-x86_64 --output hadolint
+          sudo chmod +x hadolint
+          ./hadolint images/upstream/docker-stacks-foundation/Dockerfile --no-fail
+          ./hadolint images/upstream/base-notebook/Dockerfile --no-fail
+          ./hadolint images/upstream/minimal-notebook/Dockerfile --no-fail
+          ./hadolint images/upstream/scipy-notebook/Dockerfile --no-fail
+
+      - name: Echo disk usage before clean up
+        run: ./.github/scripts/echo_usage.sh
+
+      - name: Free up all available disk space before building
+        run: ./.github/scripts/cleanup_runner.sh
+
+      - name: Echo disk usage before build start
+        run: ./.github/scripts/echo_usage.sh
+
+      # Connect to Azure Container registry (ACR)
+      - uses: azure/docker-login@v1
+        with:
+          login-server: ${{ inputs.registry-name }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Set short SHA
+        run: |
+          shortSha=$(git rev-parse --short ${{ github.sha}})
+          echo "COMMIT_SHORT_SHA=$shortSha"
+          echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
+
+      - name: Build image
+        id: build-image
+        run: |
+          tags="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
+          
+          # adds tags for master
+          if [ "${{ inputs.branch-name }}" == 'master' ]; then
+            tags="${tags} v2 latest"
+          fi
+
+          make bake-upstream BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} TAGS="${tags}"
+
+      - name: Push image to registry (default pushes all tags)
+        run: make push/scipy-notebook REPO=${{ inputs.registry-name }}
+
+      - name: Echo disk usage after build completion
+        run: ./.github/scripts/echo_usage.sh
+
+      # Free up space from build process (containerscan action will run out of space if we don't)
+      - run: ./.github/scripts/cleanup_runner.sh

@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 # This build arg allows building the image based on a different root image
-ARG ROOT_IMAGE=default_root_image
+ARG BASE_IMAGE=default_root_image
 
 # Ubuntu 24.04 (noble)
 # https://hub.docker.com/_/ubuntu/tags?page=1&name=noble
@@ -14,7 +14,7 @@ FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce
 # The binary is bind-mounted into the install RUN below, so it is not added to any image layer
 FROM mambaorg/micromamba:2.10.0@sha256:e1476182cd40eb1f7c0cfae4adec9bfd78f3d7f05c61368306abfdc8939c1198 AS micromamba
 
-FROM $ROOT_IMAGE
+FROM $BASE_IMAGE
 
 # LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 ARG NB_USER="jovyan"
