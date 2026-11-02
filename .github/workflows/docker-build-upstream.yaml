@@ -56,7 +56,7 @@ jobs:
             echo "is-diff='true'" >> $GITHUB_OUTPUT
           else
             CHANGES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/*" || true)
-            NEW_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/* || true)
+            NEW_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/*" || true)
             
             CHANGES="${CHANGES}${NEW_FILES}"
 
