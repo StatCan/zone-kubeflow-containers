@@ -18,6 +18,10 @@ on:
         description: The name of the current branch 
         required: true
         type: string
+    outputs:
+      is-diff:
+        description: Is there a difference between the target branch and the current branch
+        value: ${{ jobs.check-diff.outputs.is-diff }}
     secrets:
       REGISTRY_USERNAME:
         description: The username for the container registry
@@ -27,14 +31,48 @@ on:
         required: true
 
 jobs:
-  build-upload:
+  check-diff:
     runs-on: ubuntu-latest
-    # services:
-    #   registry:
-    #     image: registry:2
-    #     ports:
-    #       - 5000:5000
+    outputs:
+      is-diff: ${{ steps.check-changes.outputs.is-diff }}
 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch target branch
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+
+      - name: Check for changes
+        id: check-changes
+        run: | # Check for changes excluding README.md
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "Always build on pushes to master and beta"
+            echo "is-diff=true" >> $GITHUB_OUTPUT
+          # Check if the subdirectory exists in the base branch
+          elif ! git ls-tree -d origin/${{ github.event.pull_request.base.ref }} -- "images/upstream" >/dev/null 2>&1; then
+            echo "Subdirectory does not exist in the base branch"
+            echo "is-diff='true'" >> $GITHUB_OUTPUT
+          else
+            CHANGES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/*" || true)
+            NEW_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/* || true)
+            
+            CHANGES="${CHANGES}${NEW_FILES}"
+
+            if [ -n "$CHANGES" ]; then
+              echo "Changes detected (excluding README.md)"
+              echo "is-diff=true" >> $GITHUB_OUTPUT
+            else
+              echo "No changes detected"
+              echo "is-diff=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  build-upload:
+    needs: [check-diff]
+    if: ${{ needs.check-diff.outputs.is-diff == 'true' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -81,11 +119,11 @@ jobs:
 
           make bake-upstream BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} TAGS="${tags}"
 
-      - name: Push image to registry (default pushes all tags)
-        run: make push/scipy-notebook REPO=${{ inputs.registry-name }}
-
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
+
+      - name: Push image to registry (default pushes all tags)
+        run: make push/scipy-notebook REPO=${{ inputs.registry-name }}
 
       # Free up space from build process (containerscan action will run out of space if we don't)
       - run: ./.github/scripts/cleanup_runner.sh

@@ -12,9 +12,6 @@ target "base-notebook" {
         BASE_IMAGE="docker-stacks-foundation"
     }
     context = "./images/upstream/base-notebook"
-    # contexts = {
-    #     docker-stacks-foundation = "target:docker-stacks-foundation"
-    # }
     tags = ["base-notebook"]
 }
 
@@ -23,9 +20,6 @@ target "minimal-notebook" {
         BASE_IMAGE="base-notebook"
     }
     context = "./images/upstream/minimal-notebook"
-    # contexts = {
-    #     base-notebook = "target:base-notebook"
-    # }
     tags = ["minimal-notebook"]
 }
 
@@ -34,9 +28,6 @@ target "scipy-notebook" {
         BASE_IMAGE="minimal-notebook"
     }
     context = "./images/upstream/scipy-notebook"
-    # contexts = {
-    #     minimal-notebook = "target:minimal-notebook"
-    # }
     tags = ["scipy-notebook"]
 }
 
