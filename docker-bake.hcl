@@ -25,7 +25,7 @@ target "scipy-notebook" {
     contexts = {
         minimal-notebook = "target:minimal-notebook"
     }
-    tags = ["scypi-notebook"]
+    tags = ["scipy-notebook"]
 }
 
 # The Zone images

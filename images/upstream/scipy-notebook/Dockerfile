@@ -26,6 +26,10 @@ RUN rm -rf "/home/${NB_USER}/.cache/rosetta"
 
 USER ${NB_UID}
 
+RUN printenv
+
+RUN mamba list
+
 # Install Python 3 packages
 RUN mamba install --yes \
     'altair' \
