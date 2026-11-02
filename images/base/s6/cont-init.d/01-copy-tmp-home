@@ -7,6 +7,20 @@ umask 0002
 # the home directory is usually a PVC
 # we need to copy the contents of $HOME_TMP that we populated during the build
 
+# Walking $HOME_TMP against the PVC costs a round trip per file on network
+# storage, so skip it when this home was already seeded with the same set of
+# paths. `cp --update=none` never overwrites, so only new paths matter, and the
+# path list comes from the image's local filesystem, which is fast to walk.
+# Delete ~/.zone-home-seed to restore missing defaults on the next start.
+seedStamp="$HOME/.zone-home-seed"
+seedId=$(find "$HOME_TMP" -printf '%P\n' | LC_ALL=C sort | md5sum | cut -d' ' -f1)
+if [[ "$(cat "$seedStamp" 2>/dev/null)" == "$seedId" ]]; then
+    echo "INFO: '$HOME' already seeded from this image, skipping copy"
+    # Same VS Code extension cache reset as after a copy (below)
+    rm -f "$HOME/.local/share/code-server/extensions/extensions.json"
+    exit 0
+fi
+
 # comparing space to avoid errors with running out of space on start up
 availableHomeSpace=$(df --output=avail $HOME | tail -n 1)
 tmpHomeSpace=$(du -s $HOME_TMP | awk '{print $1}')
@@ -17,7 +31,9 @@ if [[ "$availableHomeSpace" -gt "$tmpHomeSpace" ]]; then
     # NOTE: --update=none prevents overwriting existing files
     # NOTE: -T ensures that the CONTENTS of $HOME_TMP are copied, and not the directory itself
     echo "INFO: Copying contents of '$HOME_TMP' to '$HOME'..."
-    cp --update=none -r -T "$HOME_TMP" "$HOME"
+    if cp --update=none -r -T "$HOME_TMP" "$HOME"; then
+        echo "$seedId" > "$seedStamp"
+    fi
     # Remove old versions of python extension (REVISIT) see ZONE-600
     if [ -d "$HOME/.local/share/code-server/extensions/ms-python.debugpy-2025.4.0-linux-x64" ]; then rm -Rf $HOME/.local/share/code-server/extensions/ms-python.debugpy-2025.4.0-linux-x64; fi
     if [ -d "$HOME/.local/share/code-server/extensions/ms-python.python-2025.4.0-universal" ]; then rm -Rf $HOME/.local/share/code-server/extensions/ms-python.python-2025.4.0-universal; fi

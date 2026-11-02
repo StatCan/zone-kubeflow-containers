@@ -1,0 +1,4 @@
+# Everything here is built into Linux images (s6 scripts, Dockerfiles, configs),
+# so check text files out with LF on every OS: a Windows checkout with
+# core.autocrlf=true otherwise writes CRLF and the scripts fail in the container.
+* text=auto eol=lf

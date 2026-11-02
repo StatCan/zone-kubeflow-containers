@@ -82,7 +82,8 @@ RUN apt-get update --yes \
 # s6 - 01-copy-tmp-home
 # NOTE: the contents of $HOME_TMP are copied to $HOME at runtime
 #       this is a workaround because a PVC will be mounted at $HOME
-RUN cp -p -r -T "${HOME}" "${HOME_TMP}" \
-    && chmod -R g=u "${HOME_TMP}"
+# mid already seeds $HOME_TMP from $HOME; copying $HOME again here overwrote
+# its .bashrc/.profile and restored the runtime caches mid leaves out.
+RUN chmod -R g=u "${HOME_TMP}/.config/saspy"
 
 USER $NB_USER

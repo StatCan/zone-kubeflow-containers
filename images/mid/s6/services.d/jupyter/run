@@ -20,6 +20,10 @@ chmod 700 "${XDG_RUNTIME_DIR}"
 export JUPYTER_RUNTIME_DIR="/tmp/jupyter_runtime"
 
 cd "${HOME}" || { echo "ERROR: failed to cd to ${HOME}"; exit 1; }
+
+# compress_response gzips JupyterLab's JavaScript and API responses; the
+# frontend bundle is ~4x smaller on the wire. Already-compressed responses
+# (e.g. code-server behind jupyter-server-proxy) are passed through untouched.
 echo "--------------------starting jupyter--------------------"
 exec 2>&1
 exec \
@@ -34,4 +38,5 @@ exec \
   --ServerApp.allow_origin="*" \
   --ServerApp.authenticate_prometheus=False \
   --ServerApp.base_url="${NB_PREFIX}" \
+  --ServerApp.tornado_settings='{"compress_response": True}' \
   --ContentsManager.allow_hidden=True
