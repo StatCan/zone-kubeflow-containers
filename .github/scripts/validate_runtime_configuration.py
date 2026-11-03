@@ -14,7 +14,7 @@ def validate_upstream_propagation() -> None:
     assert workflow.count('- "docker-bake.hcl"') == 2
     assert "is-diff: ${{ steps.upstream-diff.outputs.is-diff }}" in workflow
     assert (
-        'parent-image-is-diff: "${{ needs.upstream-datascience.outputs.is-diff }}"'
+        'parent-image-is-diff: "${{ needs.upstream-scipy.outputs.is-diff }}"'
         in workflow
     )
     assert "DOCKER_STACKS_REF|PYTHON_VERSION" in workflow

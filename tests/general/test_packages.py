@@ -24,13 +24,13 @@ This is necessary for:
 
 Example:
 
-    $ make test/datascience-notebook
+    $ make test/scipy-notebook
 
     # [...]
     # test/test_packages.py::test_python_packages
     # --------------------------------------------------------------------------------------------- live log setup ----------------------------------------------------------------------------------------------
-    # 2020-03-08 09:56:04 [    INFO] Starting container jupyter/datascience-notebook ... (helpers.py:51)
-    # 2020-03-08 09:56:04 [    INFO] Running jupyter/datascience-notebook with args {'detach': True, 'ports': {'8888/tcp': 8888}, 'tty': True, 'command': ['start.sh', 'bash', '-c', 'sleep infinity']} ... (conftest.py:78)
+    # 2020-03-08 09:56:04 [    INFO] Starting container jupyter/scipy-notebook ... (helpers.py:51)
+    # 2020-03-08 09:56:04 [    INFO] Running jupyter/scipy-notebook with args {'detach': True, 'ports': {'8888/tcp': 8888}, 'tty': True, 'command': ['start.sh', 'bash', '-c', 'sleep infinity']} ... (conftest.py:78)
     # 2020-03-08 09:56:04 [    INFO] Grabing the list of specifications ... (helpers.py:76)
     # ---------------------------------------------------------------------------------------------- live log call ----------------------------------------------------------------------------------------------
     # 2020-03-08 09:56:07 [    INFO] Testing the import of packages ... (test_packages.py:125)
@@ -83,7 +83,6 @@ EXCLUDED_PACKAGES = [
     'jupyterlab-translate',
     'python-lsp-server',
     "jupyter-lsp",
-    "jupyter-pluto-proxy",
     "jupyter-resource-usage",
     "jupyter-server-proxy",
     "jupyterlab-git",

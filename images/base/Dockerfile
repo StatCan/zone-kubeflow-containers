@@ -1,13 +1,13 @@
 #
 # NOTE: Use the docker-bake.hcl file to build this image correctly.
 #
-# Same upstream image as before (datascience-notebook, Conda R and Julia
-# included), rebuilt on Python 3.14 because upstream publishes no 3.14 tag.
+# Using the scipy-notebook image from upstream (offers Conda, no R) 
+# but rebuilt on Python 3.14 because upstream publishes no 3.14 tag.
 # The default is that CI-built chain from the ACR (produced by the
-# upstream-datascience job in .github/workflows/docker.yaml), so a bare local
+# upstream-scipy job in .github/workflows/docker.yaml), so a bare local
 # build matches CI without rebuilding the upstream chain. docker-bake.hcl
 # passes the same ref explicitly -- keep the two in sync.
-ARG BASE_IMAGE=stcthezoneacr.azurecr.io/datascience-notebook:python3.14.5-d7c65738a271
+ARG BASE_IMAGE=stcthezoneacr.azurecr.io/scipy-notebook:python3.14.5-d7c65738a271
 FROM $BASE_IMAGE
 
 USER root
