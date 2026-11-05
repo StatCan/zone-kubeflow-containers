@@ -111,3 +111,51 @@ def test_r_kernelspec(package_helper):
     LOGGER.info(f"kernelspec list: {output}")
     assert result.exit_code == 0
     assert "ir" in output.split()
+
+
+# TEMPORARY: remove with images/mid/s6/cont-init.d/03-fix-user-rprofile.
+# The ~/.Rprofile that notebooks created before R 4.6.1 still carry
+# (images/mid/.Rprofile from #224), plus a user customization.
+OLD_RPROFILE = r'''home_dir <- Sys.getenv("HOME")
+package_dir <- paste0(home_dir, "/R/", "r-packages-", R.Version()$major, ".", R.Version()$minor)
+dir.create(package_dir, recursive = T, showWarnings = F)
+
+# Include any existing older R package directories for seamless upgrade
+all_r_package_dirs <- list.files(paste0(home_dir, "/R/"), pattern = "^r-packages-[0-9]+\\.[0-9]+$", full.names = TRUE, include.dirs = TRUE)
+existing_r_package_dirs <- all_r_package_dirs[file.info(all_r_package_dirs)$isdir]
+
+# Set library paths with current directory first, then any existing older directories
+.libPaths(c(package_dir, existing_r_package_dirs[existing_r_package_dirs != package_dir]))
+
+# Clean up
+rm(home_dir)
+rm(package_dir)
+rm(all_r_package_dirs)
+rm(existing_r_package_dirs)
+
+# using wget because https://github.com/StatCan/aaw-kubeflow-containers/issues/569
+# https://stackoverflow.com/questions/70559397/r-internet-routines-cannot-be-loaded-when-starting-from-rstudio
+options(download.file.method="wget")
+options(width = 123)
+'''
+
+
+def test_old_user_rprofile_is_fixed(package_helper):
+    """The startup script strips the wget override and the older-library
+    block from an existing ~/.Rprofile and keeps the user's own settings"""
+    _skip_unless_mid_or_later(package_helper)
+
+    # r-packages-4.5 matches the old block's pattern, so it would be added to
+    # .libPaths() if the block survived.
+    script = f"""export HOME="$(mktemp -d)"
+mkdir -p "$HOME/R/r-packages-4.5"
+cat > "$HOME/.Rprofile" <<'EOF'
+{OLD_RPROFILE}EOF
+bash /etc/cont-init.d/03-fix-user-rprofile
+Rscript -e 'cat(sum(grepl("r-packages-", .libPaths())), identical(getOption("download.file.method"), "wget"), getOption("width"))'
+"""
+    result = _execute_on_container(package_helper, ["bash", "-c", script])
+    output = result.output.decode("utf-8").strip()
+    LOGGER.info(f"Rprofile migration: {output}")
+    assert result.exit_code == 0, output
+    assert output.splitlines()[-1] == "1 FALSE 123", output
