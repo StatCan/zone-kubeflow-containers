@@ -61,3 +61,17 @@ def test_custom_rstudio_proxy(package_helper):
     result = _execute_on_container(package_helper, ["test", "-x", "/usr/local/bin/rstudio-use-current-conda"])
     assert result.exit_code == 0, "rstudio-use-current-conda helper is missing or not executable"
  
+
+def test_rstudio_does_not_restore_saved_libpaths(package_helper):
+    """A session suspended at shutdown resumes with the .libPaths() it saved,
+    which after an R upgrade point at the old version's library. The launcher
+    drops them so the persistent library from Rprofile.site is used instead."""
+    _skip_if_no_rstudio(package_helper)
+
+    saved = "/home/jovyan/.local/share/rstudio/sessions/active/session-test/suspended-session-data/libpaths"
+    script = f"""mkdir -p "$(dirname {saved})" && touch {saved}
+timeout 5 /opt/jupyter-custom-rstudio-proxy/start_rstudio_server.sh 18787 > /dev/null 2>&1
+test ! -e {saved}
+"""
+    result = _execute_on_container(package_helper, ["bash", "-c", script])
+    assert result.exit_code == 0, "saved .libPaths() of a suspended session was not removed"

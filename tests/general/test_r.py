@@ -12,6 +12,7 @@ import logging
 import pytest
 
 from helpers import CondaPackageHelper
+from tests.general.wait_utils import wait_for_exec_success
 
 LOGGER = logging.getLogger(__name__)
 
@@ -111,3 +112,65 @@ def test_r_kernelspec(package_helper):
     LOGGER.info(f"kernelspec list: {output}")
     assert result.exit_code == 0
     assert "ir" in output.split()
+
+
+def _wait_for_startup(container):
+    """02-start-custom writes the user library setup into Rprofile.site at boot"""
+    ready, output = wait_for_exec_success(
+        container=container,
+        command=["grep", "-q", "r-packages-", "/opt/conda/lib/R/etc/Rprofile.site"],
+        timeout=120,
+    )
+    assert ready, f"Rprofile.site was not configured at startup: {output}"
+
+
+def test_user_library_without_user_rprofile(container, package_helper):
+    """install.packages() targets ~/R/r-packages-<version> on the workspace volume
+    even when ~/.Rprofile does not run: here a project .Rprofile replaces it, as
+    renv projects do. Otherwise it falls back to /opt/conda/lib/R/library, which
+    is lost on restart."""
+    _skip_unless_mid_or_later(package_helper)
+    _wait_for_startup(container)
+
+    script = """mkdir -p /tmp/project && echo 'options(width = 123)' > /tmp/project/.Rprofile
+cd /tmp/project && Rscript -e 'cat(.libPaths()[1], getOption("width"))'
+"""
+    result = _execute_on_container(package_helper, ["bash", "-c", script])
+    output = result.output.decode("utf-8").strip()
+    LOGGER.info(f"user library: {output}")
+    assert result.exit_code == 0, output
+    r_version = EXPECTED_R_VERSION.split()[-1]
+    assert output.splitlines()[-1] == f"/home/jovyan/R/r-packages-{r_version} 123", output
+
+
+def test_wget_downloads_send_r_user_agent(container, package_helper):
+    """Older ~/.Rprofile files force download.file.method = "wget". Posit Package
+    Manager only serves binary packages to clients that send R's user agent."""
+    _skip_unless_mid_or_later(package_helper)
+    _wait_for_startup(container)
+
+    script = """cat > /tmp/echo_ua.py <<'EOF'
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = self.headers.get("User-Agent", "").encode()
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+HTTPServer(("127.0.0.1", 18904), Handler).serve_forever()
+EOF
+python3 /tmp/echo_ua.py &
+SERVER_PID=$!
+trap 'kill $SERVER_PID' EXIT
+for _ in $(seq 1 20); do
+  Rscript -e 'options(download.file.method = "wget"); download.file("http://127.0.0.1:18904/", "/tmp/ua.txt", quiet = TRUE)' 2>/dev/null && break
+  sleep 0.5
+done
+cat /tmp/ua.txt
+"""
+    result = _execute_on_container(package_helper, ["bash", "-c", script])
+    output = result.output.decode("utf-8").strip()
+    LOGGER.info(f"wget user agent: {output}")
+    r_version = EXPECTED_R_VERSION.split()[-1]
+    assert output.splitlines()[-1].startswith(f"R/{r_version} "), output
