@@ -22,6 +22,9 @@ echo "R_ZIPCMD=zip" >> /opt/conda/lib/R/etc/Renviron
 # Filer related env vars for R & Rstudio
 printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
 
+# Sanitize serviceaccounttoken from newlines. Did NOT want to edit the existing, working secret.
+serviceaccounttoken="$(echo "$serviceaccounttoken"|tr -d '\n')"
+
 # Point conda to Artifactory repository
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/conda/conda-forge-remote/
 conda config --remove channels 'defaults'
