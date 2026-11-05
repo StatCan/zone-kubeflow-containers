@@ -249,9 +249,10 @@ RUN chmod a+w ${TNS_ADMIN} \
     && chown $NB_UID:$NB_GID ${TNS_ADMIN}/tnsnames.ora
 
 # Final cleanup
+# Compiled bytecode (*.pyc) is kept: deleting it here did not shrink the image
+# (the files stay in the parent layers) but made every new container recompile
+# each module on first import, slowing Jupyter, kernel and conda startup.
 RUN rm -rf /tmp/* /var/tmp/* \
-    && find / -depth -name '*.pyc' -exec rm -rf '{}' + \
-    && find / -depth -name '__pycache__' -exec rm -rfv '{}' + \
     && conda clean -afy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER

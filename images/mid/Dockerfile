@@ -111,8 +111,9 @@ RUN mamba install --quiet --yes -c conda-forge \
         # Python<->R bridge, previously the conda-forge build (pinned to R 4.5)
         'rpy2' \
     && jupyter server extension enable --sys-prefix --py jupyter_server_proxy \
-    && jupyter lab build --dev-build=False --minimize=False \
-    && jupyter lab clean \
+    # No `jupyter lab build`: every lab extension above is prebuilt, and the
+    # rebuild swapped JupyterLab's shipped minified bundle for an unminified
+    # one (15.9 MB instead of 6.1 MB of JavaScript on every first page load).
     && npm i -g \
         'bash-language-server' \
         'dockerfile-language-server-nodejs' \
@@ -191,6 +192,11 @@ ENV SPARK_HOME="/opt/conda/lib/python3.14/site-packages/pyspark" \
 COPY pip.conf /etc/pip.conf
 COPY --chmod=755 keep-alive.sh /usr/local/bin/
 
+# The public conda-forge channel is unreachable from the Zone. Dropping it here
+# (after the last conda install) saves starting conda at every notebook boot;
+# s6/cont-init.d/02-start-custom adds the Artifactory channel at startup.
+RUN conda config --system --remove channels conda-forge
+
 # SSL Certs
 # https://jirab.statcan.ca/browse/ZONE-274?focusedId=3674862&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-3674862
 # Added cert from: https://jirab.statcan.ca/browse/ZONE-349
@@ -243,12 +249,17 @@ RUN install -d -m 0775 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension mblode.pretty-formatter@0.2.1 \
     && CS_DEFAULT_HOME="${HOME_TMP}/.local/share/code-server" code-server --install-extension "${HOME_TMP}/cpptools-linux.vsix" \
     && rm -f "${HOME_TMP}/cpptools-linux.vsix" \
-    && wget -qO- https://pixi.sh/install.sh | sh \
+    # PATH is added to .bashrc below: letting the installer write it creates
+    # ${HOME_TMP}/.bashrc first, so the seeding step skips the real .bashrc
+    && wget -qO- https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 sh \
     && DUCK_BIN="/opt/conda/bin/duckdb" \
     && DUCK_VER="$($DUCK_BIN --version | cut -d' ' -f1)" \
     && ABI_VER="v$(echo "$DUCK_VER" | sed 's/^v//' | cut -d'.' -f1-2).0" \
     && mkdir -p "${HOME_TMP}/.duckdb/extensions/${ABI_VER}/linux_amd64/" \
-    && $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;"
+    && $DUCK_BIN -c "INSTALL spatial; INSTALL httpfs; INSTALL icu; INSTALL avro; INSTALL parquet;" \
+    # Group permissions are set in this layer: changing modes in a later one
+    # stores a second copy of every file above in the image.
+    && chmod -R g=u "${HOME_TMP}"
 
 ENV EXTENSIONS_GALLERY='{"serviceUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/api","itemUrl":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/item","resourceUrlTemplate":"https://code-marketplace.thezone-prod-cc-00.cloudnative.cloud.statcan.ca/files/{publisher}/{name}/{version}/{path}"}'
 
@@ -265,6 +276,7 @@ RUN set -eu \
     && git config --file "${HOME_TMP}/.gitconfig" credential.helper manager \
     && { \
         printf 'export GPG_TTY=$(tty)\n'; \
+        printf 'export PATH="$HOME/.pixi/bin:$PATH"\n'; \
         printf 'eval "$(pixi completion --shell bash)"\n'; \
     } >> "${HOME_TMP}/.bashrc"
 
@@ -282,8 +294,11 @@ COPY --chown=${NB_USER}:${NB_GID} vscode_user_settings.json ${HOME_TMP}/.local/s
 # https://jirab.statcan.ca/browse/ZPS-40
 COPY --chown=${NB_USER}:${NB_GID} --chmod=775 rm ${HOME_TMP}/.local/bin/rm
 
+# Only entries whose group bits lag the owner's are changed (the files added
+# since the extension layer); a blanket chmod -R would duplicate that layer.
 RUN install -d -m 2775 "${HOME_TMP}/.cache" \
-    && chmod -R g=u "${HOME_TMP}" \
+    && find "${HOME_TMP}" \( -perm -u=r ! -perm -g=r -o -perm -u=w ! -perm -g=w -o -perm -u=x ! -perm -g=x \) \
+        -exec chmod g=u {} + \
     && chmod 700 "${HOME_TMP}/.gnupg" \
     && chmod 2775 "${HOME_TMP}/.cache"
 

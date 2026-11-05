@@ -26,12 +26,8 @@ rm -rf /var/lib/apt/lists/*
 if [ -x "$(command -v mamba)" ]; then
     # Full Conda Cleanup
     mamba clean --all -f -y
-    # Remove source cache files
-    if [ -d $CONDA_DIR ]; then
-        # Cleanup python bytecode files - not needed: https://jcrist.github.io/conda-docker-tips.html
-        find $CONDA_DIR -type f -name '*.pyc' -delete
-        find $CONDA_DIR -type l -name '*.pyc' -delete
-    fi
+    # Python bytecode (*.pyc) is kept on purpose: without it every new
+    # notebook container recompiles each module it imports at startup.
 fi
 
 # Clean npm
