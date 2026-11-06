@@ -147,7 +147,7 @@ def test_old_user_rprofile_is_fixed(package_helper):
 
     # r-packages-4.5 matches the old block's pattern, so it would be added to
     # .libPaths() if the block survived.
-    script = f"""export HOME="$(mktemp -d)"
+    script = f"""
 mkdir -p "$HOME/R/r-packages-4.5"
 cat > "$HOME/.Rprofile" <<'EOF'
 {OLD_RPROFILE}EOF
