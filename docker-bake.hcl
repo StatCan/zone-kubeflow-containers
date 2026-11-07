@@ -1,12 +1,40 @@
+# Jupyter Docker Stacks Upstream images
+target "docker-stacks-foundation" {
+    args = {
+        BASE_IMAGE="ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852"
+    }
+    context = "./images/upstream/docker-stacks-foundation"
+    tags = ["docker-stacks-foundation"]
+}
+
+target "base-notebook" {
+    args = {
+        BASE_IMAGE="docker-stacks-foundation"
+    }
+    context = "./images/upstream/base-notebook"
+    tags = ["base-notebook"]
+}
+
+target "minimal-notebook" {
+    args = {
+        BASE_IMAGE="base-notebook"
+    }
+    context = "./images/upstream/minimal-notebook"
+    tags = ["minimal-notebook"]
+}
+
+target "scipy-notebook" {
+    args = {
+        BASE_IMAGE="minimal-notebook"
+    }
+    context = "./images/upstream/scipy-notebook"
+    tags = ["scipy-notebook"]
+}
+
+# The Zone images
 target "base" {
     args = {
-        # The CI-built Python 3.14 scipy-notebook chain (see the
-        # upstream-scipy job in .github/workflows/docker.yaml, which
-        # produces this exact tag), so local builds start from the same base
-        # as CI and skip rebuilding the upstream chain. Requires `az acr login
-        # --name stcthezoneacr` first. Keep the tag in lockstep with that
-        # job's PYTHON_VERSION and DOCKER_STACKS_REF.
-        BASE_IMAGE="stcthezoneacr.azurecr.io/scipy-notebook:python3.14.5-d7c65738a271"
+        BASE_IMAGE="scipy-notebook"
     }
     context = "./images/base"
     tags = ["base"]
