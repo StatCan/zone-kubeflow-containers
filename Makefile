@@ -90,6 +90,16 @@ bake/%: ## build the desired image with docker bake
 	IMAGE_NAME="$(notdir $@)" \
 	bash "$(MAKE_HELPERS)/$(BAKE_BUILD_EXEC)"
 
+bake-upstream: export DARGS?=
+bake-upstream: export BASE_IMAGE?=
+bake-upstream: export REPO?=$(DEFAULT_REPO)
+bake-upstream: export TAGS?=
+bake-upstream: ## build the upstream image chain with docker bake
+	IMAGE_NAME="docker-stacks-foundation" TAGS="" bash "$(MAKE_HELPERS)/$(BAKE_BUILD_EXEC)" && \
+	IMAGE_NAME="base-notebook" BASE_IMAGE="" TAGS="" bash "$(MAKE_HELPERS)/$(BAKE_BUILD_EXEC)" && \
+	IMAGE_NAME="minimal-notebook" BASE_IMAGE="" TAGS="" bash "$(MAKE_HELPERS)/$(BAKE_BUILD_EXEC)" && \
+	IMAGE_NAME="scipy-notebook" BASE_IMAGE="" bash "$(MAKE_HELPERS)/$(BAKE_BUILD_EXEC)"
+
 post-build/%: export REPO?=$(DEFAULT_REPO)
 post-build/%: export TAG?=$(DEFAULT_TAG)
 post-build/%: export SOURCE_FULL_IMAGE_NAME?=
