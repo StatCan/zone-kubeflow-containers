@@ -96,6 +96,8 @@ RUN mamba install --quiet --yes -c conda-forge \
         'duckdb' \
         'duckdb-cli' \
         'python-duckdb' \
+        # pdftools dependency
+        'poppler' \
     && pip install --no-cache-dir \
         'kubeflow-training' \
         'git+https://github.com/betatim/vscode-binder' \
