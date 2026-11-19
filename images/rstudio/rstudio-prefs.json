@@ -1,4 +1,5 @@
 {
 	"save_workspace": "never",
-	"load_workspace": false
+	"load_workspace": false,
+	"always_save_history": false
 }

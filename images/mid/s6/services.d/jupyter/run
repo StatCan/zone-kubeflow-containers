@@ -22,9 +22,13 @@ export JUPYTER_RUNTIME_DIR="/tmp/jupyter_runtime"
 cd "${HOME}" || { echo "ERROR: failed to cd to ${HOME}"; exit 1; }
 echo "--------------------starting jupyter--------------------"
 exec 2>&1
+# User pip installs persist in ~/.local (ZONE-543). -s keeps them off the server's
+# sys.path so a broken one cannot stop the server from starting and lock the user
+# out; kernels and terminals are separate processes and still see them.
+# -P because `-m` would otherwise put the working directory ($HOME) on sys.path.
 exec \
   s6-envdir /run/s6-env \
-  /opt/conda/bin/jupyter lab \
+  /opt/conda/bin/python -s -P -m jupyterlab \
   --notebook-dir="${HOME}" \
   --ip=0.0.0.0 \
   --no-browser \
