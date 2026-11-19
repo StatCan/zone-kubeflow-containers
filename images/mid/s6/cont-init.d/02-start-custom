@@ -22,15 +22,21 @@ echo "R_ZIPCMD=zip" >> /opt/conda/lib/R/etc/Renviron
 # Filer related env vars for R & Rstudio
 printenv | grep svm >> /opt/conda/lib/R/etc/Renviron
 
-# Retrieve service account details
-serviceaccountname=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Username}} | base64 --decode`
-serviceaccounttoken=`kubectl get secret artifactory-creds -n $NB_NAMESPACE --template={{.data.Token}} | base64 --decode`
+# Sanitize serviceaccounttoken from newlines. Did NOT want to edit the existing, working secret.
+serviceaccounttoken="$(echo "$serviceaccounttoken"|tr -d '\n')"
+
 # Point conda to Artifactory repository
 conda config --add channels https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/conda/conda-forge-remote/
 conda config --remove channels 'defaults'
 conda config --remove channels conda-forge --system
 
-pip config set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+# Point pip to Artifactory repository (user scope, so venvs use it too)
+pip config --user set global.index-url https://$serviceaccountname:$serviceaccounttoken@artifactory.cloud.statcan.ca/artifactory/api/pypi/pypi/simple
+
+# Persist `pip install` on the workspace volume (ZONE-543). The site file
+# (/opt/conda/pip.conf) is only read by the base env, so installs there go to
+# ~/.local while venvs and conda envs keep installing into themselves.
+pip config --site set install.user true
 
 # create pixi config to change default channel
 if [ ! -d "/home/${NB_USER}/.pixi/config.toml" ]; then
