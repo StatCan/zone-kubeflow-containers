@@ -137,8 +137,8 @@ RUN printf '%s\n' \
         >> /opt/conda/lib/R/etc/Rprofile.site \
     && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
                              'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
-                             'languageserver', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
-                             'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'tidymodels', \
+                             'languageserver', 'lintr', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
+                             'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'styler', 'tidymodels', \
                              'tidyverse'); \
                     install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
                     missing <- setdiff(pkgs, rownames(installed.packages())); \
