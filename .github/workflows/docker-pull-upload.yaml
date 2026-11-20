@@ -1,7 +1,4 @@
-name: Download a copy of the image of of main, retag it, and upload
-
-env:
-  HADOLINT_VERSION: "2.12.0"
+name: Copy unchanged image into the PR repository
 
 on:
   workflow_call:
@@ -12,6 +9,14 @@ on:
         type: string
       registry-name:
         description: url of the registry <registy-name>
+        required: true
+        type: string
+      repository-suffix:
+        description: Suffix for the destination ACR repository
+        required: true
+        type: string
+      tags:
+        description: Space-separated tags to publish
         required: true
         type: string
     secrets:
@@ -25,18 +30,7 @@ on:
 jobs:
   pull-upload:
     runs-on: ubuntu-latest
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Free up all available disk space before building
-        run: ./.github/scripts/cleanup_runner.sh
-
       # Connect to Azure Container registry (ACR)
       - uses: azure/docker-login@v1
         with:
@@ -44,24 +38,26 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # If the target is beta, pull from beta
-      - name: Pull existing image
-        id: pull-existing
+      - name: Copy target branch image to the PR repository
+        shell: bash
+        env:
+          IMAGE: ${{ inputs.registry-name }}/${{ inputs.image }}
+          REPOSITORY_SUFFIX: ${{ inputs.repository-suffix }}
+          TAGS: ${{ inputs.tags }}
         run: |
-          image_name=${{ inputs.registry-name }}/${{ inputs.image }}:v2
-          if [ "${{ github.event.pull_request.base.ref }}" == "beta" ]; then
-            image_name=${{ inputs.registry-name }}/${{ inputs.image }}:beta
+          source="$IMAGE:v2"
+          if [[ $GITHUB_BASE_REF == beta ]]; then
+            source="$IMAGE-beta:latest"
+            # The first PR precedes the beta push that creates the new repository.
+            if ! result=$(docker buildx imagetools inspect "$source" 2>&1); then
+              case "$result" in
+                *"not found"*|*"manifest unknown"*|*"name unknown"*) source="$IMAGE:beta" ;;
+                *) echo "$result" >&2; exit 1 ;;
+              esac
+            fi
           fi
-
-          docker pull ${image_name}
-          
-          echo "image_name=$image_name" >> $GITHUB_OUTPUT
-
-      - name: Retag existing image
-        run: make post-build/${{ inputs.image }} REPO=${{ inputs.registry-name }} SOURCE_FULL_IMAGE_NAME=${{ steps.pull-existing.outputs.image_name }}
-
-      - name: Push image to registry (default pushes all tags)
-        run: make push/${{ inputs.image }} REPO=${{ inputs.registry-name }}
-
-      # Free up space from build process (containerscan action will run out of space if we don't)
-      - run: ./.github/scripts/cleanup_runner.sh
+          args=()
+          for tag in $TAGS; do
+            args+=(--tag "$IMAGE$REPOSITORY_SUFFIX:$tag")
+          done
+          docker buildx imagetools create --prefer-index=false "${args[@]}" "$source"

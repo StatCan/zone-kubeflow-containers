@@ -2,11 +2,13 @@ name: Build, test, and push Docker Images
 on:
   push:
     branches:
-      - "master"
-      - "beta"
+      - "**"
     paths:
       - ".github/workflows/*"
-
+      - ".github/scripts/image-route.sh"
+      - "make_helpers/bake-build.sh"
+      - "make_helpers/get_branch_name.sh"
+      - "Makefile"
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
@@ -14,9 +16,13 @@ on:
       - "docker-bake.hcl"
       - "requirements-dev.txt"
   pull_request:
+    branches: [beta, master, main]
     paths:
       - ".github/workflows/*"
-      
+      - ".github/scripts/image-route.sh"
+      - "make_helpers/bake-build.sh"
+      - "make_helpers/get_branch_name.sh"
+      - "Makefile"
       - "images/**"
       - "!images/*/README.md"
       - "tests/**"
@@ -24,30 +30,59 @@ on:
       - "docker-bake.hcl"
       - "requirements-dev.txt"
 
+permissions:
+  contents: read
+
 jobs:
   vars:
+    if: github.event.deleted != true
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
+      pr-run: ${{ steps.duplicate.outputs.pr-run }}
       REGISTRY_NAME: "stcthezoneacr.azurecr.io"
-      branch-name: ${{ steps.getBranch.outputs.branch-name }}
+      repository-suffix: ${{ steps.route.outputs.repository-suffix }}
+      tags: ${{ steps.route.outputs.tags }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Get branch name
-        id: getBranch
+      - name: Check for a PR run covering this feature push
+        id: duplicate
+        if: github.event_name == 'push' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/beta'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          chmod +x ./make_helpers/get_branch_name.sh
-          BRANCH_NAME=$(./make_helpers/get_branch_name.sh)
-          echo "branch-name=$BRANCH_NAME"
-          echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          # The push can start before the associated PR run appears in the Actions API.
+          for delay in 0 5 10; do
+            sleep "$delay"
+            if ! pr_run=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/docker.yaml/runs" \
+              -f event=pull_request -f branch="$GITHUB_REF_NAME" -f head_sha="$GITHUB_SHA" \
+              --jq 'first(.workflow_runs[] | select(.head_repository.id == .repository.id and
+                .status != "completed") | .html_url) // empty'); then
+              echo "::warning::Could not check for a PR run. Continuing with the feature build."
+              exit 0
+            fi
+            if [[ -n $pr_run ]]; then
+              echo "The PR workflow covers this push: $pr_run" >> "$GITHUB_STEP_SUMMARY"
+              echo "pr-run=$pr_run" >> "$GITHUB_OUTPUT"
+              break
+            fi
+          done
+      - uses: actions/checkout@v4
+      - name: Select image repository and tags
+        id: route
+        run: bash .github/scripts/image-route.sh >> "$GITHUB_OUTPUT"
 
   upstream-scipy:
+    if: needs.vars.outputs.pr-run == ''
     needs: [vars]
     uses: ./.github/workflows/docker-build-upstream.yaml
     with:
       base-image: "ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -61,7 +96,8 @@ jobs:
       parent-image: "scipy-notebook"
       parent-image-is-diff: "${{ needs.upstream-scipy.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -75,7 +111,8 @@ jobs:
       parent-image: "base"
       parent-image-is-diff: "${{ needs.base.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -89,7 +126,8 @@ jobs:
       parent-image: "mid"
       parent-image-is-diff: "${{ needs.mid.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -103,7 +141,8 @@ jobs:
       parent-image: "rstudio"
       parent-image-is-diff: "${{ needs.rstudio.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -119,7 +158,8 @@ jobs:
       parent-image: "sas-kernel"
       parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -133,7 +173,8 @@ jobs:
       parent-image: "sas-kernel"
       parent-image-is-diff: "${{ needs.sas-kernel.outputs.is-diff }}"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      branch-name: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tags: ${{ needs.vars.outputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -146,7 +187,8 @@ jobs:
     with:
       image: "base"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tag: ${{ github.sha }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -158,7 +200,8 @@ jobs:
     with:
       image: "mid"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tag: ${{ github.sha }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -170,7 +213,8 @@ jobs:
     with:
       image: "rstudio"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tag: ${{ github.sha }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -182,7 +226,8 @@ jobs:
     with:
       image: "sas-kernel"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tag: ${{ github.sha }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -194,7 +239,8 @@ jobs:
     with:
       image: "jupyterlab-cpu"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tag: ${{ github.sha }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -206,7 +252,8 @@ jobs:
     with:
       image: "sas"
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-      tag: "${{ needs.vars.outputs.branch-name }}"
+      repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+      tag: ${{ github.sha }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}

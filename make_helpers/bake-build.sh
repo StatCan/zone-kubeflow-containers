@@ -6,6 +6,7 @@
 #   REPO (The location where our images live)
 #   TAGS (Any desired tags on the final image, expects a space seperated list of values)
 #   IMAGE_NAME (The name of the bake target to build)
+#   REPOSITORY_SUFFIX (Optional suffix for the published image name)
 #   DARGS (Any additional parameters to set to the bake command)
 
 ARGS=()
@@ -16,7 +17,7 @@ TAG_LIST=()
 if [[ -n "${TAGS}" ]]; then
     TAG_LIST=($TAGS)
     # for each tag given, prefix the tag with the bake value to override the tags from the bake file
-    TAG_LIST=( "${TAG_LIST[@]/#/--set ${IMAGE_NAME}.tags=${REPO}/${IMAGE_NAME}:}" )
+    TAG_LIST=( "${TAG_LIST[@]/#/--set ${IMAGE_NAME}.tags=${REPO}/${IMAGE_NAME}${REPOSITORY_SUFFIX}:}" )
     
     # concats the list of tag overrides to the bake parameters list
     ARGS+=( "${TAG_LIST[@]}" )

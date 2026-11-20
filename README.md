@@ -317,25 +317,18 @@ k8scc01covidacr.azurecr.io/sas              v2         2b9acb795079   19 hours a
 ### Testing On-Platform
 
 GitHub Actions CI is enabled to do building, scanning, automated testing, pushing of our images to ACR.
-The workflows will trigger on the following:
+For changes to images, tests, or build configuration, the workflow publishes to the following ACR repositories. Examples use the JupyterLab CPU image.
 
-- any push to master or beta
-- any push to an open PR that edits files in `.github/workflows/` or `/images/`
+| Event | Example image |
+| --- | --- |
+| Push to `master` | `jupyterlab-cpu:v2` (also `master` and `latest`) |
+| Push to `beta` | `jupyterlab-cpu-beta:latest` |
+| Feature push or PR targeting `beta`, `master`, or `main` | `jupyterlab-cpu-branch:feat1` for branch `feat1` |
 
-This allows for easy scanning and automated testing for images.
-
-After the workflow is complete,
-the images will be available on artifactory.cloud.statcan.ca/das-aaw-docker.
-You can access these images on https://zone.statcan.ca using any of the following:
-
-- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:BRANCH_NAME
-- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:SHA
-- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:SHORT_SHA
-
-Pushes to master will also have the following tags:
-
-- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:latest
-- artifactory.cloud.statcan.ca/das-aaw-docker/IMAGENAME:v2
+When a feature push already has a queued or running PR workflow for the same branch and commit, the PR workflow handles publishing and testing.
+Each repository also receives the full and short commit SHA tags. On PRs these identify the tested merge commit.
+All feature branches share one `-branch` repository per image. Branch names that need sanitizing or shortening get a hash suffix.
+Use the repository and tag under `artifactory.cloud.statcan.ca/das-aaw-docker/` to select an image on the Zone.
 
 ### Adding New Software
 
@@ -376,7 +369,8 @@ and increasing that size would negatively impact the time it takes up for a work
         parent-image-is-diff: "${{ needs.parent.outputs.is-diff }}"     # Checks if the parent image had changes. Omit if stage uses an upsteam image
         # The following values are static between differnt stages
         registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-        branch-name: "${{ needs.vars.outputs.branch-name }}"
+        repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+        tags: ${{ needs.vars.outputs.tags }}
       secrets:
         REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -397,7 +391,8 @@ and the image name must be added to the matrix in `./github/workflows/docker-nig
         image: "imagename"                                # The name of the image that will be tested
         # The following values are static between differnt tests
         registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
-        tag: "${{ needs.vars.outputs.branch-name }}"
+        repository-suffix: ${{ needs.vars.outputs.repository-suffix }}
+        tag: ${{ github.sha }}
       secrets:
         REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -490,7 +485,7 @@ The Github workflow is set up to build the images and their dependant stages.
 
 See below for a flowchart of this build.
 
-The main workflow is `docker.yaml`, it controls the stage build order, and what triggers the CI. (Pushes to master, pushes to an open pull-request, and nightly builds)
+The main workflow, `docker.yaml`, controls the stage build order for branch pushes and pull requests. The separate `docker-nightly.yaml` workflow tests the published `v2` images.
 
 The building of a stage is controled by `docker-steps.yaml`. It checks if there are changes to the stage or dependant stages. Builds a new image if there are changes, or pulls a copy of the existing image if not.
 

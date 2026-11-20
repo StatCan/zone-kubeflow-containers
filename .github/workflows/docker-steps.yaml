@@ -28,8 +28,12 @@ on:
         description: url of the registry <registy-name>
         required: true
         type: string
-      branch-name:
-        description: The name of the current branch 
+      repository-suffix:
+        description: Suffix for the destination ACR repository
+        required: true
+        type: string
+      tags:
+        description: Space-separated tags to publish
         required: true
         type: string
     secrets:
@@ -56,41 +60,18 @@ jobs:
     with:
       directory: ${{ inputs.directory }}
       parent-image-is-diff: ${{ inputs.parent-image-is-diff }}
-      branch-name: ${{ inputs.branch-name }}
-
-  set-and-print-variables:
-    needs: [check-diff]
-    runs-on: ubuntu-latest
-    outputs:
-      base-image: ${{ steps.set-base.outputs.base-image }}
-    steps:
-      - name: print inputs
-        run: echo "${{ toJSON(inputs) }}"
-      - name: print check-diff
-        run: echo "${{ toJSON(needs.check-diff) }}"
-      - name: set BASE_IMAGE env
-        id: set-base
-        # if base image is given, then it is from upstream
-        # otherwise, set the base image to use our registry
-        run: |
-          if [ "${{ inputs.base-image }}" != "" ]; then
-            echo "BASE_IMAGE=${{ inputs.base-image }}"
-            echo "base-image=${{ inputs.base-image }}" >> $GITHUB_OUTPUT
-          else
-            echo "BASE_IMAGE=${{ inputs.registry-name }}/${{ inputs.parent-image }}:${{ inputs.branch-name }}"
-            echo "base-image=${{ inputs.registry-name }}/${{ inputs.parent-image }}:${{ inputs.branch-name }}" >> $GITHUB_OUTPUT
-          fi
 
   build-upload:
-    needs: [check-diff, set-and-print-variables]
+    needs: [check-diff]
     if: ${{ needs.check-diff.outputs.is-diff == 'true' }}
     uses: ./.github/workflows/docker-build-upload.yaml
     with:
       directory: ${{ inputs.directory }}
       image: ${{ inputs.image }}
-      base-image: ${{ needs.set-and-print-variables.outputs.base-image }}
+      base-image: ${{ inputs.base-image || format('{0}/{1}{2}:{3}', inputs.registry-name, inputs.parent-image, inputs.repository-suffix, github.sha) }}
       registry-name: ${{ inputs.registry-name }}
-      branch-name: ${{ inputs.branch-name }}
+      repository-suffix: ${{ inputs.repository-suffix }}
+      tags: ${{ inputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -104,6 +85,8 @@ jobs:
     with:
       image: ${{ inputs.image }}
       registry-name: ${{ inputs.registry-name }}
+      repository-suffix: ${{ inputs.repository-suffix }}
+      tags: ${{ inputs.tags }}
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
