@@ -9,11 +9,7 @@ on:
         type: string
       parent-image-is-diff:
         description: Parent image has been changed?
-        required: true
-        type: string
-      branch-name:
-        description: The name of the current branch 
-        required: true
+        default: "false"
         type: string
     outputs:
       is-diff:
@@ -28,36 +24,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Fetch target branch
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}
+        with:
+          fetch-depth: 2
 
       - name: Check for changes
         id: check-changes
-        run: | # Check for changes excluding README.md
-          if [ "${{ github.event_name }}" == "push" ]; then
-            echo "Always build on pushes to master and beta"
-            echo "is-diff=true" >> $GITHUB_OUTPUT
-          elif [ "${{ inputs.parent-image-is-diff }}" == "true" ]; then
-            echo "Parent is diff"
-            echo "is-diff=true" >> $GITHUB_OUTPUT
-          # Check if the subdirectory exists in the base branch
-          elif ! git ls-tree -d origin/${{ github.event.pull_request.base.ref }} -- "images/${{ inputs.directory }}" >/dev/null 2>&1; then
-            echo "Subdirectory does not exist in the base branch"
-            echo "is-diff='true'" >> $GITHUB_OUTPUT
-          else
-            CHANGES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/${{ inputs.directory }}" | grep -v "README.md" || true)
-            NEW_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/${{ inputs.directory }}" | grep -v "README.md" || true)
-            
-            CHANGES="${CHANGES}${NEW_FILES}"
-
-            if [ -n "$CHANGES" ]; then
-              echo "Changes detected (excluding README.md)"
-              echo "is-diff=true" >> $GITHUB_OUTPUT
+        env:
+          DIRECTORY: ${{ inputs.directory }}
+          PARENT_CHANGED: ${{ inputs.parent-image-is-diff }}
+        run: |
+          changed=true
+          # PR checkouts are merge commits. Their first parent is the exact target revision.
+          if [[ $GITHUB_EVENT_NAME == pull_request && $PARENT_CHANGED == false ]]; then
+            if git diff --quiet HEAD^1 HEAD -- "images/$DIRECTORY" ":(exclude,glob)**/README.md"; then
+              changed=false
             else
-              echo "No changes detected"
-              echo "is-diff=false" >> $GITHUB_OUTPUT
+              status=$?
+              [[ $status == 1 ]] || exit "$status"
             fi
           fi
+          echo "is-diff=$changed" >> "$GITHUB_OUTPUT"

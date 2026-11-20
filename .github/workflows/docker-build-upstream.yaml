@@ -14,8 +14,12 @@ on:
         description: url of the registry <registy-name>
         required: true
         type: string
-      branch-name:
-        description: The name of the current branch 
+      repository-suffix:
+        description: Suffix for the destination ACR repository
+        required: true
+        type: string
+      tags:
+        description: Space-separated tags to publish
         required: true
         type: string
     outputs:
@@ -32,42 +36,9 @@ on:
 
 jobs:
   check-diff:
-    runs-on: ubuntu-latest
-    outputs:
-      is-diff: ${{ steps.check-changes.outputs.is-diff }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Fetch target branch
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-
-      - name: Check for changes
-        id: check-changes
-        run: | # Check for changes excluding README.md
-          if [ "${{ github.event_name }}" == "push" ]; then
-            echo "Always build on pushes to master and beta"
-            echo "is-diff=true" >> $GITHUB_OUTPUT
-          # Check if the subdirectory exists in the base branch
-          elif ! git ls-tree -d origin/${{ github.event.pull_request.base.ref }} -- "images/upstream" >/dev/null 2>&1; then
-            echo "Subdirectory does not exist in the base branch"
-            echo "is-diff='true'" >> $GITHUB_OUTPUT
-          else
-            CHANGES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/*" || true)
-            NEW_FILES=$(git diff --name-only --diff-filter=A origin/${{ github.event.pull_request.base.ref }} HEAD -- "images/upstream/*" || true)
-            
-            CHANGES="${CHANGES}${NEW_FILES}"
-
-            if [ -n "$CHANGES" ]; then
-              echo "Changes detected (excluding README.md)"
-              echo "is-diff=true" >> $GITHUB_OUTPUT
-            else
-              echo "No changes detected"
-              echo "is-diff=false" >> $GITHUB_OUTPUT
-            fi
-          fi
+    uses: ./.github/workflows/check-diff.yaml
+    with:
+      directory: upstream
 
   build-upload:
     needs: [check-diff]
@@ -101,29 +72,31 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Set short SHA
-        run: |
-          shortSha=$(git rev-parse --short ${{ github.sha}})
-          echo "COMMIT_SHORT_SHA=$shortSha"
-          echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
-
       - name: Build image
-        id: build-image
+        env:
+          REPOSITORY_SUFFIX: ${{ inputs.repository-suffix }}
+          TAGS: ${{ inputs.tags }}
         run: |
-          tags="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
-          
-          # adds tags for master
-          if [ "${{ inputs.branch-name }}" == 'master' ]; then
-            tags="${tags} v2 latest"
-          fi
-
-          make bake-upstream BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} TAGS="${tags}"
+          make bake-upstream BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }}
 
       - name: Echo disk usage after build completion
         run: ./.github/scripts/echo_usage.sh
 
-      - name: Push image to registry (default pushes all tags)
-        run: make push/scipy-notebook REPO=${{ inputs.registry-name }}
+      - name: Push SciPy image to registry
+        run: make push/scipy-notebook${{ inputs.repository-suffix }} REPO=${{ inputs.registry-name }}
 
       # Free up space from build process (containerscan action will run out of space if we don't)
       - run: ./.github/scripts/cleanup_runner.sh
+
+  copy-unchanged:
+    needs: [check-diff]
+    if: needs.check-diff.outputs.is-diff == 'false'
+    uses: ./.github/workflows/docker-pull-upload.yaml
+    with:
+      image: scipy-notebook
+      registry-name: ${{ inputs.registry-name }}
+      repository-suffix: ${{ inputs.repository-suffix }}
+      tags: ${{ inputs.tags }}
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}

@@ -22,8 +22,12 @@ on:
         description: url of the registry <registy-name>
         required: true
         type: string
-      branch-name:
-        description: The name of the current branch 
+      repository-suffix:
+        description: Suffix for the destination ACR repository
+        required: true
+        type: string
+      tags:
+        description: Space-separated tags to publish
         required: true
         type: string
     secrets:
@@ -74,24 +78,13 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Set short SHA
-        run: |
-          shortSha=$(git rev-parse --short ${{ github.sha}})
-          echo "COMMIT_SHORT_SHA=$shortSha"
-          echo "COMMIT_SHORT_SHA=$shortSha" >> $GITHUB_ENV
-
       - name: Build image
-        id: build-image
+        env:
+          REPOSITORY_SUFFIX: ${{ inputs.repository-suffix }}
+          TAGS: ${{ inputs.tags }}
         run: |
-          tags="${{inputs.branch-name}} ${{env.COMMIT_SHORT_SHA}} ${{github.sha}}"
-          
-          # adds tags for master
-          if [ "${{ inputs.branch-name }}" == 'master' ]; then
-            tags="${tags} v2 latest"
-          fi
-
           make bake/${{ inputs.image }} BASE_IMAGE=${{ inputs.base-image }} REPO=${{ inputs.registry-name }} \
-            TAGS="${tags}" DARGS="--push --set ${{ inputs.image }}.args.ACCOUNT_NAME=${{ secrets.SAS_SA_NAME }} \
+            DARGS="--push --set ${{ inputs.image }}.args.ACCOUNT_NAME=${{ secrets.SAS_SA_NAME }} \
             --set ${{ inputs.image }}.args.SRC_ACCOUNT_KEY=${{ secrets.SAS_SA_KEY_1 }}"
 
       - name: Echo disk usage after build completion
