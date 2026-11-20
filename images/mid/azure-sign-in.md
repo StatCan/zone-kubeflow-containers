@@ -18,6 +18,34 @@ That's it. `az storage`, `az cognitiveservices`, and friends work as you.
 If `az login --identity` complains that you have no subscriptions, add
 `--allow-no-subscriptions` (see Troubleshooting below).
 
+## AzCopy
+
+Run `azcopy --version` in your workspace terminal to check that AzCopy is
+available. Set `AZCOPY_AUTO_LOGIN_TYPE=MSI` on the command to use your Zone
+sign-in. You need write access to the destination for these upload examples.
+Replace `./example.csv` with a file in your workspace or on a mounted filer.
+Both examples opt out of [AzCopy usage telemetry](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10#opt-out-of-azcopy-telemetry).
+
+Upload to Azure Blob Storage:
+
+```bash
+AZCOPY_AUTO_LOGIN_TYPE=MSI azcopy copy ./example.csv \
+  'https://<account>.blob.core.windows.net/<container>/example.csv' \
+  --disable-telemetry=true
+```
+
+Upload to a Fabric OneLake lakehouse:
+
+```bash
+AZCOPY_AUTO_LOGIN_TYPE=MSI azcopy copy ./example.csv \
+  'https://onelake.dfs.fabric.microsoft.com/<workspace>/<lakehouse>.lakehouse/Files/example.csv' \
+  --trusted-microsoft-suffixes 'fabric.microsoft.com' --disable-telemetry=true
+```
+
+To download, put the cloud URL first and the local path second. See
+[Getting started with AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10)
+and [AzCopy with OneLake](https://learn.microsoft.com/en-us/fabric/onelake/onelake-azcopy).
+
 ## Python
 
 The standard Azure SDK credentials just work — no configuration needed:
