@@ -325,6 +325,7 @@ For changes to images, tests, or build configuration, the workflow publishes to 
 | Push to `beta` | `jupyterlab-cpu-beta:latest` |
 | Feature push or PR targeting `beta`, `master`, or `main` | `jupyterlab-cpu-branch:feat1` for branch `feat1` |
 
+When a feature push already has a queued or running PR workflow for the same branch and commit, the PR workflow handles publishing and testing.
 Each repository also receives the full and short commit SHA tags. On PRs these identify the tested merge commit.
 All feature branches share one `-branch` repository per image. Branch names that need sanitizing or shortening get a hash suffix.
 Use the repository and tag under `artifactory.cloud.statcan.ca/das-aaw-docker/` to select an image on the Zone.

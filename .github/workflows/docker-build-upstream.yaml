@@ -1,5 +1,8 @@
 name: Build and Push upstream image if needed
 
+permissions:
+  contents: read
+
 env:
   HADOLINT_VERSION: "2.12.0"
 

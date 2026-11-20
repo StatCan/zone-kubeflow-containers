@@ -36,11 +36,6 @@ on:
 jobs:
   pull-test:
     runs-on: ubuntu-latest
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     env:
       IMAGE_REF: ${{ inputs.registry-name }}/${{ inputs.image }}${{ inputs.repository-suffix }}:${{ inputs.tag }}
       TRIVY_VERSION: "0.69.3"
