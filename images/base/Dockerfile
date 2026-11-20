@@ -194,17 +194,17 @@ RUN printf '#!/bin/sh\nexec env -u LD_LIBRARY_PATH /usr/bin/nano "$@"\n' > /usr/
 ENV VISUAL="/usr/local/bin/nano"
 ENV EDITOR=${VISUAL}
 
-# ODBC drivers and Oracle client in one layer
+# Microsoft packages and Oracle client in one layer
 RUN \
-    # Microsoft ODBC drivers, add the signature to trust the Microsoft repo
+    # Add the Microsoft APT repository for ODBC drivers and AzCopy
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg \
     && echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" > /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
-    # Install the driver
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
         msodbcsql18 \
         # optional: for bcp and sqlcmd
         mssql-tools18 \
+        azcopy \
         unixodbc \
         # installing unixODBC
         unixodbc-dev \

@@ -60,6 +60,11 @@ jobs:
       directory: "base"
       parent-image: "scipy-notebook"
       parent-image-is-diff: "${{ needs.upstream-scipy.outputs.is-diff }}"
+      # When upstream skips the build, use the target branch's published image.
+      base-image: >-
+        ${{ needs.upstream-scipy.outputs.is-diff == 'false' &&
+            format('{0}/scipy-notebook:{1}', needs.vars.outputs.REGISTRY_NAME,
+              github.base_ref == 'beta' && 'beta' || 'v2') || '' }}
       registry-name: "${{ needs.vars.outputs.REGISTRY_NAME }}"
       branch-name: "${{ needs.vars.outputs.branch-name }}"
     secrets:
