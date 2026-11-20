@@ -91,7 +91,7 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-base=4.6.1' \
+        'r-base=4.5.1' \
         'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
