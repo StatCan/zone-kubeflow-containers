@@ -53,17 +53,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if ! pr_run=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/docker.yaml/runs" \
-            -f event=pull_request -f branch="$GITHUB_REF_NAME" -f head_sha="$GITHUB_SHA" \
-            --jq 'first(.workflow_runs[] | select(.head_repository.id == .repository.id and
-              (.status == "queued" or .status == "in_progress")) | .html_url) // empty'); then
-            echo "::warning::Could not check for a PR run. Continuing with the feature build."
-            exit 0
-          fi
-          if [[ -n $pr_run ]]; then
-            echo "The PR workflow covers this push: $pr_run" >> "$GITHUB_STEP_SUMMARY"
-            echo "pr-run=$pr_run" >> "$GITHUB_OUTPUT"
-          fi
+          # The push can start before the associated PR run appears in the Actions API.
+          for delay in 0 5 10; do
+            sleep "$delay"
+            if ! pr_run=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/docker.yaml/runs" \
+              -f event=pull_request -f branch="$GITHUB_REF_NAME" -f head_sha="$GITHUB_SHA" \
+              --jq 'first(.workflow_runs[] | select(.head_repository.id == .repository.id and
+                .status != "completed") | .html_url) // empty'); then
+              echo "::warning::Could not check for a PR run. Continuing with the feature build."
+              exit 0
+            fi
+            if [[ -n $pr_run ]]; then
+              echo "The PR workflow covers this push: $pr_run" >> "$GITHUB_STEP_SUMMARY"
+              echo "pr-run=$pr_run" >> "$GITHUB_OUTPUT"
+              break
+            fi
+          done
       - uses: actions/checkout@v4
       - name: Select image repository and tags
         id: route
