@@ -123,6 +123,10 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
 
+# Zone frozen images
+# Since we want to keep the same R pacakge versions, we are just going to copy them from the previous frozen image
+COPY --from=stcthezoneacr.azurecr.io/jupyterlab-cpu-rpy-2025:init-v2 /opt/conda/lib/R/library /opt/conda/lib/R/library
+
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
 # that came from conda-forge (scipy-notebook base + the list above)
 # plus languageserver. PPM only serves binaries when R's HTTP user agent
@@ -135,14 +139,14 @@ RUN printf '%s\n' \
         '# Posit Package Manager serves prebuilt binaries only to clients that advertise their R version.' \
         'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
         >> /opt/conda/lib/R/etc/Rprofile.site \
-    && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
-                             'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
-                             'languageserver', 'lintr', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
-                             'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'styler', 'tidymodels', \
-                             'tidyverse'); \
-                    install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
-                    missing <- setdiff(pkgs, rownames(installed.packages())); \
-                    if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
+    # && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
+    #                          'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
+    #                          'languageserver', 'lintr', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
+    #                          'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'styler', 'tidymodels', \
+    #                          'tidyverse'); \
+    #                 install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
+    #                 missing <- setdiff(pkgs, rownames(installed.packages())); \
+    #                 if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
     # Re-register the Jupyter R kernel (the conda r-irkernel kernelspec went with the package)
     && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
     && rm -rf /tmp/downloaded_packages /tmp/Rtmp* \
@@ -163,7 +167,7 @@ RUN set -eux; \
     pip install --no-cache-dir 'adlfs==2026.5.0'; \
     pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc]'; \
     pip wheel --no-cache-dir --no-deps --no-build-isolation --wheel-dir /opt/zone-token-broker/dist /opt/zone-token-broker; \
-    /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
+    # /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
     fix-permissions "${CONDA_DIR}"; \
     fix-permissions /opt/zone-token-broker
 
