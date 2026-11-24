@@ -100,13 +100,14 @@ RUN mamba install --quiet --yes -c conda-forge \
         'r-devtools' \
         'r-e1071' \
         'r-forecast' \
-        'r-hexbin' \
         'r-hdf5r' \
+        'r-hexbin' \
         'r-htmltools' \
         'r-htmlwidgets' \
         'r-httr' \
         'r-irkernel' \
         'r-jsonlite' \
+        'r-languageserver' \
         'r-markdown' \
         'r-nycflights13' \
         'r-odbc' \
@@ -192,7 +193,7 @@ RUN set -eux; \
     pip install --no-cache-dir 'adlfs==2026.5.0'; \
     pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc]'; \
     pip wheel --no-cache-dir --no-deps --no-build-isolation --wheel-dir /opt/zone-token-broker/dist /opt/zone-token-broker; \
-    # /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
+    /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
     fix-permissions "${CONDA_DIR}"; \
     fix-permissions /opt/zone-token-broker
 
