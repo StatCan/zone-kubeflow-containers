@@ -30,5 +30,22 @@ RUN cd ${RESOURCES_PATH} && \
    /bin/bash ./install.sh && \
    rm /tmp/aocc-compiler-${AOCC_VERSION}.tar
 
+# Setup the fabrik setup for the image.
+# Copy all the requirement file.  
+COPY runtime2.0.yaml /tmp/runtime2.0.yaml
+
+RUN conda env create \
+    -f /tmp/runtime2.0.yaml \
+    -n custom-env
+
+
+# # Setup the fabrik setup for the image.
+# # Copy all the requirement file.  
+# COPY requirements-2.0.txt /tmp/requirements.txt
+
+# RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# USER $NB_USER
+   
 USER $NB_USER
    

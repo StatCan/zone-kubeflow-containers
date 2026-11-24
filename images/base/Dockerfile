@@ -75,6 +75,8 @@ RUN apt-get update --yes \
         libtiff-dev \
         libfreetype-dev \
         libfreetype6 \
+        # pdftools dependency
+        libpoppler-cpp-dev \
         # Some common system dependencies
         libcairo2-dev \
         libpango1.0-dev \

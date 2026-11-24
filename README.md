@@ -139,6 +139,24 @@ graph TD
 
 ## Usage
 
+### How to build the images locally
+
+1. Connect to acr: `az acr login -n stcthezoneacr`
+2. Build each of the steps from the docker-bake.hcl file one at a time until the layer you want
+- make bake/docker-stacks-foundation
+- make bake/base-notebook
+- make bake/minimal-notebook
+- make bake/scipy-notebook
+- make bake/base
+- make bake/mid
+- make bake/rstudio
+- make bake/sas-kernel
+- make bake/jupyterlab-cpu
+- make bake/sas
+
+3. Once the images is ready and available under `codker images` you can now run it and test locally.
+4. Open the running image going to `http://127.0.0.1:8888/lab`
+
 ### Building and Tagging Docker Images
 
 We have setup [Docker Bake](https://docs.docker.com/build/bake/) to help with building our images. Docker Bake lets us define our build configuration for our images through a file instead of CLI instructions.
@@ -151,7 +169,7 @@ To review any parameters for the image builds, you can review and edit the [dock
 This file is currently setup for local development. We use parameter overrides for our github workflows to adjust the docker bake file for our CI/CD process.
 
 **Note:** Our workflows save all our images in our Azure Container Registry. To pull and push to our ACR locally, 
-you will first have to login using `az acr login -n k8scc01covidacr`
+you will first have to login using `az acr login -n stcthezoneacr`
 
 **Note:** `make push` by default does `docker push --all-tags` in order to push the SHA, SHORT_SHA, etc., tags.
 

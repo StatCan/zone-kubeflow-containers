@@ -8,7 +8,7 @@ USER root
 
 # SAS
 # Install Quarto
-ENV QUARTO_VERSION=1.8.26
+ENV QUARTO_VERSION=1.11.9
 ARG QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz
 ARG QUARTO_CHECKSUM_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-checksums.txt
 
