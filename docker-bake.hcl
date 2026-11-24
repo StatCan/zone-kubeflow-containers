@@ -72,6 +72,13 @@ target "jupyterlab-cpu" {
     tags = ["jupyterlab-cpu"]
 }
 
+target "f20req" {
+    args = {
+        BASE_IMAGE="sas-kernel"
+    }
+    context = "./images/jupyterlab"
+    tags = ["f20req"]
+}
 target "sas" {
     args = {
         BASE_IMAGE="sas-kernel"
