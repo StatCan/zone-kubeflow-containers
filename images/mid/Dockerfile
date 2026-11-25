@@ -91,37 +91,37 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-arrow' \
-        'r-aws.s3' \
+        # 'r-arrow' \
+        # 'r-aws.s3' \
         'r-base=4.5.1' \
-        'r-caret' \
-        'r-catools' \
-        'r-crayon' \
-        'r-devtools' \
-        'r-e1071' \
-        'r-forecast' \
-        'r-hdf5r' \
-        'r-hexbin' \
-        'r-htmltools' \
-        'r-htmlwidgets' \
-        'r-httr' \
-        'r-irkernel' \
-        'r-jsonlite' \
-        'r-languageserver' \
-        'r-markdown' \
-        'r-nycflights13' \
-        'r-odbc' \
-        'r-randomforest' \
-        'r-rcurl' \
-        'r-renv' \
-        'r-rmarkdown' \
-        'r-rodbc' \
-        'r-rsqlite' \
-        'r-sf' \
-        'r-shiny' \
-        'r-sparklyr' \
-        'r-tidymodels' \
-        'r-tidyverse' \
+        # 'r-caret' \
+        # 'r-catools' \
+        # 'r-crayon' \
+        # 'r-devtools' \
+        # 'r-e1071' \
+        # 'r-forecast' \
+        # 'r-hdf5r' \
+        # 'r-hexbin' \
+        # 'r-htmltools' \
+        # 'r-htmlwidgets' \
+        # 'r-httr' \
+        # 'r-irkernel' \
+        # 'r-jsonlite' \
+        # 'r-languageserver' \
+        # 'r-markdown' \
+        # 'r-nycflights13' \
+        # 'r-odbc' \
+        # 'r-randomforest' \
+        # 'r-rcurl' \
+        # 'r-renv' \
+        # 'r-rmarkdown' \
+        # 'r-rodbc' \
+        # 'r-rsqlite' \
+        # 'r-sf' \
+        # 'r-shiny' \
+        # 'r-sparklyr' \
+        # 'r-tidymodels' \
+        # 'r-tidyverse' \
         'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
@@ -152,6 +152,11 @@ RUN mamba install --quiet --yes -c conda-forge \
     && clean-layer.sh \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
+
+
+COPY base-conda-r-env.yaml ${HOME_TMP}/base-conda-r-env.yaml
+RUN conda env update --name base --file ${HOME_TMP}/base-conda-r-env.yaml --quiet \
+    && rm ${HOME_TMP}/base-conda-r-env.yaml
 
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
 # that came from conda-forge (scipy-notebook base + the list above)
