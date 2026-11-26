@@ -157,9 +157,8 @@ RUN mamba install --quiet --yes -c conda-forge \
 # COPY base-conda-r-env.yaml ${HOME_TMP}/base-conda-r-env.yaml
 # RUN conda env update --name base --file ${HOME_TMP}/base-conda-r-env.yaml --quiet \
 #     && rm ${HOME_TMP}/base-conda-r-env.yaml
-COPY r-requirements.txt ${HOME_TMP}/r-requirements.txt
-RUN mamba install --file ${HOME_TMP}/r-requirements.txt -c conda-forge \
-    && rm ${HOME_TMP}/r-requirements.txt
+COPY --chown=${NB_USER}:${NB_GID} r-requirements.txt ${HOME_TMP}/r-requirements.txt
+RUN mamba install --file ${HOME_TMP}/r-requirements.txt -c conda-forge
 
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
 # that came from conda-forge (scipy-notebook base + the list above)
