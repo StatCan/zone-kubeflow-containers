@@ -91,37 +91,37 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-arrow=22.0.0=r45hecca717_0' \
-        'r-aws.s3=0.3.22=r45hc72bb7e_4' \
+        # 'r-arrow=22.0.0=r45hecca717_0' \
+        # 'r-aws.s3=0.3.22=r45hc72bb7e_4' \
         'r-base=4.5.1' \
-        'r-caret=7.0_1=r45h54b55ab_0' \
-        'r-catools=1.18.4=r45h3697838_0' \
-        'r-crayon=1.5.3=r45hc72bb7e_2' \
-        'r-devtools=2.5.2=r45hc72bb7e_0' \
-        'r-e1071=1.7_17=r45h3697838_0' \
-        'r-forecast=9.0.2=r45hf1899b2_0' \
-        'r-hdf5r=1.3.12=r45h39a46f8_3' \
-        'r-hexbin=1.28.5=r45heaba542_1' \
-        'r-htmltools=0.5.9=r45h3697838_0' \
-        'r-htmlwidgets=1.6.4=r45h785f33e_4' \
-        'r-httr=1.4.8=r45hc72bb7e_0' \
-        'r-irkernel=1.3.2=r45h785f33e_3' \
-        'r-jsonlite=2.0.0=r45h54b55ab_1' \
-        'r-languageserver=0.3.18' \
-        'r-markdown=2.0=r45hc72bb7e_1' \
-        'r-nycflights13=1.0.2=r45h785f33e_5' \
-        'r-odbc=1.6.4.1=r45h3697838_0' \
-        'r-randomforest=4.7_1.2=r45heaba542_1' \
-        'r-rcurl=1.98_1.17=r45h46721d4_2' \
-        'r-renv=1.2.3=r45h54b55ab_0' \
-        'r-rmarkdown=2.31=r45hc72bb7e_0' \
-        'r-rodbc=1.3_26.1=r45h54b55ab_0' \
-        'r-rsqlite=3.53.1=r45h3697838_0' \
-        'r-sf=1.0_23=r45h4168156_0' \
-        'r-shiny=1.14.0=r45h785f33e_0' \
-        'r-sparklyr=1.9.5=r45hc72bb7e_0' \
-        'r-tidymodels=1.4.1=r45h785f33e_1' \
-        'r-tidyverse=2.0.0=r45h785f33e_3' \
+        # 'r-caret=7.0_1=r45h54b55ab_0' \
+        # 'r-catools=1.18.4=r45h3697838_0' \
+        # 'r-crayon=1.5.3=r45hc72bb7e_2' \
+        # 'r-devtools=2.5.2=r45hc72bb7e_0' \
+        # 'r-e1071=1.7_17=r45h3697838_0' \
+        # 'r-forecast=9.0.2=r45hf1899b2_0' \
+        # 'r-hdf5r=1.3.12=r45h39a46f8_3' \
+        # 'r-hexbin=1.28.5=r45heaba542_1' \
+        # 'r-htmltools=0.5.9=r45h3697838_0' \
+        # 'r-htmlwidgets=1.6.4=r45h785f33e_4' \
+        # 'r-httr=1.4.8=r45hc72bb7e_0' \
+        # 'r-irkernel=1.3.2=r45h785f33e_3' \
+        # 'r-jsonlite=2.0.0=r45h54b55ab_1' \
+        # 'r-languageserver=0.3.18' \
+        # 'r-markdown=2.0=r45hc72bb7e_1' \
+        # 'r-nycflights13=1.0.2=r45h785f33e_5' \
+        # 'r-odbc=1.6.4.1=r45h3697838_0' \
+        # 'r-randomforest=4.7_1.2=r45heaba542_1' \
+        # 'r-rcurl=1.98_1.17=r45h46721d4_2' \
+        # 'r-renv=1.2.3=r45h54b55ab_0' \
+        # 'r-rmarkdown=2.31=r45hc72bb7e_0' \
+        # 'r-rodbc=1.3_26.1=r45h54b55ab_0' \
+        # 'r-rsqlite=3.53.1=r45h3697838_0' \
+        # 'r-sf=1.0_23=r45h4168156_0' \
+        # 'r-shiny=1.14.0=r45h785f33e_0' \
+        # 'r-sparklyr=1.9.5=r45hc72bb7e_0' \
+        # 'r-tidymodels=1.4.1=r45h785f33e_1' \
+        # 'r-tidyverse=2.0.0=r45h785f33e_3' \
         'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
@@ -157,6 +157,9 @@ RUN mamba install --quiet --yes -c conda-forge \
 # COPY base-conda-r-env.yaml ${HOME_TMP}/base-conda-r-env.yaml
 # RUN conda env update --name base --file ${HOME_TMP}/base-conda-r-env.yaml --quiet \
 #     && rm ${HOME_TMP}/base-conda-r-env.yaml
+COPY r-requirements.txt ${HOME_TMP}/r-requirements.txt
+RUN mamba install --file ${HOME_TMP}/r-requirements.txt -c conda-forge \
+    && rm ${HOME_TMP}/r-requirements.txt
 
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
 # that came from conda-forge (scipy-notebook base + the list above)
