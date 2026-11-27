@@ -16,7 +16,7 @@ from helpers import CondaPackageHelper
 LOGGER = logging.getLogger(__name__)
 
 # Keep in sync with the r-base pin in images/mid/Dockerfile
-EXPECTED_R_VERSION = "R version 4.6.1"
+EXPECTED_R_VERSION = "R version 4.5.1"
 
 # Keep in sync with the Posit Package Manager install in images/mid/Dockerfile
 # (zonetokenbroker is installed separately from images/mid/zone-token-broker).

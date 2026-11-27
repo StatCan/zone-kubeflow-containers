@@ -52,9 +52,12 @@ RUN apt-get update --yes && \
     gcc && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# COPY --chown=${NB_USER}:${NB_GID} r-requirements.txt ${HOME_TMP}/r-requirements.txt
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
 RUN mamba install --quiet --yes -c conda-forge \
+        # --file ${HOME_TMP}/r-requirements.txt \
         # Keep the base image's Python. Unpinned, a new conda-forge patch
         # release (3.14.5 -> 3.14.8) upgrades it here and relinks every noarch
         # package, which fails on the base image's package cache.
@@ -91,7 +94,37 @@ RUN mamba install --quiet --yes -c conda-forge \
         'jupyterlab-lsp' \
         'jupyter-lsp' \
         'python-lsp-server' \
-        'r-base=4.6.1' \
+        # 'r-arrow=22.0.0=r45hecca717_0' \
+        # 'r-aws.s3=0.3.22=r45hc72bb7e_4' \
+        'r-base=4.5.1' \
+        # 'r-caret=7.0_1=r45h54b55ab_0' \
+        # 'r-catools=1.18.4=r45h3697838_0' \
+        # 'r-crayon=1.5.3=r45hc72bb7e_2' \
+        # 'r-devtools=2.5.2=r45hc72bb7e_0' \
+        # 'r-e1071=1.7_17=r45h3697838_0' \
+        # 'r-forecast=9.0.2=r45hf1899b2_0' \
+        # 'r-hdf5r=1.3.12=r45h39a46f8_3' \
+        # 'r-hexbin=1.28.5=r45heaba542_1' \
+        # 'r-htmltools=0.5.9=r45h3697838_0' \
+        # 'r-htmlwidgets=1.6.4=r45h785f33e_4' \
+        # 'r-httr=1.4.8=r45hc72bb7e_0' \
+        # 'r-irkernel=1.3.2=r45h785f33e_3' \
+        # 'r-jsonlite=2.0.0=r45h54b55ab_1' \
+        # 'r-languageserver=0.3.18' \
+        # 'r-markdown=2.0=r45hc72bb7e_1' \
+        # 'r-nycflights13=1.0.2=r45h785f33e_5' \
+        # 'r-odbc=1.6.4.1=r45h3697838_0' \
+        # 'r-randomforest=4.7_1.2=r45heaba542_1' \
+        # 'r-rcurl=1.98_1.17=r45h46721d4_2' \
+        # 'r-renv=1.2.3=r45h54b55ab_0' \
+        # 'r-rmarkdown=2.31=r45hc72bb7e_0' \
+        # 'r-rodbc=1.3_26.1=r45h54b55ab_0' \
+        # 'r-rsqlite=3.53.1=r45h3697838_0' \
+        # 'r-sf=1.0_23=r45h4168156_0' \
+        # 'r-shiny=1.14.0=r45h785f33e_0' \
+        # 'r-sparklyr=1.9.5=r45hc72bb7e_0' \
+        # 'r-tidymodels=1.4.1=r45h785f33e_1' \
+        # 'r-tidyverse=2.0.0=r45h785f33e_3' \
         'unixodbc' \
         'duckdb' \
         'duckdb-cli' \
@@ -123,6 +156,16 @@ RUN mamba install --quiet --yes -c conda-forge \
     && rm -rf /root/.cache /root/.npm \
     && fix-permissions $CONDA_DIR
 
+
+# COPY base-conda-r-env.yaml ${HOME_TMP}/base-conda-r-env.yaml
+# RUN conda env update --name base --file ${HOME_TMP}/base-conda-r-env.yaml --quiet \
+#     && rm ${HOME_TMP}/base-conda-r-env.yaml
+# COPY --chown=${NB_USER}:${NB_GID} r-requirements.txt ${HOME_TMP}/r-requirements.txt
+# RUN mamba install --file ${HOME_TMP}/r-requirements.txt -c conda-forge
+# RUN rm ${HOME_TMP}/r-requirements.txt
+
+COPY --chown=${NB_USER}:${NB_GID} installed_r.csv ${HOME_TMP}/installed_r.csv
+
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
 # that came from conda-forge (scipy-notebook base + the list above)
 # plus languageserver. PPM only serves binaries when R's HTTP user agent
@@ -135,16 +178,20 @@ RUN printf '%s\n' \
         '# Posit Package Manager serves prebuilt binaries only to clients that advertise their R version.' \
         'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
         >> /opt/conda/lib/R/etc/Rprofile.site \
-    && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
-                             'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
-                             'languageserver', 'lintr', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
-                             'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'styler', 'tidymodels', \
-                             'tidyverse'); \
-                    install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
-                    missing <- setdiff(pkgs, rownames(installed.packages())); \
-                    if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
-    # Re-register the Jupyter R kernel (the conda r-irkernel kernelspec went with the package)
-    && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
+#     # && Rscript -e "pkgs <- c('arrow', 'aws.s3', 'caret', 'caTools', 'crayon', 'devtools', 'e1071', 'forecast', \
+#     #                          'hdf5r', 'hexbin', 'htmltools', 'htmlwidgets', 'httr', 'IRkernel', 'jsonlite', \
+#     #                          'languageserver', 'lintr', 'markdown', 'nycflights13', 'odbc', 'randomForest', 'RCurl', \
+#     #                          'renv', 'rmarkdown', 'RODBC', 'RSQLite', 'sf', 'shiny', 'sparklyr', 'styler', 'tidymodels', \
+#     #                          'tidyverse'); \
+#     #                 install.packages(pkgs, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores()); \
+#     #                 missing <- setdiff(pkgs, rownames(installed.packages())); \
+#     #                 if (length(missing) > 0) stop('failed to install: ', paste(missing, collapse = ', '))" \
+#     # Re-register the Jupyter R kernel (the conda r-irkernel kernelspec went with the package)
+#     && Rscript -e "installedPreviously <- read.csv('${HOME_TMP}/installed_r.csv'); \
+#                 baseR <- as.data.frame(installed.packages()); \
+#                 toInstall <- setdiff(installedPreviously, baseR); \
+#                 install.packages(toInstall, repos = '${PPM_CRAN_URL}', Ncpus = parallel::detectCores())" \
+#     # && Rscript -e "IRkernel::installspec(user = FALSE, prefix = '/opt/conda', name = 'ir', displayname = paste('R', getRversion()))" \
     && rm -rf /tmp/downloaded_packages /tmp/Rtmp* \
     && fix-permissions $CONDA_DIR
 
@@ -163,7 +210,7 @@ RUN set -eux; \
     pip install --no-cache-dir 'adlfs==2026.5.0'; \
     pip install --no-cache-dir --no-build-isolation '/opt/zone-token-broker[zone-dvc]'; \
     pip wheel --no-cache-dir --no-deps --no-build-isolation --wheel-dir /opt/zone-token-broker/dist /opt/zone-token-broker; \
-    /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
+    # /opt/conda/bin/R CMD INSTALL /opt/zone-token-broker/zone-token-broker-r; \
     fix-permissions "${CONDA_DIR}"; \
     fix-permissions /opt/zone-token-broker
 
