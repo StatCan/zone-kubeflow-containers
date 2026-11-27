@@ -52,9 +52,12 @@ RUN apt-get update --yes && \
     gcc && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+COPY --chown=${NB_USER}:${NB_GID} r-requirements.txt ${HOME_TMP}/r-requirements.txt
+
 # Install Python dependencies, language tooling, and Jupyter server integration.
 # Keep package manager cleanup in the same layer as the install work.
 RUN mamba install --quiet --yes -c conda-forge \
+        --file ${HOME_TMP}/r-requirements.txt \
         # Keep the base image's Python. Unpinned, a new conda-forge patch
         # release (3.14.5 -> 3.14.8) upgrades it here and relinks every noarch
         # package, which fails on the base image's package cache.
@@ -157,8 +160,9 @@ RUN mamba install --quiet --yes -c conda-forge \
 # COPY base-conda-r-env.yaml ${HOME_TMP}/base-conda-r-env.yaml
 # RUN conda env update --name base --file ${HOME_TMP}/base-conda-r-env.yaml --quiet \
 #     && rm ${HOME_TMP}/base-conda-r-env.yaml
-COPY --chown=${NB_USER}:${NB_GID} r-requirements.txt ${HOME_TMP}/r-requirements.txt
-RUN mamba install --file ${HOME_TMP}/r-requirements.txt -c conda-forge
+# COPY --chown=${NB_USER}:${NB_GID} r-requirements.txt ${HOME_TMP}/r-requirements.txt
+# RUN mamba install --file ${HOME_TMP}/r-requirements.txt -c conda-forge
+RUN rm ${HOME_TMP}/r-requirements.txt
 
 # R packages as prebuilt Linux binaries from Posit Package Manager: the set
 # that came from conda-forge (scipy-notebook base + the list above)
